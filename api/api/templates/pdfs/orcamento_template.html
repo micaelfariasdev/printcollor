@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      @page {
+        size: A4;
+        margin: 1cm;
+      }
+      body {
+        font-family: Arial, sans-serif;
+        font-size: 12px;
+        color: #333;
+        margin: 0;
+        padding: 0;
+      }
+
+      /* Centralizando o cabeçalho */
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: center; /* Centraliza horizontalmente o conteúdo do flex */
+        width: 100%;
+        margin-bottom: 15px;
+      }
+
+      .logo img {
+        width: 170px;
+        margin-right: 15px; /* Espaço entre a logo e o texto */
+      }
+
+      .empresa-info {
+        text-align: center;
+      }
+      
+      /* Resto do seu código de tabelas... */
+      .info-box { width: 100%; border: 1px solid #000; margin-bottom: 10px; }
+      .info-row { border-bottom: 1px solid #000; padding: 4px; }
+      .date-row { 
+        text-align: center; 
+        color: red; 
+        font-weight: bold; 
+        border-top: 1px solid #000; 
+        background-color: #f9f9f9; 
+      }
+
+      .items-table { width: 100%; border-collapse: collapse; border: 1px solid #000; }
+      .items-table th, .items-table td { border: 1px solid #000; padding: 6px; }
+      
+      .total-section { width: 100%; border: 1px solid #000; border-top: none; text-align: center; }
+      .total-extenso { color: red; font-weight: bold; font-size: 14px; padding: 5px; text-transform: uppercase; }
+
+      .footer {
+        position: fixed;
+        bottom: 30px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 10px;
+      }
+      .signature-line { width: 250px; border-top: 1px solid #000; margin: 0 auto 5px auto; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="logo">
+        <img src="http://127.0.0.1:8000/static/logo-yasprint.png" />
+      </div>
+      <div class="empresa-info">
+        <h1>YASPRINT Comunicação Visual</h1>
+        <p>Rua Magalães Filho, 701 64.001-350 CENTRO, Teresina-PI</p>
+        <p>CNPJ: 56.606.188/0001-70 IE: 197681166</p>
+        <p>Email: YASprintComunicacaoVisual@gmail.com</p>
+      </div>
+    </div>
+
+    <div class="info-box">
+      <div class="info-row"><strong>Cliente:</strong> {{ orcamento.cliente.nome }}</div>
+      <div class="info-row"><strong>Agência:</strong></div>
+      <div class="info-row"><strong>Campanha:</strong></div>
+      <div class="date-row">{{ orcamento.data_criacao|date:"d/m/Y" }} Teresina - PI</div>
+    </div>
+
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th colspan="2">Descrição do objeto</th>
+          <th>Qnt</th>
+          <th>Valor</th>
+          <th>Valor Global</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in itens %}
+        <tr>
+          <td style="width: 30px; text-align: center;">{{ forloop.counter }}</td>
+          <td>{{ item.produto.nome }}</td>
+          <td style="text-align: center;">{{ item.quantidade }}</td>
+          <td style="text-align: right;">R$ {{ item.preco_negociado }}</td>
+          <td style="text-align: right;">R$ {{ item.subtotal }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4" style="text-align: right; font-weight: bold;">TOTAL R$</td>
+          <td style="text-align: right; font-weight: bold;">{{ orcamento.valor_total }}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div class="total-section">
+      <div class="total-label">O valor total do orçamento é de:</div>
+      <div class="total-extenso">{{ valor_extenso }}</div>
+      <div style="font-size: 9px; padding: 5px; border-top: 1px solid #000">
+        VALIDADE DA PROPOSTA: 60 dias. CONDIÇÕES DE PAGAMENTO: Conforme contrato.
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="signature-line"></div>
+      <strong>Yasmine Ibiapina Caddah</strong><br />
+      Banco do Brasil | Ag. 3178-X CC. 75793-4<br />
+      PIX CNPJ: 56.606.188.0001-70<br />
+YASprintComunicacaoVisual@gmail.com
+    </div>
+  </body>
+</html>
