@@ -104,3 +104,10 @@ class DTFVendorSerializer(serializers.ModelSerializer):
             'data_criacao', 'foi_impresso', 'esta_pago', 'foi_entregue',
             'comprovante_pagamento', 'valor_total'
         ]
+
+
+class UserMeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Usuario
+        # Enviamos apenas o necessário para o front-end
+        fields = ['id', 'username', 'nivel_acesso', 'is_staff', 'is_superuser']

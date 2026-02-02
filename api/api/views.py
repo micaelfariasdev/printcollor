@@ -1,12 +1,15 @@
 from num2words import num2words
 from rest_framework import viewsets, permissions, filters
 from rest_framework.decorators import action
+from rest_framework.views import APIView
+from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Empresa, Cliente, Produto, Orcamento, DTFVendor, Usuario
 from .permissions import IsAdminUserCustom, IsVendedor, IsFinanceiro
 from .serializers import (
     EmpresaSerializer, ClienteSerializer,
-    ProdutoSerializer, OrcamentoSerializer, DTFVendorSerializer, UsuarioSerializer
+    ProdutoSerializer, OrcamentoSerializer, DTFVendorSerializer, UsuarioSerializer,
+    UserMeSerializer
 )
 from .tools.utils import gerar_pdf_from_html
 
@@ -69,3 +72,12 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
         if self.action in ['destroy', 'update', 'partial_update']:
             return [(IsAdminUserCustom | IsFinanceiro)()]
         return [(IsAdminUserCustom | IsVendedor)()]
+
+
+class UserMeView(APIView):
+    # Apenas usuários com Token válido podem acessar
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserMeSerializer(request.user)
+        return Response(serializer.data)
