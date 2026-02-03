@@ -5,13 +5,18 @@ import {
   Clock,
   Search,
   Plus,
+  Edit3,
+  Trash2,
 } from 'lucide-react';
-import { theme } from './Theme';
+import { theme } from '../components/Theme';
 import React, { useState } from 'react';
 import { api } from '../auth/useAuth';
 import { formatarDataHora } from '../tools/dataHora';
 import { formatarReal } from '../tools/formatReal';
-import { FilterToggle } from './FilterToggle';
+import { FilterToggle } from '../components/FilterToggle';
+import ModalNovoDTF from '../components/ModalNovoDTF';
+import ModalEditarDTF from '../components/ModalEditarDTF';
+import ModalDelete from '../components/ModalDelete';
 
 export const DTFTable = () => {
   const [busca, setBusca] = useState('');
@@ -20,9 +25,35 @@ export const DTFTable = () => {
   const [filtroImpresso, setFiltroImpresso] = useState(false);
   const [filtroEntregue, setFiltroEntregue] = useState(false);
   const [mockData, setData] = React.useState<any[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // 2. Novos estados para Edição e Delete
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<{
+    id: number | null;
+    nome: string;
+  }>({ id: null, nome: '' });
+
+  // Funções de gatilho
+  const handleEdit = (id: number) => {
+    setSelectedItem({ ...selectedItem, id });
+    setIsEditOpen(true);
+  };
+
+  const handleDelete = (id: number, nome: string) => {
+    setSelectedItem({ id, nome });
+    setIsDeleteOpen(true);
+  };
+
+  const carregarDados = () => {
+    api.get('dtf/').then((response) => {
+      setData(response.data);
+    });
+  };
 
   React.useEffect(() => {
-    api.get('http://127.0.0.1:8000/api/dtf/').then((response) => {
+    api.get('dtf/').then((response) => {
       setData(response.data);
     });
     console.log(mockData);
@@ -72,6 +103,7 @@ export const DTFTable = () => {
 
           <button
             className={`${theme.colors.primaryButton} text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold shadow-md transition-all active:scale-95`}
+            onClick={() => setIsModalOpen(true)}
           >
             <Plus size={20} />
             Novo Pedido
@@ -177,19 +209,63 @@ export const DTFTable = () => {
                   </div>
                 )}
               </div>
-
-              <a
-                target="_blank"
-                className="text-blue-600 hover:text-blue-800 text-sm font-bold flex items-center transition cursor-pointer"
-                href={item.layout_arquivo}
-              >
-                <FileText size={16} className="mr-1" />
-                PDF
-              </a>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => handleEdit(item.id)}
+                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition"
+                >
+                  <Edit3 size={16} />
+                </button>
+                <button
+                  onClick={() => handleDelete(item.id, item.nome_cliente)}
+                  className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition"
+                >
+                  <Trash2 size={16} />
+                </button>
+                <div className="flex gap-3">
+                  {item.comprovante_pagamento && (
+                    <a
+                      href={item.comprovante_pagamento}
+                      target="_blank"
+                      className="text-green-600 text-sm font-bold flex items-center"
+                    >
+                      <CheckCircle2 size={16} className="mr-1" /> PIX
+                    </a>
+                  )}
+                  <a
+                    href={item.layout_arquivo}
+                    target="_blank"
+                    className="text-blue-600 text-sm font-bold flex items-center"
+                  >
+                    <FileText size={16} className="mr-1" /> PDF
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
         ))}
       </div>
+      <ModalNovoDTF
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={carregarDados}
+      />
+
+      <ModalEditarDTF
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        onSuccess={carregarDados}
+        dtfId={selectedItem.id}
+      />
+
+      <ModalDelete
+        isOpen={isDeleteOpen}
+        onClose={() => setIsDeleteOpen(false)}
+        onSuccess={carregarDados}
+        endpoint="dtf" // Nome da sua rota no Django
+        itemId={selectedItem.id}
+        itemName={selectedItem.nome}
+      />
     </div>
   );
 };

@@ -27,7 +27,7 @@ class ItemOrcamentoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ItemOrcamento
-        fields = ['id', 'produto', 'produto_nome',
+        fields = ['id', 'produto', 'produto_nome', 'descricao',
                   'quantidade', 'preco_negociado', 'subtotal']
 
 

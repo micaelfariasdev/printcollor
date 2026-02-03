@@ -94,7 +94,7 @@
         {% for item in itens %}
         <tr>
           <td style="width: 30px; text-align: center;">{{ forloop.counter }}</td>
-          <td>{{ item.produto.nome }}</td>
+          <td>{{ item.descricao }}</td>
           <td style="text-align: center;">{{ item.quantidade }}</td>
           <td style="text-align: right;">R$ {{ item.preco_negociado }}</td>
           <td style="text-align: right;">R$ {{ item.subtotal }}</td>

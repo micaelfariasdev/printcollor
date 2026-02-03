@@ -1,65 +1,49 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Download, Eye, Plus } from 'lucide-react';
+import { Search, Eye, Plus } from 'lucide-react';
 import { theme } from '../components/Theme';
 import { formatarReal } from '../tools/formatReal';
 import { api } from '../auth/useAuth';
 import { formatarDataHora } from '../tools/dataHora';
+import ModalNovoCliente from '../components/ModalNovoCliente';
+import ModalEditarCliente from '../components/ModalEditarCliente';
 
-export interface ItemOrcamento {
+export interface Client {
+  cnpj: string | null;
+  cpf: string;
+  email: string;
   id: number;
-  produto: number;
-  produto_nome: string;
-  quantidade: number;
-  preco_negociado: string; // Vem como string do DecimalField do Django
-  subtotal: number;
+  nome: string;
+  telefone: string;
 }
 
-export interface Orcamento {
-  id: number;
-  empresa: number;
-  nome_empresa: string;
-  cliente: number;
-  nome_cliente: string;
-  data_criacao: string; // Formato ISO 8601
-  itens: ItemOrcamento[];
-  valor_total: number;
-}
-
-const handleDownloadPDF = async (id: number) => {
-  try {
-    const response = await api.get(`orcamentos/${id}/gerar_pdf/`, {
-      responseType: 'blob', // ESSENCIAL para receber arquivos
-    });
-
-    // Cria um link temporário na memória do navegador
-    const url = window.URL.createObjectURL(
-      new Blob([response.data], { type: 'application/pdf' })
-    );
-
-    // Abre em uma nova aba de forma segura
-    window.open(url, '_blank');
-
-    // Opcional: Limpar a memória após um tempo
-    setTimeout(() => window.URL.revokeObjectURL(url), 100);
-  } catch (error) {
-    console.error('Erro ao gerar PDF:', error);
-  }
-};
-
-const Orcamentos: React.FC = () => {
-  const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
+const Clients: React.FC = () => {
+  const [Clients, setClients] = useState<Client[]>([]);
   const [busca, setBusca] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+
+  const handleEdit = (id: number) => {
+    setSelectedId(id);
+    setIsEditOpen(true);
+  };
+
+  const carregarClientes = () => {
+    api.get('clientes/').then((res) => setClients(res.data));
+  };
 
   useEffect(() => {
-    // Busca os orçamentos da sua API Django
     api
-      .get('orcamentos/')
-      .then((res) => setOrcamentos(res.data))
-      .catch((err) => console.error('Erro ao carregar orçamentos', err));
+      .get('clientes/')
+      .then((res) => setClients(res.data))
+      .catch((err) => console.error('Erro ao carregar clientes', err));
+
+    console.log(Clients);
   }, []);
 
-  const filtrados = orcamentos.filter((o) =>
-    o.nome_cliente.toLowerCase().includes(busca.toLowerCase())
+  const filtrados = Clients.filter((c) =>
+    c.nome.toLowerCase().includes(busca.toLowerCase())
   );
 
   return (
@@ -78,9 +62,10 @@ const Orcamentos: React.FC = () => {
 
         <button
           className={`${theme.colors.primaryButton} text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold shadow-md transition-all active:scale-95`}
+          onClick={() => setIsModalOpen(true)}
         >
           <Plus size={20} />
-          Novo Orçamento
+          Novo Cliente
         </button>
       </div>
 
@@ -94,13 +79,13 @@ const Orcamentos: React.FC = () => {
                   ID
                 </th>
                 <th className="p-4 font-black text-slate-600 uppercase text-xs">
-                  Cliente
+                  Nome
                 </th>
                 <th className="p-4 font-black text-slate-600 uppercase text-xs">
-                  Data
+                  E-mail
                 </th>
                 <th className="p-4 font-black text-slate-600 uppercase text-xs">
-                  Total
+                  Número
                 </th>
                 <th className="p-4 font-black text-slate-600 uppercase text-xs text-center">
                   Ações
@@ -115,36 +100,21 @@ const Orcamentos: React.FC = () => {
                 >
                   <td className="p-4 font-bold text-slate-400">#{orc.id}</td>
                   <td className="p-4">
-                    <div className="font-bold text-slate-800">
-                      {orc.nome_cliente}
-                    </div>
+                    <div className="font-bold text-slate-800">{orc.nome}</div>
                     <div className="text-xs text-slate-400">
-                      {orc.nome_empresa}
+                      {orc.cpf || orc.cnpj}
                     </div>
                   </td>
-                  <td className="p-4 text-slate-600 text-sm">
-                    {formatarDataHora(orc.data_criacao)}
-                  </td>
-                  <td className="p-4">
-                    <span className="font-black text-slate-800">
-                      {formatarReal(orc.valor_total)}
-                    </span>
-                  </td>
+                  <td className="p-4 text-slate-600 text-sm">{orc.email}</td>
+                  <td className="p-4 text-slate-600 text-sm">{orc.telefone}</td>
                   <td className="p-4">
                     <div className="flex items-center justify-center gap-2">
                       <button
                         title="Visualizar Detalhes"
                         className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                        onClick={() => handleEdit(orc.id)}
                       >
                         <Eye size={18} />
-                      </button>
-
-                      <button
-                        onClick={() => handleDownloadPDF(orc.id)}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                        title="Visualizar PDF Seguro"
-                      >
-                        <Download size={18} />
                       </button>
                     </div>
                   </td>
@@ -165,8 +135,21 @@ const Orcamentos: React.FC = () => {
           </table>
         </div>
       </div>
+      <ModalNovoCliente
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={carregarClientes}
+      />
+      <ModalEditarCliente
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        onSuccess={() =>
+          api.get('clientes/').then((res) => setClients(res.data))
+        }
+        clienteId={selectedId}
+      />
     </div>
   );
 };
 
-export default Orcamentos;
+export default Clients;

@@ -1,10 +1,12 @@
 from num2words import num2words
+from django.utils import timezone
+from django.db.models import Count, Sum
 from rest_framework import viewsets, permissions, filters
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Empresa, Cliente, Produto, Orcamento, DTFVendor, Usuario
+from .models import Empresa, Cliente, Produto, Orcamento, DTFVendor, Usuario, ItemOrcamento
 from .permissions import IsAdminUserCustom, IsVendedor, IsFinanceiro
 from .serializers import (
     EmpresaSerializer, ClienteSerializer,
@@ -81,3 +83,31 @@ class UserMeView(APIView):
     def get(self, request):
         serializer = UserMeSerializer(request.user)
         return Response(serializer.data)
+
+
+class DashboardStatsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        hoje = timezone.now()
+
+        total_orcamentos = Orcamento.objects.filter(
+            data_criacao__month=hoje.month,
+            data_criacao__year=hoje.year
+        ).count()
+
+        query_financeira = DTFVendor.objects.filter(
+            data_criacao__month=hoje.month,
+            data_criacao__year=hoje.year
+        )
+        total_vendas_dtf_valor = sum(i.valor_total() for i in query_financeira)
+
+        total_metragem = sum(i.tamanho_cm for i in query_financeira)
+        total_vendas_dtf = len(query_financeira)
+
+        return Response({
+            'total_orcamento': total_orcamentos,
+            'total_dtf_valor': total_vendas_dtf_valor,
+            'total_vendas_dtf': total_vendas_dtf,
+            'metragem_dtf': total_metragem,
+        })

@@ -5,32 +5,21 @@ import {
   Printer,
   Users,
   LogOut,
-  PlusCircle,
+  Package,
+  Building2,
 } from 'lucide-react';
 import { theme } from '../components/Theme';
-import { DTFTable } from '../components/DTF';
+import { DTFTable } from './DTF';
 import { api } from '../auth/useAuth';
-import Orcamentos from '../components/Orcamentos';
+import Orcamentos from './Orcamentos';
+import Clients from './Clients';
+import { formatarReal } from '../tools/formatReal';
+import Produtos from './Produtos';
+import Empresas from './Empresas';
 
-type View = 'dashboard' | 'orcamentos' | 'dtf' | 'clientes';
+type View = 'dashboard' | 'orcamentos' | 'dtf' | 'clientes' | 'produtos' | 'empresas';
 
 // --- COMPONENTES DE APOIO ---
-
-const SummaryCards = () => (
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-    <Card
-      label="Total em Orçamentos"
-      value="R$ 12.450,00"
-      color="border-blue-600"
-    />
-    <Card label="Metros DTF (Mês)" value="45.2 m" color="border-green-600" />
-    <Card
-      label="Aguardando Impressão"
-      value="08 Pedidos"
-      color="border-purple-600"
-    />
-  </div>
-);
 
 const Card = ({
   label,
@@ -52,13 +41,50 @@ const Card = ({
 const Dashboard: React.FC = () => {
   const [activeView, setActiveView] = useState<View>('dashboard');
   const [meData, setMeData] = useState<any>(null);
+  const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
     api.get('/me/').then((response) => {
       setMeData(response.data);
     });
-    console.log(meData);
+    api.get('/dashboard/').then((response) => {
+      setStats(response.data);
+    });
+    console.log(stats);
   }, []);
+
+  const SummaryCards = () => (
+    <div>
+      <div>
+        <h2 className="text-2xl font-bold text-slate-800 mb-6">
+          Resumo do Mês -{' '}
+          {new Date().toLocaleString('default', { month: 'long' })}{' '}
+        </h2>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <Card
+          label="Total de Orçamentos"
+          value={`${stats?.total_orcamento || 0}`}
+          color="border-blue-600"
+        />
+        <Card
+          label="Metros DTF (Mês)"
+          value={`${stats?.metragem_dtf || 0} m`}
+          color="border-green-600"
+        />
+        <Card
+          label="Total de vendas DTF"
+          value={`${stats?.total_vendas_dtf || 0} Pedidos`}
+          color="border-purple-600"
+        />
+        <Card
+          label="Total em vendas DTF"
+          value={`${formatarReal(stats?.total_dtf_valor || 0)}`}
+          color="border-purple-600"
+        />
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex h-screen bg-gray-100 font-sans">
@@ -98,6 +124,18 @@ const Dashboard: React.FC = () => {
             active={activeView === 'clientes'}
             onClick={() => setActiveView('clientes')}
           />
+          <NavItem
+            icon={<Package size={20} />}
+            label="Produtos"
+            active={activeView === 'produtos'}
+            onClick={() => setActiveView('produtos')}
+          />
+          <NavItem
+            icon={<Building2 size={20} />}
+            label="Empresas"
+            active={activeView === 'empresas'}
+            onClick={() => setActiveView('empresas')}
+          />
         </nav>
 
         <div className="p-4 border-t border-slate-800">
@@ -119,6 +157,9 @@ const Dashboard: React.FC = () => {
         {activeView === 'dashboard' && <SummaryCards />}
         {activeView === 'orcamentos' && <Orcamentos />}
         {activeView === 'dtf' && <DTFTable />}
+        {activeView === 'clientes' && <Clients />}
+        {activeView === 'produtos' && <Produtos />}
+        {activeView === 'empresas' && <Empresas />}
       </main>
     </div>
   );

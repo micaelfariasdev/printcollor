@@ -59,16 +59,34 @@ class Orcamento(models.Model):
 
 
 class ItemOrcamento(models.Model):
-    # related_name='itens' facilita buscar os produtos de um orçamento
     orcamento = models.ForeignKey(
         Orcamento, related_name='itens', on_delete=models.CASCADE)
-    produto = models.ForeignKey(Produto, on_delete=models.CASCADE)
+    
+    # Mudamos para SET_NULL para o item NÃO ser deletado
+    produto = models.ForeignKey(
+        Produto, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Campo para salvar o nome caso o produto seja deletado no futuro
+    produto_nome_no_ato = models.CharField(max_length=255, null=True, blank=True)
+    
+    descricao = models.CharField(max_length=255, null=True, blank=True)
     quantidade = models.PositiveIntegerField(default=1)
     preco_negociado = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def save(self, *args, **kwargs):
+        # Se o produto existir e o nome ainda não foi salvo, congela o nome
+        if self.produto and not self.produto_nome_no_ato:
+            self.produto_nome_no_ato = self.produto.nome
+        super().save(*args, **kwargs)
 
     @property
     def subtotal(self):
         return self.quantidade * self.preco_negociado
+    
+    @property
+    def nome_exibicao(self):
+        # Prioriza o nome congelado para o histórico não quebrar
+        return self.produto_nome_no_ato or (self.produto.nome if self.produto else "Produto Excluído")
 
 
 class DTFVendor(models.Model):
