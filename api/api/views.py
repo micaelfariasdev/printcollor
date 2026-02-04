@@ -20,7 +20,7 @@ from .serializers import (
 
 import base64
 from io import BytesIO
-
+from xhtml2pdf import pisa
 
 from django.template.loader import render_to_string
 from weasyprint import HTML
@@ -128,7 +128,7 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
         dtf = self.get_object()
         
         try:
-            # 1. Processamento de Imagem em Base64 (Evita erro de Proxy/Caminho)
+            # 1. Processamento de Imagem (Mantendo sua lógica de Base64)
             def get_b64(campo):
                 if not campo or not os.path.exists(campo.path):
                     return None
@@ -147,21 +147,24 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
                 'comprovante_path': get_b64(dtf.comprovante_pagamento),
             }
 
-            # 2. Renderização Direta do PDF
+            # 2. Renderização do HTML para String
             html_string = render_to_string('pdfs/dtf_pedido.html', context)
             
-            # Aqui chamamos o WeasyPrint garantindo apenas 1 argumento no construtor
-            pdf_data = HTML(string=html_string).write_pdf()
+            # 3. Geração do PDF via pisa (xhtml2pdf + pypdf)
+            result = BytesIO()
+            # Criamos o PDF passando apenas a string codificada e o buffer de saída
+            pdf = pisa.pisaDocument(BytesIO(html_string.encode("UTF-8")), result)
             
-            response = HttpResponse(pdf_data, content_type='application/pdf')
-            response['Content-Disposition'] = f'attachment; filename="pedido_{dtf.id}.pdf"'
-            return response
+            if not pdf.err:
+                response = HttpResponse(result.getvalue(), content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="pedido_{dtf.id}.pdf"'
+                return response
+            
+            return Response({"erro": "Falha na geração do arquivo PDF"}, status=400)
 
         except Exception as e:
-            # Se der erro, você verá exatamente o que é no terminal do servidor
             print(f"ERRO NO PDF: {str(e)}")
-            return Response({"erro": "Falha ao gerar PDF", "debug": str(e)}, status=500)
-
+            return Response({"erro": str(e)}, status=500)
 
 class UserMeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
