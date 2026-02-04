@@ -128,23 +128,39 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
         dtf = self.get_object()
         
         try:
-            # 1. Processa as imagens (Se falhar, retorna None mas não trava o PDF)
-            layout_base64 = processar_imagem_base64(dtf.layout_arquivo)
-            comprovante_base64 = processar_imagem_base64(dtf.comprovante_pagamento)
+            # 1. Processamento de Imagem em Base64 (Evita erro de Proxy/Caminho)
+            def get_b64(campo):
+                if not campo or not os.path.exists(campo.path):
+                    return None
+                try:
+                    with Image.open(campo.path) as img:
+                        if img.height > img.width:
+                            img = img.rotate(90, expand=True)
+                        buf = BytesIO()
+                        img.save(buf, format="PNG")
+                        return f"data:image/png;base64,{base64.b64encode(buf.getvalue()).decode()}"
+                except: return None
 
             context = {
                 'dtf': dtf,
-                'layout_path': layout_base64,
-                'comprovante_path': comprovante_base64,
+                'layout_path': get_b64(dtf.layout_arquivo),
+                'comprovante_path': get_b64(dtf.comprovante_pagamento),
             }
 
-            # 2. Chama a função de PDF
-            return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, f'pedido_{dtf.id}.pdf')
+            # 2. Renderização Direta do PDF
+            html_string = render_to_string('pdfs/dtf_pedido.html', context)
             
+            # Aqui chamamos o WeasyPrint garantindo apenas 1 argumento no construtor
+            pdf_data = HTML(string=html_string).write_pdf()
+            
+            response = HttpResponse(pdf_data, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="pedido_{dtf.id}.pdf"'
+            return response
+
         except Exception as e:
-            # Log detalhado para você ver no terminal
-            print(f"ERRO CRÍTICO NO WEASYPRINT: {str(e)}")
-            return Response({"erro": "Falha na renderização do motor de PDF", "detalhes": str(e)}, status=500)
+            # Se der erro, você verá exatamente o que é no terminal do servidor
+            print(f"ERRO NO PDF: {str(e)}")
+            return Response({"erro": "Falha ao gerar PDF", "debug": str(e)}, status=500)
 
 
 class UserMeView(APIView):
