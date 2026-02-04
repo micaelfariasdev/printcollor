@@ -5,6 +5,7 @@ import { api } from '../auth/useAuth';
 import { formatarReal } from '../tools/formatReal';
 import ModalNovoProduto from '../components/ModalNovoProduto';
 import ModalDelete from '../components/ModalDelete';
+import ModalEditarProduto from '../components/ModalEditarProduto';
 
 const Produtos: React.FC = () => {
   const [produtos, setProdutos] = useState<any[]>([]);
@@ -17,6 +18,14 @@ const Produtos: React.FC = () => {
   }>({ id: null, name: '' });
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+
+  const handleEdit = (id: number) => {
+    setSelectedId(id);
+    setIsEditOpen(true);
+  };
+
   const confirmarDelete = (id: number, nome: string) => {
     setDeleteConfig({ id, name: nome });
     setIsDeleteOpen(true);
@@ -27,6 +36,7 @@ const Produtos: React.FC = () => {
       .get('produtos/')
       .then((res) => setProdutos(res.data))
       .catch((err) => console.error('Erro ao carregar produtos', err));
+    console.log(produtos);
   };
 
   useEffect(() => {
@@ -95,7 +105,10 @@ const Produtos: React.FC = () => {
                   </td>
                   <td className="p-5">
                     <div className="flex items-center justify-center gap-2">
-                      <button className="p-2 text-slate-400 hover:text-blue-600 transition">
+                      <button
+                        onClick={() => handleEdit(prod.id)}
+                        className="p-2 text-slate-400 hover:text-blue-600 transition"
+                      >
                         <Edit3 size={18} />
                       </button>
                       <button
@@ -124,6 +137,12 @@ const Produtos: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={carregarProdutos}
+      />
+      <ModalEditarProduto
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        onSuccess={carregarProdutos}
+        produtoId={selectedId}
       />
     </div>
   );

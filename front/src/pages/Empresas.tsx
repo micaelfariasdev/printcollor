@@ -97,7 +97,10 @@ const Empresas: React.FC = () => {
                 </div>
               </div>
               <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => handleEdit(emp.id)} className="p-2 text-slate-400 hover:text-blue-600 rounded-lg">
+                <button
+                  onClick={() => handleEdit(emp.id)}
+                  className="p-2 text-slate-400 hover:text-blue-600 rounded-lg"
+                >
                   <Edit3 size={18} />
                 </button>
                 <button
@@ -143,12 +146,12 @@ const Empresas: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSuccess={carregarEmpresas}
       />
-      <ModalEditarEmpresa 
-  isOpen={isEditOpen} 
-  onClose={() => setIsEditOpen(false)} 
-  onSuccess={carregarEmpresas} 
-  empresaId={selectedId} 
-/>
+      <ModalEditarEmpresa
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        onSuccess={carregarEmpresas}
+        empresaId={selectedId}
+      />
     </div>
   );
 };

@@ -7,17 +7,30 @@ import {
   LogOut,
   Package,
   Building2,
+  ChevronUp,
+  UserCog,
 } from 'lucide-react';
 import { theme } from '../components/Theme';
 import { DTFTable } from './DTF';
-import { api } from '../auth/useAuth';
+import { api, useAuth } from '../auth/useAuth';
 import Orcamentos from './Orcamentos';
 import Clients from './Clients';
 import { formatarReal } from '../tools/formatReal';
 import Produtos from './Produtos';
 import Empresas from './Empresas';
+import Usuarios from './Usuarios';
+import { DashboardSkeleton } from '../components/Skeleton';
+import Configuracoes from './Configuracoes';
 
-type View = 'dashboard' | 'orcamentos' | 'dtf' | 'clientes' | 'produtos' | 'empresas';
+type View =
+  | 'dashboard'
+  | 'orcamentos'
+  | 'dtf'
+  | 'clientes'
+  | 'produtos'
+  | 'empresas'
+  | 'usuarios'
+  | 'configuracoes';
 
 // --- COMPONENTES DE APOIO ---
 
@@ -42,15 +55,37 @@ const Dashboard: React.FC = () => {
   const [activeView, setActiveView] = useState<View>('dashboard');
   const [meData, setMeData] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isFinanceiro, setIsFinanceiro] = useState<boolean>(false);
 
+  const titles: Record<View, string> = {
+    dashboard: 'Painel de Controle',
+    orcamentos: 'Gestão de Orçamentos',
+    dtf: 'Pedidos de DTF',
+    clientes: 'Carteira de Clientes',
+    produtos: 'Catálogo de Produtos',
+    empresas: 'Minhas Unidades',
+    usuarios: 'Equipe PrintCollor',
+    configuracoes: 'Configurações da Conta',
+  };
+
+  useEffect(() => {
+    const currentTitle = titles[activeView] || activeView;
+    document.title = `${currentTitle} | ${theme.appName}`;
+  }, [activeView]);
+
+  const { logout } = useAuth();
   useEffect(() => {
     api.get('/me/').then((response) => {
       setMeData(response.data);
+      setIsAdmin(response.data.is_staff);
+      setIsFinanceiro(response.data.nivel_acesso === 'financeiro');
     });
     api.get('/dashboard/').then((response) => {
       setStats(response.data);
     });
-    console.log(stats);
+    console.log(meData);
   }, []);
 
   const SummaryCards = () => (
@@ -86,6 +121,10 @@ const Dashboard: React.FC = () => {
     </div>
   );
 
+  if (!meData) {
+    return <DashboardSkeleton />;
+  }
+
   return (
     <div className="flex h-screen bg-gray-100 font-sans">
       {/* Sidebar */}
@@ -95,7 +134,7 @@ const Dashboard: React.FC = () => {
         <div className="p-6 text-2xl font-bold border-b border-slate-800">
           {theme.appName}{' '}
           <span className={theme.colors.accentText}>
-            {meData?.nivel_acesso || 'Admin'}
+            {meData?.is_staff ? 'Administradora' : meData?.nivel_acesso}
           </span>
         </div>
 
@@ -130,18 +169,77 @@ const Dashboard: React.FC = () => {
             active={activeView === 'produtos'}
             onClick={() => setActiveView('produtos')}
           />
-          <NavItem
-            icon={<Building2 size={20} />}
-            label="Empresas"
-            active={activeView === 'empresas'}
-            onClick={() => setActiveView('empresas')}
-          />
+          {(isAdmin || isFinanceiro) && (
+            <NavItem
+              icon={<Building2 size={20} />}
+              label="Empresas"
+              active={activeView === 'empresas'}
+              onClick={() => setActiveView('empresas')}
+            />
+          )}
+          {isAdmin && (
+            <NavItem
+              icon={<Users size={20} />}
+              label="Usuarios"
+              active={activeView === 'usuarios'}
+              onClick={() => setActiveView('usuarios')}
+            />
+          )}
         </nav>
 
-        <div className="p-4 border-t border-slate-800">
-          <button className="flex items-center space-x-3 text-slate-400 hover:text-white transition">
-            <LogOut size={20} />
-            <span>Sair</span>
+        <div className="p-4 border-t border-slate-800 relative">
+          {/* Dropdown de Opções */}
+          {showProfileMenu && (
+            <div className="absolute bottom-20 left-4 right-4 bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-2">
+              <div className="p-2 space-y-1">
+                <button
+                  onClick={() => {
+                    setActiveView('configuracoes');
+                    setShowProfileMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 p-3 text-slate-300 hover:bg-slate-700 hover:text-white rounded-xl transition-all text-sm font-bold"
+                >
+                  <UserCog size={18} className="text-blue-400" />
+                  Configurações
+                </button>
+
+                <button
+                  onClick={logout}
+                  className="w-full flex items-center gap-3 p-3 text-red-400 hover:bg-red-500/10 rounded-xl transition-all text-sm font-bold"
+                >
+                  <LogOut size={18} />
+                  Sair do Sistema
+                </button>
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={() => setShowProfileMenu(!showProfileMenu)}
+            className={`w-full flex items-center gap-3 p-2 rounded-2xl transition-all border ${
+              showProfileMenu
+                ? 'bg-slate-800 border-slate-700'
+                : 'border-transparent hover:bg-slate-800/50'
+            }`}
+          >
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black shadow-lg">
+              {meData?.username?.charAt(0).toUpperCase() || 'A'}
+            </div>
+
+            <div className="flex-1 text-left overflow-hidden">
+              <p className="text-sm font-black text-white truncate uppercase italic">
+                {(meData?.first_name && meData?.last_name ? `${meData?.first_name} ${meData?.last_name}` : meData?.username) || 'Usuária'}
+              </p>
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">
+                {meData?.is_staff ? 'Administradora' : meData?.nivel_acesso}
+              </p>
+            </div>
+
+            <div
+              className={`text-slate-500 transition-transform duration-300 ${showProfileMenu ? 'rotate-180' : ''}`}
+            >
+              <ChevronUp size={16} />
+            </div>
           </button>
         </div>
       </aside>
@@ -160,6 +258,8 @@ const Dashboard: React.FC = () => {
         {activeView === 'clientes' && <Clients />}
         {activeView === 'produtos' && <Produtos />}
         {activeView === 'empresas' && <Empresas />}
+        {activeView === 'usuarios' && <Usuarios />}
+        {activeView === 'configuracoes' && <Configuracoes />}
       </main>
     </div>
   );

@@ -18,6 +18,27 @@ import ModalNovoDTF from '../components/ModalNovoDTF';
 import ModalEditarDTF from '../components/ModalEditarDTF';
 import ModalDelete from '../components/ModalDelete';
 
+const handleDownloadPDF = async (id: number) => {
+  try {
+    const response = await api.get(`dtf/${id}/gerar_pdf/`, {
+      responseType: 'blob', // ESSENCIAL para receber arquivos
+    });
+
+    // Cria um link temporário na memória do navegador
+    const url = window.URL.createObjectURL(
+      new Blob([response.data], { type: 'application/pdf' })
+    );
+
+    // Abre em uma nova aba de forma segura
+    window.open(url, '_blank');
+
+    // Opcional: Limpar a memória após um tempo
+    setTimeout(() => window.URL.revokeObjectURL(url), 100);
+  } catch (error) {
+    console.error('Erro ao gerar PDF:', error);
+  }
+};
+
 export const DTFTable = () => {
   const [busca, setBusca] = useState('');
   const [ordem, setOrdem] = useState('recente');
@@ -233,8 +254,8 @@ export const DTFTable = () => {
                     </a>
                   )}
                   <a
-                    href={item.layout_arquivo}
-                    target="_blank"
+                    onClick={() => handleDownloadPDF(item.id)}
+                    // target="_blank"
                     className="text-blue-600 text-sm font-bold flex items-center"
                   >
                     <FileText size={16} className="mr-1" /> PDF

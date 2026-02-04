@@ -1,7 +1,11 @@
+from django.conf import settings
+from PIL import Image  # Pip install Pillow
+import os
+from django.contrib.auth.hashers import check_password
 from num2words import num2words
 from django.utils import timezone
 from django.db.models import Count, Sum
-from rest_framework import viewsets, permissions, filters
+from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -25,6 +29,10 @@ class EmpresaViewSet(viewsets.ModelViewSet):
     queryset = Empresa.objects.all()
     serializer_class = EmpresaSerializer
 
+    def get_permissions(self):
+        # Use as classes sem instanciar (sem os parênteses)
+        return [(IsAdminUserCustom | IsFinanceiro)()]
+
 
 class ClienteViewSet(viewsets.ModelViewSet):
     queryset = Cliente.objects.all()
@@ -44,7 +52,7 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         # Use as classes sem instanciar (sem os parênteses)
-        return [(IsAdminUserCustom | IsFinanceiro)()]
+        return [permissions.IsAuthenticated()]
 
     @action(detail=True, methods=['get'])
     def gerar_pdf(self, request, pk=None):
@@ -59,7 +67,11 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
             'valor_extenso': valor_extenso,
             'logo_url': request.build_absolute_uri('/static/img/logo_yasprint.png')
         }
-        return gerar_pdf_from_html('pdfs/orcamento_template.html', context, f'orcamento_{orcamento.id}.pdf')
+
+        tid = orcamento.empresa.template_id
+
+        template_nome = f'pdfs/{tid}.html'
+        return gerar_pdf_from_html(template_nome, context, f'orcamento_{orcamento.id}.pdf')
 
 
 class DTFVendorViewSet(viewsets.ModelViewSet):
@@ -75,14 +87,56 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
             return [(IsAdminUserCustom | IsFinanceiro)()]
         return [(IsAdminUserCustom | IsVendedor)()]
 
+    @action(detail=True, methods=['get'])
+    def gerar_pdf(self, request, pk=None):
+        dtf = self.get_object()
+
+        # Função auxiliar interna para evitar repetição de código (DRY)
+        def processar_imagem(campo_arquivo, sufixo):
+            if not campo_arquivo:
+                return None
+
+            # SEMPRE use .path para abrir com Pillow, nunca .url
+            original_path = campo_arquivo.path
+            with Image.open(original_path) as img:
+                largura, altura = img.size
+                # Lógica: Se estiver em pé, deita
+                if altura > largura:
+                    img = img.rotate(90, expand=True)
+                    temp_name = f'temp_{dtf.id}_{sufixo}.png'
+                    temp_path = os.path.join(settings.MEDIA_ROOT, temp_name)
+                    img.save(temp_path)
+                    return 'file://' + temp_path
+                return 'file://' + original_path
+
+        # Processa as duas imagens de forma independente
+        layout_final = processar_imagem(dtf.layout_arquivo, 'layout')
+        comprovante_final = processar_imagem(
+            dtf.comprovante_pagamento, 'comprovante')
+
+        context = {
+            'dtf': dtf,
+            'layout_path': layout_final,
+            'comprovante_path': comprovante_final
+        }
+
+        return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, f'pedido_{dtf.id}.pdf')
+
 
 class UserMeView(APIView):
-    # Apenas usuários com Token válido podem acessar
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         serializer = UserMeSerializer(request.user)
         return Response(serializer.data)
+
+    def patch(self, request):
+        serializer = UserMeSerializer(
+            request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class DashboardStatsView(APIView):
@@ -111,3 +165,19 @@ class DashboardStatsView(APIView):
             'total_vendas_dtf': total_vendas_dtf,
             'metragem_dtf': total_metragem,
         })
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        current_password = request.data.get("current_password")
+        new_password = request.data.get("new_password")
+
+        if not check_password(current_password, user.password):
+            return Response({"error": "Senha atual incorreta"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(new_password)
+        user.save()
+        return Response({"message": "Senha alterada com sucesso"}, status=status.HTTP_200_OK)

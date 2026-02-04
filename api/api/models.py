@@ -17,6 +17,13 @@ class Usuario(AbstractUser):
 
 
 class Empresa(models.Model):
+    OPCOES_TEMPLATE = [
+        (1, 'Empresa 1'),
+        (2, 'Empresa 2'),
+        (3, 'Empresa 3'),
+    ]
+
+    template_id = models.IntegerField(choices=OPCOES_TEMPLATE, default=1)
     nome = models.CharField(max_length=100)
     cnpj = models.CharField(max_length=18, unique=True)
     endereco = models.CharField(max_length=255, null=True, blank=True)
@@ -61,14 +68,15 @@ class Orcamento(models.Model):
 class ItemOrcamento(models.Model):
     orcamento = models.ForeignKey(
         Orcamento, related_name='itens', on_delete=models.CASCADE)
-    
+
     # Mudamos para SET_NULL para o item NÃO ser deletado
     produto = models.ForeignKey(
         Produto, on_delete=models.SET_NULL, null=True, blank=True)
-    
+
     # Campo para salvar o nome caso o produto seja deletado no futuro
-    produto_nome_no_ato = models.CharField(max_length=255, null=True, blank=True)
-    
+    produto_nome_no_ato = models.CharField(
+        max_length=255, null=True, blank=True)
+
     descricao = models.CharField(max_length=255, null=True, blank=True)
     quantidade = models.PositiveIntegerField(default=1)
     preco_negociado = models.DecimalField(max_digits=10, decimal_places=2)
@@ -82,7 +90,7 @@ class ItemOrcamento(models.Model):
     @property
     def subtotal(self):
         return self.quantidade * self.preco_negociado
-    
+
     @property
     def nome_exibicao(self):
         # Prioriza o nome congelado para o histórico não quebrar
@@ -119,7 +127,7 @@ class DTFVendor(models.Model):
 
         if tot < Decimal('20.00'):
             return Decimal('20.00')
-        
+
         # Agora o cálculo funciona perfeitamente
         return (self.tamanho_cm / cem) * preco_por_metro
 

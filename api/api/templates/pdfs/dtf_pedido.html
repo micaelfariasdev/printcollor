@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      @page {
+        size: A4;
+        margin: 1cm;
+      }
+      body {
+        font-family: 'Helvetica', 'Arial', sans-serif;
+        color: #1e293b;
+        margin: 0;
+        padding: 0;
+        line-height: 1.5;
+      }
+      /* Cabeçalho Estilizado */
+      .header {
+        display: flex;
+        justify-content: space-between;
+        border-bottom: 3px solid #0f172a;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+      }
+      .header-title {
+        float: left;
+      }
+      .header-info {
+        float: right;
+        text-align: right;
+      }
+      .header-title h1 {
+        margin: 0;
+        text-transform: uppercase;
+        font-style: italic;
+        font-weight: 900;
+        color: #2563eb;
+      }
+      .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 10px;
+        font-weight: bold;
+        text-transform: uppercase;
+        background: #f1f5f9;
+      }
+      /* Grid de Informações */
+      .info-grid {
+        width: 100%;
+        margin-bottom: 30px;
+      }
+      .info-box {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 15px;
+        border: 1px solid #e2e8f0;
+      }
+      .label {
+        font-size: 10px;
+        font-weight: 900;
+        color: #64748b;
+        text-transform: uppercase;
+        display: block;
+      }
+      .value {
+        font-size: 16px;
+        font-weight: bold;
+        color: #0f172a;
+      }
+      /* Área do Layout */
+      .layout-preview {
+        width: 100%;
+        height: 300px;
+        background: #f1f5f9;
+        border: 2px dashed #cbd5e1;
+        border-radius: 20px;
+        text-align: center;
+        margin-top: 20px;
+        position: relative;
+      }
+      .layout-preview img {
+        max-height: 280px;
+        max-width: 90%;
+        margin-top: 10px;
+      }
+      /* Footer / Assinatura */
+      .footer {
+        margin-top: 50px;
+        border-top: 1px solid #e2e8f0;
+        padding-top: 20px;
+        font-size: 10px;
+        color: #94a3b8;
+        text-align: center;
+      }
+      .clear {
+        clear: both;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="header-title">
+        <h1>PrintCollor <span style="color: #0f172a">DTF</span></h1>
+        <div class="badge">Pedido #{{ dtf.id }}</div>
+      </div>
+      <div class="header-info">
+        <div class="value">{{ dtf.data_criacao|date:"d/m/Y H:i" }}</div>
+        <div class="label">Data de Emissão</div>
+      </div>
+      <div class="clear"></div>
+    </div>
+
+    <table class="info-grid" cellspacing="10">
+      <tr>
+        <td class="info-box" colspan="2">
+          <span class="label">Cliente</span>
+          <span class="value">{{ dtf.cliente.nome }}</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="info-box" width="50%">
+          <span class="label">Tamanho do Filme</span>
+          <span class="value">{{ dtf.tamanho_cm }} cm (Lineares)</span>
+        </td>
+        <td class="info-box" width="50%">
+          <span class="label">Valor Total</span>
+          <span class="value">R$ {{ dtf.valor_total|floatformat:2 }}</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="info-box">
+          <span class="label">Status de Pagamento</span>
+          <span
+            class="value"
+            style="color: {% if dtf.esta_pago %}#16a34a{% else %}#dc2626{% endif %};"
+          >
+            {% if dtf.esta_pago %}PAGO{% else %}AGUARDANDO PAGAMENTO{% endif %}
+          </span>
+        </td>
+        <td class="info-box">
+          <span class="label">Status de Produção</span>
+          <span class="value">{{ dtf.foi_impresso|upper }}</span>
+        </td>
+      </tr>
+    </table>
+
+    <div style="margin-top: 30px">
+      <span class="label">Visualização do Arquivo</span>
+      <div
+        class="layout-preview"
+        style="
+          max-height: 240px;
+          width: 100%;
+          background: #f1f5f9;
+          border: 2px dashed #cbd5e1;
+          border-radius: 20px;
+          text-align: center;
+          padding: 0;
+          overflow: hidden;
+        "
+      >
+        {% if layout_path %}
+        <img
+          src="{{ layout_path }}"
+          style="
+            width: 100%;
+            max-height: 80%;
+            height: auto;
+            display: block;
+            margin: 5px auto;
+          "
+        />
+        {% else %}
+        <div style="padding: 100px 0; color: #94a3b8; font-weight: bold">
+          SEM IMAGEM DE LAYOUT
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div style="margin-top: 30px">
+      <span class="label">Visualização do comprovante</span>
+      <div
+        class="layout-preview"
+        style="
+          max-height: 240px;
+          width: 100%;
+          background: #f1f5f9;
+          border: 2px dashed #cbd5e1;
+          border-radius: 20px;
+          text-align: center;
+          padding: 0;
+          overflow: hidden;
+        "
+      >
+        {% if comprovante_path %}
+        <img
+          src="{{ comprovante_path }}"
+          style="
+            width: 100%;
+            max-height: 80%;
+            height: auto;
+            display: block;
+            margin: 5px auto;
+          "
+        />
+        {% else %}
+        <div style="padding: 100px 0; color: #94a3b8; font-weight: bold">
+          SEM IMAGEM DE comprovante
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="footer">
+      Este documento é um comprovante interno de produção da PrintCollor.<br />
+      A conferência do layout e metragem é de responsabilidade da usuária
+      emissora.
+    </div>
+  </body>
+</html>

@@ -66,31 +66,53 @@ class OrcamentoSerializer(serializers.ModelSerializer):
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
-    # Campo que existe apenas no Serializer para validação
+    # Mantemos o seu sistema de segurança por código de convite
     codigo_convite = serializers.CharField(write_only=True)
 
     class Meta:
         model = Usuario
-        fields = ['id', 'username', 'password', 'nivel_acesso', 'codigo_convite']
+        # Adicionamos 'first_name' e 'last_name' aos campos
+        fields = [
+            'id', 'username', 'first_name', 'last_name', 
+            'email', 'password', 'nivel_acesso', 
+            'codigo_convite', 'is_staff', 'is_superuser'
+        ]
         extra_kwargs = {
-            'password': {'write_only': True}
+            'password': {'write_only': True},
+            'first_name': {'required': False}, # Opcional para não quebrar cadastros antigos
+            'last_name': {'required': False}
         }
 
     def validate_codigo_convite(self, value):
-        # Defina aqui o seu código predefinido
+        # Sua lógica de código mestre
         CODIGO_MESTRE = "PRINTCOLLOR2026"
-        
         if value != CODIGO_MESTRE:
             raise ValidationError("Código de convite inválido ou expirado.")
         return value
 
     def create(self, validated_data):
-        # Removemos o código de convite antes de salvar no banco
-        validated_data.pop('codigo_convite')
+        # Removemos o código antes de salvar
+        validated_data.pop('codigo_convite', None)
         
-        # Cria o usuário com a senha criptografada
+        # O create_user do Django lida perfeitamente com first_name e last_name
         user = Usuario.objects.create_user(**validated_data)
         return user
+
+    def update(self, instance, validated_data):
+        # Removemos o código de convite se ele vier no PATCH
+        validated_data.pop('codigo_convite', None)
+        
+        # Trata a senha separadamente se ela for alterada
+        password = validated_data.pop('password', None)
+        if password:
+            instance.set_password(password)
+            
+        # Atualiza os outros campos (incluindo nome e sobrenome)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+            
+        instance.save()
+        return instance
 
 
 class DTFVendorSerializer(serializers.ModelSerializer):
@@ -109,5 +131,5 @@ class DTFVendorSerializer(serializers.ModelSerializer):
 class UserMeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
-        # Enviamos apenas o necessário para o front-end
-        fields = ['id', 'username', 'nivel_acesso', 'is_staff', 'is_superuser']
+        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'nivel_acesso', 'is_staff']
+        read_only_fields = ['id', 'nivel_acesso', 'is_staff']

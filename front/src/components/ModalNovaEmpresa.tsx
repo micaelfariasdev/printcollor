@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { X, Save, Loader2, Building2, CreditCard, Mail, Phone, MapPin } from 'lucide-react';
+import {
+  X,
+  Save,
+  Loader2,
+  Building2,
+  CreditCard,
+  Mail,
+  Phone,
+  MapPin,
+  ChevronDown,
+} from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
 
@@ -12,7 +22,12 @@ interface Props {
 const ModalNovaEmpresa: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    nome: '', cnpj: '', email: '', telefone: '', endereco: ''
+    nome: '',
+    cnpj: '',
+    email: '',
+    telefone: '',
+    endereco: '',
+    template_id: 1,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,9 +37,16 @@ const ModalNovaEmpresa: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
       await api.post('empresas/', formData);
       onSuccess();
       onClose();
-      setFormData({ nome: '', cnpj: '', email: '', telefone: '', endereco: '' });
+      setFormData({
+        nome: '',
+        cnpj: '',
+        email: '',
+        telefone: '',
+        endereco: '',
+        template_id: 1,
+      });
     } catch (err) {
-      alert("Erro ao cadastrar empresa. Verifique se o CNPJ é único.");
+      alert('Erro ao cadastrar empresa. Verifique se o CNPJ é único.');
     } finally {
       setLoading(false);
     }
@@ -39,60 +61,160 @@ const ModalNovaEmpresa: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
           <h2 className="text-2xl font-black text-slate-800 uppercase italic">
             Configurar <span className={theme.colors.accentText}>Empresa</span>
           </h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-all"><X size={24} className="text-slate-400" /></button>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-slate-100 rounded-full transition-all"
+          >
+            <X size={24} className="text-slate-400" />
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-4">
           <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Razão Social / Nome Fantasia</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
+              Razão Social / Nome Fantasia
+            </label>
             <div className="relative">
-              <Building2 className="absolute left-4 top-3.5 text-slate-400" size={18} />
-              <input required className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-12 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
-                onChange={(e) => setFormData({...formData, nome: e.target.value})} />
+              <Building2
+                className="absolute left-4 top-3.5 text-slate-400"
+                size={18}
+              />
+              <input
+                required
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-12 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                onChange={(e) =>
+                  setFormData({ ...formData, nome: e.target.value })
+                }
+              />
             </div>
           </div>
 
           <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase ml-1">CNPJ</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
+              CNPJ
+            </label>
             <div className="relative">
-              <CreditCard className="absolute left-4 top-3.5 text-slate-400" size={18} />
-              <input required placeholder="00.000.000/0000-00" className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-12 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
-                onChange={(e) => setFormData({...formData, cnpj: e.target.value})} />
+              <CreditCard
+                className="absolute left-4 top-3.5 text-slate-400"
+                size={18}
+              />
+              <input
+                required
+                placeholder="00.000.000/0000-00"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-12 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                onChange={(e) =>
+                  setFormData({ ...formData, cnpj: e.target.value })
+                }
+              />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Telefone</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
+                Telefone
+              </label>
               <div className="relative">
-                <Phone className="absolute left-4 top-3.5 text-slate-400" size={18} />
-                <input className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-12 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
-                  onChange={(e) => setFormData({...formData, telefone: e.target.value})} />
+                <Phone
+                  className="absolute left-4 top-3.5 text-slate-400"
+                  size={18}
+                />
+                <input
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-12 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                  onChange={(e) =>
+                    setFormData({ ...formData, telefone: e.target.value })
+                  }
+                />
               </div>
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">E-mail</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
+                E-mail
+              </label>
               <div className="relative">
-                <Mail className="absolute left-4 top-3.5 text-slate-400" size={18} />
-                <input type="email" className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-12 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
-                  onChange={(e) => setFormData({...formData, email: e.target.value})} />
+                <Mail
+                  className="absolute left-4 top-3.5 text-slate-400"
+                  size={18}
+                />
+                <input
+                  type="email"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-12 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                />
               </div>
             </div>
           </div>
 
           <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Endereço Completo</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
+              Endereço Completo
+            </label>
             <div className="relative">
-              <MapPin className="absolute left-4 top-3.5 text-slate-400" size={18} />
-              <input className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-12 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
-                onChange={(e) => setFormData({...formData, endereco: e.target.value})} />
+              <MapPin
+                className="absolute left-4 top-3.5 text-slate-400"
+                size={18}
+              />
+              <input
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-12 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                onChange={(e) =>
+                  setFormData({ ...formData, endereco: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
+              Unidade do Template (PDF)
+            </label>
+            <div className="relative">
+              <Building2
+                className="absolute left-4 top-3.5 text-slate-400"
+                size={18}
+              />
+              <select
+                value={formData.template_id}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-12 outline-none focus:ring-2 focus:ring-blue-500 font-bold appearance-none cursor-pointer"
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    template_id: parseInt(e.target.value),
+                  })
+                }
+              >
+                <option value={1}>Empresa 1 - Matriz</option>
+                <option value={2}>Empresa 2 - Filial 01</option>
+                <option value={3}>Empresa 3 - Filial 02</option>
+              </select>
+              {/* Ícone de seta para indicar que é um select */}
+              <div className="absolute right-4 top-4 pointer-events-none text-slate-400">
+                <ChevronDown size={16} />
+              </div>
             </div>
           </div>
 
           <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onClose} className="flex-1 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-100 transition-all">Cancelar</button>
-            <button type="submit" disabled={loading} className={`flex-[2] ${theme.colors.primaryButton} text-white py-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-blue-500/20 disabled:opacity-50 transition-all active:scale-95`}>
-              {loading ? <Loader2 className="animate-spin" size={20}/> : <><Save size={20}/> Salvar Empresa</>}
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-100 transition-all"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className={`flex-[2] ${theme.colors.primaryButton} text-white py-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-blue-500/20 disabled:opacity-50 transition-all active:scale-95`}
+            >
+              {loading ? (
+                <Loader2 className="animate-spin" size={20} />
+              ) : (
+                <>
+                  <Save size={20} /> Salvar Empresa
+                </>
+              )}
             </button>
           </div>
         </form>
