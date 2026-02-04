@@ -91,28 +91,36 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
     def gerar_pdf(self, request, pk=None):
         dtf = self.get_object()
 
-        # Função auxiliar interna para evitar repetição de código (DRY)
         def processar_imagem(campo_arquivo, sufixo):
-            if not campo_arquivo:
+            # 1. Verifica se o campo tem arquivo e se ele existe no HD
+            if not campo_arquivo or not hasattr(campo_arquivo, 'path'):
+                return None
+            
+            if not os.path.exists(campo_arquivo.path):
                 return None
 
-            # SEMPRE use .path para abrir com Pillow, nunca .url
-            original_path = campo_arquivo.path
-            with Image.open(original_path) as img:
-                largura, altura = img.size
-                # Lógica: Se estiver em pé, deita
-                if altura > largura:
-                    img = img.rotate(90, expand=True)
-                    temp_name = f'temp_{dtf.id}_{sufixo}.png'
-                    temp_path = os.path.join(settings.MEDIA_ROOT, temp_name)
-                    img.save(temp_path)
-                    return 'file://' + temp_path
-                return 'file://' + original_path
+            try:
+                original_path = campo_arquivo.path
+                with Image.open(original_path) as img:
+                    largura, altura = img.size
+                    # Se estiver em pé, rotaciona para deitar
+                    if altura > largura:
+                        img = img.rotate(90, expand=True)
+                        temp_name = f'temp_{dtf.id}_{sufixo}.png'
+                        temp_path = os.path.join(settings.MEDIA_ROOT, temp_name)
+                        img.save(temp_path)
+                        # Garante as barras corretas para o motor de PDF
+                        return 'file://' + temp_path.replace('\\', '/')
+                    
+                    return 'file://' + original_path.replace('\\', '/')
+            except Exception as e:
+                # Se a imagem estiver corrompida, não trava o PDF
+                print(f"Erro ao processar imagem {sufixo}: {e}")
+                return None
 
-        # Processa as duas imagens de forma independente
+        # Processa as duas imagens com segurança
         layout_final = processar_imagem(dtf.layout_arquivo, 'layout')
-        comprovante_final = processar_imagem(
-            dtf.comprovante_pagamento, 'comprovante')
+        comprovante_final = processar_imagem(dtf.comprovante_pagamento, 'comprovante')
 
         context = {
             'dtf': dtf,
@@ -121,8 +129,7 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
         }
 
         return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, f'pedido_{dtf.id}.pdf')
-
-
+    
 class UserMeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
