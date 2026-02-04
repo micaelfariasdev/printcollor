@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Instância principal do Axios
 export const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api/',
+  baseURL: 'https://printcollor.micaelfarias.com/api/',
 });
 
 // Interceptor para injetar o Token e gerenciar Refresh
@@ -24,7 +24,7 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem('refresh_token');
       if (refreshToken) {
         try {
-          const { data } = await axios.post('http://127.0.0.1:8000/api/token/refresh/', {
+          const { data } = await axios.post('https://printcollor.micaelfarias.com/api/token/refresh/', {
             refresh: refreshToken,
           });
           localStorage.setItem('access_token', data.access);
@@ -43,7 +43,7 @@ export const useAuth = () => {
   const [user, setUser] = useState<any>(null);
 
   const login = async (credentials: any) => {
-    const { data } = await api.post('token/', credentials);
+    const { data } = await axios.post('https://printcollor.micaelfarias.com/api/token/', credentials);
     localStorage.setItem('access_token', data.access);
     localStorage.setItem('refresh_token', data.refresh);
     setUser({ loggedIn: true });
