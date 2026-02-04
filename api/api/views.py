@@ -90,46 +90,34 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def gerar_pdf(self, request, pk=None):
         dtf = self.get_object()
-
-        def processar_imagem(campo_arquivo, sufixo):
-            # 1. Verifica se o campo tem arquivo e se ele existe no HD
-            if not campo_arquivo or not hasattr(campo_arquivo, 'path'):
-                return None
+        
+        def obter_dados_imagem(campo_arquivo):
+            if not campo_arquivo or not hasattr(campo_arquivo, 'path') or not os.path.exists(campo_arquivo.path):
+                return None, False
             
-            if not os.path.exists(campo_arquivo.path):
-                return None
-
             try:
-                original_path = campo_arquivo.path
-                with Image.open(original_path) as img:
+                path = campo_arquivo.path
+                with Image.open(path) as img:
                     largura, altura = img.size
-                    # Se estiver em pé, rotaciona para deitar
-                    if altura > largura:
-                        img = img.rotate(90, expand=True)
-                        temp_name = f'temp_{dtf.id}_{sufixo}.png'
-                        temp_path = os.path.join(settings.MEDIA_ROOT, temp_name)
-                        img.save(temp_path)
-                        # Garante as barras corretas para o motor de PDF
-                        return 'file://' + temp_path.replace('\\', '/')
-                    
-                    return 'file://' + original_path.replace('\\', '/')
-            except Exception as e:
-                # Se a imagem estiver corrompida, não trava o PDF
-                print(f"Erro ao processar imagem {sufixo}: {e}")
-                return None
+                    # Apenas detecta se precisa girar (altura > largura)
+                    precisa_girar = altura > largura
+                return 'file://' + path.replace('\\', '/'), precisa_girar
+            except Exception:
+                return None, False
 
-        # Processa as duas imagens com segurança
-        layout_final = processar_imagem(dtf.layout_arquivo, 'layout')
-        comprovante_final = processar_imagem(dtf.comprovante_pagamento, 'comprovante')
+        layout_url, girar_layout = obter_dados_imagem(dtf.layout_arquivo)
+        comp_url, girar_comp = obter_dados_imagem(dtf.comprovante_pagamento)
 
         context = {
             'dtf': dtf,
-            'layout_path': layout_final,
-            'comprovante_path': comprovante_final
+            'layout_path': layout_url,
+            'rotate_layout': girar_layout,
+            'comprovante_path': comp_url,
+            'rotate_comprovante': girar_comp,
         }
 
         return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, f'pedido_{dtf.id}.pdf')
-    
+
 class UserMeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
