@@ -1,19 +1,25 @@
-from django.template.loader import render_to_string
-from weasyprint import HTML
-import tempfile
+# api/tools/utils.py
+from django.template.loader import get_template
 from django.http import HttpResponse
+from xhtml2pdf import pisa # Certifique-se de ter dado: pip install xhtml2pdf
+from io import BytesIO
 
-def gerar_pdf_from_html(template_name, context, filename):
-    # 1. Renderiza o HTML com os dados do Django
-    html_string = render_to_string(template_name, context)
+def gerar_pdf_from_html(template_path, context, filename):
+    # 1. Carrega o template e renderiza para HTML
+    template = get_template(template_path)
+    html = template.render(context)
     
-    # 2. Cria o PDF
-    html = HTML(string=html_string)
-    result = html.write_pdf()
-
-    # 3. Prepara a resposta do navegador
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename={filename}'
-    response.write(result)
+    # 2. Prepara o buffer para o PDF
+    result = BytesIO()
     
-    return response
+    # 3. Cria o PDF a partir do HTML
+    # pisa.CreatePDF costuma ser a causa do erro se os parâmetros estiverem fora de ordem
+    pdf = pisa.pisaDocument(BytesIO(html.encode("UTF-8")), result)
+    
+    # 4. Verifica erros e retorna a resposta do Django
+    if not pdf.err:
+        response = HttpResponse(result.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+    
+    return HttpResponse('Erro ao gerar PDF', status=400)
