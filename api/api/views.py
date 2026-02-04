@@ -114,13 +114,13 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
     def gerar_pdf(self, request, pk=None):
         dtf = self.get_object()
         
-        layout_base64 = processar_imagem_base64(dtf.layout_arquivo)
-        comprovante_base64 = processar_imagem_base64(dtf.comprovante_pagamento)
+        # layout_base64 = processar_imagem_base64(dtf.layout_arquivo)
+        # comprovante_base64 = processar_imagem_base64(dtf.comprovante_pagamento)
 
         context = {
             'dtf': dtf,
-            'layout_path': layout_base64,
-            'comprovante_path': comprovante_base64,
+            # 'layout_path': layout_base64,
+            # 'comprovante_path': comprovante_base64,
         }
 
         return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, f'pedido_{dtf.id}.pdf')
