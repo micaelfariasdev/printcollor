@@ -112,6 +112,8 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def gerar_pdf(self, request, pk=None):
+        context = {'teste': 'Olá'}
+        return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, 'teste.pdf')
         dtf = self.get_object()
         
         # layout_base64 = processar_imagem_base64(dtf.layout_arquivo)
