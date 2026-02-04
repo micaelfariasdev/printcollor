@@ -17,14 +17,7 @@ from .serializers import (
     ProdutoSerializer, OrcamentoSerializer, DTFVendorSerializer, UsuarioSerializer,
     UserMeSerializer
 )
-import hashlib
-from functools import partial
 
-# Resolve o bug do MD5 em sistemas com FIPS/OpenSSL rígido
-try:
-    hashlib.md5 = partial(hashlib.md5, usedforsecurity=False)
-except TypeError:
-    pass
 import base64
 from io import BytesIO
 
@@ -134,22 +127,24 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
     def gerar_pdf(self, request, pk=None):
         dtf = self.get_object()
         
-        # 1. Processa as imagens em Base64 para evitar erros de caminho/proxy
-        layout_base64 = processar_imagem_base64(dtf.layout_arquivo)
-        comprovante_base64 = processar_imagem_base64(dtf.comprovante_pagamento)
-
-        context = {
-            'dtf': dtf,
-            'layout_path': layout_base64,
-            'comprovante_path': comprovante_base64,
-        }
-
         try:
-            # 2. Chama a função passando EXATAMENTE 3 argumentos
+            # 1. Processa as imagens (Se falhar, retorna None mas não trava o PDF)
+            layout_base64 = processar_imagem_base64(dtf.layout_arquivo)
+            comprovante_base64 = processar_imagem_base64(dtf.comprovante_pagamento)
+
+            context = {
+                'dtf': dtf,
+                'layout_path': layout_base64,
+                'comprovante_path': comprovante_base64,
+            }
+
+            # 2. Chama a função de PDF
             return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, f'pedido_{dtf.id}.pdf')
+            
         except Exception as e:
-            print(f"ERRO AO GERAR PDF: {e}")
-            return Response({"erro": str(e)}, status=500)
+            # Log detalhado para você ver no terminal
+            print(f"ERRO CRÍTICO NO WEASYPRINT: {str(e)}")
+            return Response({"erro": "Falha na renderização do motor de PDF", "detalhes": str(e)}, status=500)
 
 
 class UserMeView(APIView):
