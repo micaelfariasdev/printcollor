@@ -18,21 +18,29 @@ from .serializers import (
     UserMeSerializer
 )
 from .tools.utils import gerar_pdf_from_html
+import hashlib
+from functools import partial
 
+# Resolve o bug do MD5 em sistemas com FIPS/OpenSSL rígido
+try:
+    hashlib.md5 = partial(hashlib.md5, usedforsecurity=False)
+except TypeError:
+    pass
 import base64
 from io import BytesIO
+
 
 def processar_imagem_base64(campo_arquivo):
     if not campo_arquivo or not os.path.exists(campo_arquivo.path):
         return None
-    
+
     try:
         with Image.open(campo_arquivo.path) as img:
             largura, altura = img.size
             # Lógica: Se estiver em pé, deita
             if altura > largura:
                 img = img.rotate(90, expand=True)
-            
+
             # Converte a imagem para Base64 em memória
             buffered = BytesIO()
             img.save(buffered, format="PNG")
@@ -120,7 +128,7 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
             print(f"ERRO FATAL NO PDF: {e}")
             return Response({"erro": str(e)}, status=500)
         dtf = self.get_object()
-        
+
         # layout_base64 = processar_imagem_base64(dtf.layout_arquivo)
         # comprovante_base64 = processar_imagem_base64(dtf.comprovante_pagamento)
 
@@ -131,6 +139,7 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
         }
 
         return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, f'pedido_{dtf.id}.pdf')
+
 
 class UserMeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
