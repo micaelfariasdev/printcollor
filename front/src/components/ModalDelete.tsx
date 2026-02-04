@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, X, AlertTriangle, Loader2 } from 'lucide-react';
-import { theme } from './Theme';
+import { Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { api } from '../auth/useAuth';
 
 interface Props {

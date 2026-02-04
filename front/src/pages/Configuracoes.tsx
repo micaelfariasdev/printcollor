@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Lock, Save, Loader2, ShieldCheck, KeyRound, BadgeCheck } from 'lucide-react';
+import { Mail, Loader2, ShieldCheck, KeyRound, BadgeCheck } from 'lucide-react';
 import { theme } from '../components/Theme';
 import { api } from '../auth/useAuth';
 
@@ -76,7 +76,7 @@ const Configuracoes: React.FC = () => {
         {/* Lado Esquerdo: Avatar Dinâmico */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm text-center sticky top-8">
-            <div className="w-24 h-24 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] mx-auto mb-4 flex items-center justify-center text-3xl font-black text-white shadow-xl border-4 border-white">
+            <div className="w-24 h-24 bg-linear-to-br from-blue-600 to-indigo-700 rounded-4xl mx-auto mb-4 flex items-center justify-center text-3xl font-black text-white shadow-xl border-4 border-white">
               {(formData.first_name || formData.username).charAt(0).toUpperCase()}
             </div>
             <h3 className="text-xl font-black text-slate-800 uppercase italic truncate">

@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Search, Eye, Plus } from 'lucide-react';
 import { theme } from '../components/Theme';
-import { formatarReal } from '../tools/formatReal';
 import { api } from '../auth/useAuth';
-import { formatarDataHora } from '../tools/dataHora';
 import ModalNovoCliente from '../components/ModalNovoCliente';
 import ModalEditarCliente from '../components/ModalEditarCliente';
 
