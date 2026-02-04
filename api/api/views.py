@@ -19,6 +19,29 @@ from .serializers import (
 )
 from .tools.utils import gerar_pdf_from_html
 
+import base64
+from io import BytesIO
+
+def processar_imagem_base64(campo_arquivo):
+    if not campo_arquivo or not os.path.exists(campo_arquivo.path):
+        return None
+    
+    try:
+        with Image.open(campo_arquivo.path) as img:
+            largura, altura = img.size
+            # Lógica: Se estiver em pé, deita
+            if altura > largura:
+                img = img.rotate(90, expand=True)
+            
+            # Converte a imagem para Base64 em memória
+            buffered = BytesIO()
+            img.save(buffered, format="PNG")
+            img_str = base64.b64encode(buffered.getvalue()).decode()
+            return f"data:image/png;base64,{img_str}"
+    except Exception as e:
+        print(f"Erro Base64: {e}")
+        return None
+
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all()
@@ -91,29 +114,13 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
     def gerar_pdf(self, request, pk=None):
         dtf = self.get_object()
         
-        def obter_dados_imagem(campo_arquivo):
-            if not campo_arquivo or not hasattr(campo_arquivo, 'path') or not os.path.exists(campo_arquivo.path):
-                return None, False
-            
-            try:
-                path = campo_arquivo.path
-                with Image.open(path) as img:
-                    largura, altura = img.size
-                    # Apenas detecta se precisa girar (altura > largura)
-                    precisa_girar = altura > largura
-                return 'file://' + path.replace('\\', '/'), precisa_girar
-            except Exception:
-                return None, False
-
-        layout_url, girar_layout = obter_dados_imagem(dtf.layout_arquivo)
-        comp_url, girar_comp = obter_dados_imagem(dtf.comprovante_pagamento)
+        layout_base64 = processar_imagem_base64(dtf.layout_arquivo)
+        comprovante_base64 = processar_imagem_base64(dtf.comprovante_pagamento)
 
         context = {
             'dtf': dtf,
-            'layout_path': layout_url,
-            'rotate_layout': girar_layout,
-            'comprovante_path': comp_url,
-            'rotate_comprovante': girar_comp,
+            'layout_path': layout_base64,
+            'comprovante_path': comprovante_base64,
         }
 
         return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, f'pedido_{dtf.id}.pdf')
