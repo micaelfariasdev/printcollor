@@ -30,6 +30,19 @@ import base64
 from io import BytesIO
 
 
+from django.template.loader import render_to_string
+from weasyprint import HTML
+from django.http import HttpResponse
+
+def gerar_pdf_from_html(template_name, context, filename):
+    html_string = render_to_string(template_name, context)
+    html = HTML(string=html_string)
+    result = html.write_pdf()
+    response = HttpResponse(result, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
 def processar_imagem_base64(campo_arquivo):
     if not campo_arquivo or not os.path.exists(campo_arquivo.path):
         return None
@@ -120,25 +133,24 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def gerar_pdf(self, request, pk=None):
-        try:
-            context = {'teste': 'Olá'}
-            return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, 'teste.pdf')
-        except Exception as e:
-            # Isso vai fazer o erro aparecer no log do Gunicorn/Runserver
-            print(f"ERRO FATAL NO PDF: {e}")
-            return Response({"erro": str(e)}, status=500)
         dtf = self.get_object()
-
-        # layout_base64 = processar_imagem_base64(dtf.layout_arquivo)
-        # comprovante_base64 = processar_imagem_base64(dtf.comprovante_pagamento)
+        
+        # 1. Processa as imagens em Base64 para evitar erros de caminho/proxy
+        layout_base64 = processar_imagem_base64(dtf.layout_arquivo)
+        comprovante_base64 = processar_imagem_base64(dtf.comprovante_pagamento)
 
         context = {
             'dtf': dtf,
-            # 'layout_path': layout_base64,
-            # 'comprovante_path': comprovante_base64,
+            'layout_path': layout_base64,
+            'comprovante_path': comprovante_base64,
         }
 
-        return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, f'pedido_{dtf.id}.pdf')
+        try:
+            # 2. Chama a função passando EXATAMENTE 3 argumentos
+            return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, f'pedido_{dtf.id}.pdf')
+        except Exception as e:
+            print(f"ERRO AO GERAR PDF: {e}")
+            return Response({"erro": str(e)}, status=500)
 
 
 class UserMeView(APIView):
