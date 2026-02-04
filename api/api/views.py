@@ -112,8 +112,13 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def gerar_pdf(self, request, pk=None):
-        context = {'teste': 'Olá'}
-        return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, 'teste.pdf')
+        try:
+            context = {'teste': 'Olá'}
+            return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, 'teste.pdf')
+        except Exception as e:
+            # Isso vai fazer o erro aparecer no log do Gunicorn/Runserver
+            print(f"ERRO FATAL NO PDF: {e}")
+            return Response({"erro": str(e)}, status=500)
         dtf = self.get_object()
         
         # layout_base64 = processar_imagem_base64(dtf.layout_arquivo)
