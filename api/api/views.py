@@ -17,7 +17,6 @@ from .serializers import (
     ProdutoSerializer, OrcamentoSerializer, DTFVendorSerializer, UsuarioSerializer,
     UserMeSerializer
 )
-from .tools.utils import gerar_pdf_from_html
 import hashlib
 from functools import partial
 
