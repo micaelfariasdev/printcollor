@@ -81,6 +81,9 @@ const Dashboard: React.FC = () => {
       setMeData(response.data);
       setIsAdmin(response.data.is_staff);
       setIsFinanceiro(response.data.nivel_acesso === 'financeiro');
+    })
+    .catch(() => {
+      window.location.href = '/login';
     });
     api.get('/dashboard/').then((response) => {
       setStats(response.data);
@@ -104,7 +107,7 @@ const Dashboard: React.FC = () => {
         />
         <Card
           label="Metros DTF (Mês)"
-          value={`${stats?.metragem_dtf || 0} m`}
+          value={`${stats?.metragem_dtf || 0} cm`}
           color="border-green-600"
         />
         <Card
