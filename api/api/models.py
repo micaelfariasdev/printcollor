@@ -25,7 +25,7 @@ class Empresa(models.Model):
 
     template_id = models.IntegerField(choices=OPCOES_TEMPLATE, default=1)
     nome = models.CharField(max_length=100)
-    cnpj = models.CharField(max_length=18, unique=True, null=True, blank=True)
+    cnpj = models.CharField(max_length=18, null=True, blank=True)
     endereco = models.CharField(max_length=255, null=True, blank=True)
     telefone = models.CharField(max_length=15, null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
