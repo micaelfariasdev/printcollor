@@ -17,35 +17,22 @@ from .serializers import (
     ProdutoSerializer, OrcamentoSerializer, DTFVendorSerializer, UsuarioSerializer,
     UserMeSerializer
 )
+from .tools.utils import gerar_pdf_from_html
 
 import base64
 from io import BytesIO
-from xhtml2pdf import pisa
-
-from django.template.loader import render_to_string
-from weasyprint import HTML
-from django.http import HttpResponse
-
-def gerar_pdf_from_html(template_name, context, filename):
-    html_string = render_to_string(template_name, context)
-    html = HTML(string=html_string)
-    result = html.write_pdf()
-    response = HttpResponse(result, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    
-    return response
 
 def processar_imagem_base64(campo_arquivo):
     if not campo_arquivo or not os.path.exists(campo_arquivo.path):
         return None
-
+    
     try:
         with Image.open(campo_arquivo.path) as img:
             largura, altura = img.size
             # Lógica: Se estiver em pé, deita
             if altura > largura:
                 img = img.rotate(90, expand=True)
-
+            
             # Converte a imagem para Base64 em memória
             buffered = BytesIO()
             img.save(buffered, format="PNG")
@@ -127,44 +114,32 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
     def gerar_pdf(self, request, pk=None):
         dtf = self.get_object()
         
-        try:
-            # 1. Processamento de Imagem (Mantendo sua lógica de Base64)
-            def get_b64(campo):
-                if not campo or not os.path.exists(campo.path):
-                    return None
-                try:
-                    with Image.open(campo.path) as img:
-                        if img.height > img.width:
-                            img = img.rotate(90, expand=True)
-                        buf = BytesIO()
-                        img.save(buf, format="PNG")
-                        return f"data:image/png;base64,{base64.b64encode(buf.getvalue()).decode()}"
-                except: return None
-
-            context = {
-                'dtf': dtf,
-                'layout_path': get_b64(dtf.layout_arquivo),
-                'comprovante_path': get_b64(dtf.comprovante_pagamento),
-            }
-
-            # 2. Renderização do HTML para String
-            html_string = render_to_string('pdfs/dtf_pedido.html', context)
+        def obter_dados_imagem(campo_arquivo):
+            if not campo_arquivo or not hasattr(campo_arquivo, 'path') or not os.path.exists(campo_arquivo.path):
+                return None, False
             
-            # 3. Geração do PDF via pisa (xhtml2pdf + pypdf)
-            result = BytesIO()
-            # Criamos o PDF passando apenas a string codificada e o buffer de saída
-            pdf = pisa.pisaDocument(BytesIO(html_string.encode("UTF-8")), result)
-            
-            if not pdf.err:
-                response = HttpResponse(result.getvalue(), content_type='application/pdf')
-                response['Content-Disposition'] = f'attachment; filename="pedido_{dtf.id}.pdf"'
-                return response
-            
-            return Response({"erro": "Falha na geração do arquivo PDF"}, status=400)
+            try:
+                path = campo_arquivo.path
+                with Image.open(path) as img:
+                    largura, altura = img.size
+                    # Apenas detecta se precisa girar (altura > largura)
+                    precisa_girar = altura > largura
+                return 'file://' + path.replace('\\', '/'), precisa_girar
+            except Exception:
+                return None, False
 
-        except Exception as e:
-            print(f"ERRO NO PDF: {str(e)}")
-            return Response({"erro": str(e)}, status=500)
+        layout_url, girar_layout = obter_dados_imagem(dtf.layout_arquivo)
+        comp_url, girar_comp = obter_dados_imagem(dtf.comprovante_pagamento)
+
+        context = {
+            'dtf': dtf,
+            'layout_path': layout_url,
+            'rotate_layout': girar_layout,
+            'comprovante_path': comp_url,
+            'rotate_comprovante': girar_comp,
+        }
+
+        return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, f'pedido_{dtf.id}.pdf')
 
 class UserMeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
