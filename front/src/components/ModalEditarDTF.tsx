@@ -13,6 +13,7 @@ interface Props {
 const ModalEditarDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, dtfId }) => {
   const [loading, setLoading] = useState(false);
   const [clientes, setClientes] = useState<any[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   
   // Estados do Formulário
   const [cliente, setCliente] = useState('');
@@ -58,6 +59,25 @@ const ModalEditarDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, dtfId }) 
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
   }, [isOpen]);
+
+  // Handlers para Drag and Drop
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && (file.type.includes('image') || file.type === 'application/pdf')) {
+      setNovoComprovante(file);
+    }
+  };
 
   const handleSalvar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,7 +133,6 @@ const ModalEditarDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, dtfId }) 
             </div>
           </div>
 
-          {/* Status em Checkboxes Estilizados */}
           <div className="grid grid-cols-3 gap-3">
             <button type="button" onClick={() => setFoiImpresso(foiImpresso === 'impresso' ? 'pendente' : 'impresso')} className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${foiImpresso === 'impresso' ? 'border-green-500 bg-green-50 text-green-600' : 'border-slate-100 text-slate-400'}`}>
               <CheckCircle2 size={20} /> <span className="text-[10px] font-black uppercase">Impresso</span>
@@ -126,15 +145,14 @@ const ModalEditarDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, dtfId }) 
             </button>
           </div>
 
-          {/* Uploads */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Layout */}
+            {/* Layout com Ctrl+V */}
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Alterar Layout (Ctrl+V)</label>
               <div className="relative h-32 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center overflow-hidden bg-slate-50">
                 <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => setNovoLayout(e.target.files![0])} />
                 {novoLayout ? (
-                  <span className="text-[10px] font-bold text-blue-600 px-4 text-center">{novoLayout.name}</span>
+                  <span className="text-[10px] font-bold text-blue-600 px-4 text-center truncate w-full">{novoLayout.name}</span>
                 ) : (
                   <div className="flex flex-col items-center text-slate-400">
                     <ImageIcon size={24} />
@@ -144,20 +162,31 @@ const ModalEditarDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, dtfId }) 
               </div>
             </div>
 
-            {/* Comprovante */}
+            {/* Comprovante com Drag and Drop */}
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Comprovante de Pagamento</label>
-              <div className="relative h-32 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center overflow-hidden bg-slate-50">
+              <div 
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`relative h-32 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center overflow-hidden transition-all duration-200 ${
+                  isDragging ? 'border-blue-500 bg-blue-50 scale-[1.02]' : 'border-slate-200 bg-slate-50'
+                }`}
+              >
                 <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => setNovoComprovante(e.target.files![0])} />
                 {novoComprovante || urlsAtuais.comprovante ? (
-                  <div className="flex flex-col items-center text-green-600">
+                  <div className="flex flex-col items-center text-green-600 p-4">
                     <FileText size={24} />
-                    <span className="text-[10px] font-bold uppercase mt-1">{novoComprovante ? "Novo Selecionado" : "Já enviado"}</span>
+                    <span className="text-[10px] font-bold uppercase mt-1 text-center truncate w-full">
+                      {novoComprovante ? novoComprovante.name : "Arquivo já enviado"}
+                    </span>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center text-slate-400">
-                    <Upload size={24} />
-                    <span className="text-[10px] font-bold uppercase mt-1">Anexar Comprovante</span>
+                  <div className={`flex flex-col items-center transition-colors ${isDragging ? 'text-blue-500' : 'text-slate-400'}`}>
+                    <Upload size={24} className={isDragging ? 'animate-bounce' : ''} />
+                    <span className="text-[10px] font-bold uppercase mt-1 text-center">
+                      {isDragging ? 'Solte para anexar' : 'Arraste ou clique'}
+                    </span>
                   </div>
                 )}
               </div>
