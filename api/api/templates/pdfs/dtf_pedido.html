@@ -130,85 +130,77 @@
         </td>
       </tr>
     </table>
-    <div
+    <table
       style="
-        margin-top: 15px;
         width: 100%;
-        display: table;
-        border-spacing: 10px;
+        margin-top: 15px;
         table-layout: fixed;
+        border-spacing: 10px;
       "
     >
-      <div style="display: table-cell; vertical-align: top">
-        <span class="label">Visualização do Arquivo</span>
-        <div
-          style="
-            height: 550px; /* Altura aumentada significativamente */
-            background: #f1f5f9;
-            border: 2px dashed #cbd5e1;
-            border-radius: 15px;
-            text-align: center;
-            overflow: hidden;
-            padding: 5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          "
-        >
-          {% if layout_path %}
-          <img
-            src="{{ layout_path }}"
+      <tr>
+        <td style="vertical-align: top">
+          <span class="label">Visualização do Arquivo</span>
+          <div
             style="
-              max-width: 100%;
-              max-height: 100%;
-              width: auto;
-              height: auto;
-              object-fit: contain;
+              height: 500px;
+              background: #f1f5f9;
+              border: 2px dashed #cbd5e1;
+              border-radius: 15px;
+              text-align: center;
+              overflow: hidden;
             "
-          />
-          {% else %}
-          <div style="font-size: 10px; color: #94a3b8; font-weight: bold">
-            SEM IMAGEM
+          >
+            {% if layout_path %}
+            <img
+              src="{{ layout_path }}"
+              style="
+                max-width: 95%;
+                max-height: 480px;
+                width: auto;
+                height: auto;
+                margin-top: 10px;
+              "
+            />
+            {% else %}
+            <div style="padding-top: 200px; color: #94a3b8; font-weight: bold">
+              SEM IMAGEM
+            </div>
+            {% endif %}
           </div>
-          {% endif %}
-        </div>
-      </div>
-
-      <div style="display: table-cell; vertical-align: top">
-        <span class="label">Visualização do Comprovante</span>
-        <div
-          style="
-            height: 550px; /* Mesma altura para manter simetria */
-            background: #f1f5f9;
-            border: 2px dashed #cbd5e1;
-            border-radius: 15px;
-            text-align: center;
-            overflow: hidden;
-            padding: 5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          "
-        >
-          {% if comprovante_path %}
-          <img
-            src="{{ comprovante_path }}"
+        </td>
+        <td style="vertical-align: top">
+          <span class="label">Visualização do Comprovante</span>
+          <div
             style="
-              max-width: 100%;
-              max-height: 100%;
-              width: auto;
-              height: auto;
-              object-fit: contain;
+              height: 500px;
+              background: #f1f5f9;
+              border: 2px dashed #cbd5e1;
+              border-radius: 15px;
+              text-align: center;
+              overflow: hidden;
             "
-          />
-          {% else %}
-          <div style="font-size: 10px; color: #94a3b8; font-weight: bold">
-            SEM COMPROVANTE
+          >
+            {% if comprovante_path %}
+            <img
+              src="{{ comprovante_path }}"
+              style="
+                max-width: 95%;
+                max-height: 480px;
+                width: auto;
+                height: auto;
+                margin-top: 10px;
+              "
+            />
+            {% else %}
+            <div style="padding-top: 200px; color: #94a3b8; font-weight: bold">
+              SEM COMPROVANTE
+            </div>
+            {% endif %}
           </div>
-          {% endif %}
-        </div>
-      </div>
-    </div>
+        </td>
+      </tr>
+    </table>
     <div class="footer">
       Este documento é um comprovante interno de produção da PrintCollor.<br />
       A conferência do layout e metragem é de responsabilidade da usuária
