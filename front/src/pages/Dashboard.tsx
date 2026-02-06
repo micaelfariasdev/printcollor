@@ -85,6 +85,9 @@ const Dashboard: React.FC = () => {
         setIsAdmin(response.data.is_staff);
         setIsFinanceiro(response.data.nivel_acesso === 'financeiro');
         setIsMaquina(response.data.nivel_acesso === 'maquina');
+        if (response.data.nivel_acesso === 'maquina') {
+          setActiveView('dtf');
+        }
       })
       .catch(() => {
         window.location.href = '/login';
@@ -269,7 +272,6 @@ const Dashboard: React.FC = () => {
         </div>
       </aside>
 
-      {/* Content Area */}
       <main className="flex-1 overflow-y-auto p-8">
         <header className="flex justify-between items-center mb-8">
           <h2 className="text-3xl font-bold text-slate-800 capitalize">
@@ -277,14 +279,27 @@ const Dashboard: React.FC = () => {
           </h2>
         </header>
 
-        {activeView === 'dashboard' && <SummaryCards />}
-        {activeView === 'orcamentos' && <Orcamentos />}
+        {/* Apenas DTF e Configurações são permitidos para Máquina */}
         {activeView === 'dtf' && <DTFTable />}
-        {activeView === 'clientes' && <Clients />}
-        {activeView === 'produtos' && <Produtos />}
-        {activeView === 'empresas' && <Empresas />}
-        {activeView === 'usuarios' && <Usuarios />}
         {activeView === 'configuracoes' && <Configuracoes />}
+
+        {/* Abas restritas: Só renderizam se NÃO for máquina */}
+        {!isMaquina && (
+          <>
+            {activeView === 'dashboard' && <SummaryCards />}
+            {activeView === 'orcamentos' && <Orcamentos />}
+            {activeView === 'clientes' && <Clients />}
+            {activeView === 'produtos' && <Produtos />}
+          </>
+        )}
+
+        {/* Abas exclusivas de Admin/Financeiro */}
+        {isAdmin || isFinanceiro ? (
+          <>
+            {activeView === 'empresas' && <Empresas />}
+            {activeView === 'usuarios' && <Usuarios />}
+          </>
+        ) : null}
       </main>
     </div>
   );
