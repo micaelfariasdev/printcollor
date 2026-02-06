@@ -2,6 +2,20 @@ from django.utils import timezone
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from decimal import Decimal
+import os
+
+def path_layout_dtf(instance, filename):
+    # Pega a extensão original (ex: .png, .pdf)
+    ext = filename.split('.')[-1]
+    # Define o nome como id_do_pedido.extensão
+    # Se for um novo pedido (sem ID ainda), usamos 'temp'
+    nome = f"layout_dtf_{instance.id if instance.id else 'novo'}.{ext}"
+    return os.path.join('dtf/layouts/', nome)
+
+def path_comprovante_dtf(instance, filename):
+    ext = filename.split('.')[-1]
+    nome = f"comprovante_dtf_{instance.id if instance.id else 'novo'}.{ext}"
+    return os.path.join('dtf/comprovantes/', nome)
 
 
 class Usuario(AbstractUser):
@@ -105,7 +119,7 @@ class DTFVendor(models.Model):
     )
 
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
-    layout_arquivo = models.FileField(upload_to='layouts/%Y/%m/%d/')
+    layout_arquivo = models.FileField(upload_to=path_layout_dtf)
     tamanho_cm = models.DecimalField(
         max_digits=10, decimal_places=2, help_text="Tamanho em centímetros lineares")
 
@@ -118,7 +132,7 @@ class DTFVendor(models.Model):
     foi_entregue = models.BooleanField(default=False)
 
     comprovante_pagamento = models.ImageField(
-        upload_to='comprovantes/%Y/%m/%d/', null=True, blank=True)
+        upload_to=path_comprovante_dtf, null=True, blank=True)
 
     def valor_total(self):
         # Transforme todos os números em Decimal
@@ -134,3 +148,5 @@ class DTFVendor(models.Model):
 
     def __str__(self):
         return f"{self.cliente.nome} - {self.tamanho_cm}cm ({self.get_foi_impresso_display()})"
+
+
