@@ -84,7 +84,7 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
         # Adicionando o valor por extenso
         valor_extenso = num2words(
             orcamento.valor_total, lang='pt_BR', to='currency')
-        logo_path = os.path.join(settings.STATIC_ROOT, 'img/logo_yasprint.png')
+        logo_path = os.path.join(settings.BASE_DIR, 'static', 'logo-yasprint.png')
         context = {
             'orcamento': orcamento,
             'itens': orcamento.itens.all(),
