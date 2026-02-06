@@ -118,7 +118,7 @@
       <tbody>
         {% for item in itens %}
         <tr>
-          <td>{{ item.descricao }}</td>
+          <td><strong>{{ item.descricao }}</strong></td>
           <td style="text-align: center">UNID</td>
           <td style="text-align: center">{{ item.quantidade|intcomma }}</td>
           <td style="text-align: right">
@@ -129,10 +129,11 @@
         {% endfor %}
       </tbody>
     </table>
-    <p style="text-align: right; font-weight: bold">
-      R$ {{ orcamento.valor_total|intcomma }}
-    </p>
+    
     <div class="declaracao">
+        <strong style="text-align: left; font-weight: bold">
+     VALOR TOTAL R$ {{ orcamento.valor_total|intcomma }}
+    </strong>
       <strong>A EMPRESA: FC INDUSTRIA DE MALHAS DECLARA QUE:</strong>
       <p>
         1. Estão inclusas no valor cotado todas as despesas com mão de obra e,
