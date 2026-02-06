@@ -98,9 +98,9 @@
         <strong>CLIENTE:</strong> {{ orcamento.cliente.nome|default:"ALEPI" }}
       </div>
       <div class="date-row">
-        TERESINA (PI), {{ orcamento.data_criacao|date:"d"|default:"28" }} de {{
-        orcamento.data_criacao|date:"F"|default:"janeiro" }} de {{
-        orcamento.data_criacao|date:"Y"|default:"2026" }}
+        TERESINA (PI), {{ orcamento.data_criacao|date:"d" }} de {{
+        orcamento.data_criacao|date:"m"}} de {{
+        orcamento.data_criacao|date:"Y" }}
       </div>
     </div>
 
