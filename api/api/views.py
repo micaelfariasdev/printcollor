@@ -22,17 +22,18 @@ from .tools.utils import gerar_pdf_from_html
 import base64
 from io import BytesIO
 
+
 def processar_imagem_base64(campo_arquivo):
     if not campo_arquivo or not os.path.exists(campo_arquivo.path):
         return None
-    
+
     try:
         with Image.open(campo_arquivo.path) as img:
             largura, altura = img.size
             # Lógica: Se estiver em pé, deita
             if altura > largura:
                 img = img.rotate(90, expand=True)
-            
+
             # Converte a imagem para Base64 em memória
             buffered = BytesIO()
             img.save(buffered, format="PNG")
@@ -83,12 +84,12 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
         # Adicionando o valor por extenso
         valor_extenso = num2words(
             orcamento.valor_total, lang='pt_BR', to='currency')
-
+        logo_path = os.path.join(settings.STATIC_ROOT, 'img/logo_yasprint.png')
         context = {
             'orcamento': orcamento,
             'itens': orcamento.itens.all(),
             'valor_extenso': valor_extenso,
-            'logo_url': 'file://' + '/static/img/logo_yasprint.png'.replace('\\', '/')
+            'logo_url': f'file://{logo_path}'
         }
 
         tid = orcamento.empresa.template_id
@@ -113,11 +114,11 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def gerar_pdf(self, request, pk=None):
         dtf = self.get_object()
-        
+
         def obter_dados_imagem(campo_arquivo):
             if not campo_arquivo or not hasattr(campo_arquivo, 'path') or not os.path.exists(campo_arquivo.path):
                 return None, False
-            
+
             try:
                 path = campo_arquivo.path
                 with Image.open(path) as img:
@@ -140,6 +141,7 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
         }
 
         return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, f'pedido_{dtf.id}.pdf')
+
 
 class UserMeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
