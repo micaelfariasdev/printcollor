@@ -21,19 +21,23 @@ import ModalDelete from '../components/ModalDelete';
 const handleDownloadPDF = async (id: number) => {
   try {
     const response = await api.get(`dtf/${id}/gerar_pdf/`, {
-      responseType: 'blob', // ESSENCIAL para receber arquivos
+      responseType: 'blob', // Mantém como blob
     });
 
-    // Cria um link temporário na memória do navegador
     const url = window.URL.createObjectURL(
       new Blob([response.data], { type: 'application/pdf' })
     );
 
-    // Abre em uma nova aba de forma segura
-    window.open(url, '_blank');
+    const link = document.createElement('a');
+    link.href = url;
 
-    // Opcional: Limpar a memória após um tempo
-    setTimeout(() => window.URL.revokeObjectURL(url), 100);
+    link.setAttribute('download', `pedido_dtf_${id}.pdf`); 
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    window.URL.revokeObjectURL(url);
   } catch (error) {
     console.error('Erro ao gerar PDF:', error);
   }
