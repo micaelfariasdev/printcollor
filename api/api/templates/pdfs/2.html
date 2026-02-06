@@ -95,12 +95,10 @@
 
     <div class="info-box">
       <div class="info-row">
-        <strong>CLIENTE:</strong> {{ orcamento.cliente.nome|default:"ALEPI" }}
+        <strong>CLIENTE:</strong> {{ orcamento.cliente.nome }}
       </div>
       <div class="date-row">
-        TERESINA (PI), {{ orcamento.data_criacao|date:"d" }} de {{
-        orcamento.data_criacao|date:"m"}} de {{
-        orcamento.data_criacao|date:"Y" }}
+        TERESINA (PI), {{ orcamento.data_criacao|date:"d \d\e F \d\e Y" }}
       </div>
     </div>
 
