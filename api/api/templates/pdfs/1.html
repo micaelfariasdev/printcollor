@@ -24,7 +24,12 @@
         width: 100%;
         margin-bottom: 15px;
       }
-
+      .logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px; /* Espaço entre a logo e o texto */
+      }
       .logo img {
         width: 170px;
         margin-right: 15px; /* Espaço entre a logo e o texto */
@@ -95,7 +100,7 @@
   <body>
     <div class="header">
       <div class="logo">
-        <img src={{logo_url}} />
+        <img src="{{logo_url}}" />
       </div>
       <div class="empresa-info">
         <h1>YASPRINT Comunicação Visual</h1>
@@ -116,7 +121,7 @@
       </div>
     </div>
 
-    <table class="items-table ">
+    <table class="items-table">
       <thead>
         <tr>
           <th colspan="2">Descrição do objeto</th>
