@@ -88,7 +88,7 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
             'orcamento': orcamento,
             'itens': orcamento.itens.all(),
             'valor_extenso': valor_extenso,
-            'logo_url': request.build_absolute_uri('/static/img/logo_yasprint.png')
+            'logo_url': 'file://' + '/static/img/logo_yasprint.png'.replace('\\', '/')
         }
 
         tid = orcamento.empresa.template_id

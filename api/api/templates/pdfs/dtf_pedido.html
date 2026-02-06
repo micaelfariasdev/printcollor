@@ -144,75 +144,61 @@
         </td>
       </tr>
     </table>
-
-    <div style="margin-top: 30px">
-      <span class="label">Visualização do Arquivo</span>
-      <div
-        class="layout-preview"
-        style="
-          max-height: 240px;
-          width: 100%;
-          background: #f1f5f9;
-          border: 2px dashed #cbd5e1;
-          border-radius: 20px;
-          text-align: center;
-          padding: 0;
-          overflow: hidden;
-        "
-      >
-        {% if layout_path %}
-        <img
-          src="{{ layout_path }}"
+    <div style="margin-top: 30px; display: flex; gap: 20px">
+      <div style="flex: 1">
+        <span class="label">Visualização do Arquivo</span>
+        <div
+          class="layout-preview"
           style="
-            width: 100%;
-            max-height: 80%;
-            height: auto;
-            display: block;
-            margin: 5px auto;
+            height: 400px;
+            background: #f1f5f9;
+            border: 2px dashed #cbd5e1;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
           "
-        />
-        {% else %}
-        <div style="padding: 100px 0; color: #94a3b8; font-weight: bold">
-          SEM IMAGEM DE LAYOUT
+        >
+          {% if layout_path %}
+          <img
+            src="{{ layout_path }}"
+            style="max-width: 95%; max-height: 95%; object-fit: contain"
+          />
+          {% else %}
+          <div style="color: #94a3b8; font-weight: bold">
+            SEM IMAGEM DE LAYOUT
+          </div>
+          {% endif %}
         </div>
-        {% endif %}
+      </div>
+
+      <div style="flex: 1">
+        <span class="label">Visualização do Comprovante</span>
+        <div
+          class="layout-preview"
+          style="
+            height: 400px;
+            background: #f1f5f9;
+            border: 2px dashed #cbd5e1;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+          "
+        >
+          {% if comprovante_path %}
+          <img
+            src="{{ comprovante_path }}"
+            style="max-width: 95%; max-height: 95%; object-fit: contain"
+          />
+          {% else %}
+          <div style="color: #94a3b8; font-weight: bold">SEM COMPROVANTE</div>
+          {% endif %}
+        </div>
       </div>
     </div>
-
-    <div style="margin-top: 30px">
-      <span class="label">Visualização do comprovante</span>
-      <div
-        class="layout-preview"
-        style="
-          max-height: 240px;
-          width: 100%;
-          background: #f1f5f9;
-          border: 2px dashed #cbd5e1;
-          border-radius: 20px;
-          text-align: center;
-          padding: 0;
-          overflow: hidden;
-        "
-      >
-        {% if comprovante_path %}
-        <img
-          src="{{ comprovante_path }}"
-          style="
-            width: 100%;
-            max-height: 80%;
-            height: auto;
-            display: block;
-            margin: 5px auto;
-          "
-        />
-        {% else %}
-        <div style="padding: 100px 0; color: #94a3b8; font-weight: bold">
-          SEM IMAGEM DE comprovante
-        </div>
-        {% endif %}
-      </div>
-    </div>
-
     <div class="footer">
       Este documento é um comprovante interno de produção da PrintCollor.<br />
       A conferência do layout e metragem é de responsabilidade da usuária
