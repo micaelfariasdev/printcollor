@@ -13,7 +13,10 @@ interface Props {
 const ModalEditarDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, dtfId }) => {
   const [loading, setLoading] = useState(false);
   const [clientes, setClientes] = useState<any[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
+  
+  // Estados para feedback visual de arraste
+  const [isDraggingLayout, setIsDraggingLayout] = useState(false);
+  const [isDraggingComprovante, setIsDraggingComprovante] = useState(false);
   
   // Estados do Formulário
   const [cliente, setCliente] = useState('');
@@ -46,7 +49,7 @@ const ModalEditarDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, dtfId }) 
     }
   }, [isOpen, dtfId]);
 
-  // Suporte a Ctrl+V para o Layout
+  // Suporte a Ctrl+V para o Layout 
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       if (!isOpen) return;
@@ -60,23 +63,21 @@ const ModalEditarDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, dtfId }) 
     return () => window.removeEventListener('paste', handlePaste);
   }, [isOpen]);
 
-  // Handlers para Drag and Drop
-  const handleDragOver = (e: React.DragEvent) => {
+  // Handlers genéricos para Drag and Drop
+  const onDragOver = (e: React.DragEvent, setter: (val: boolean) => void) => {
     e.preventDefault();
-    setIsDragging(true);
+    setter(true);
   };
 
-  const handleDragLeave = () => {
-    setIsDragging(false);
+  const onDragLeave = (setter: (val: boolean) => void) => {
+    setter(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const onDropFile = (e: React.DragEvent, setterFile: (file: File) => void, setterDrag: (val: boolean) => void) => {
     e.preventDefault();
-    setIsDragging(false);
+    setterDrag(false);
     const file = e.dataTransfer.files?.[0];
-    if (file && (file.type.includes('image') || file.type === 'application/pdf')) {
-      setNovoComprovante(file);
-    }
+    if (file) setterFile(file);
   };
 
   const handleSalvar = async (e: React.FormEvent) => {
@@ -134,6 +135,7 @@ const ModalEditarDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, dtfId }) 
           </div>
 
           <div className="grid grid-cols-3 gap-3">
+            {/* Status Buttons seguem o mesmo estilo do original */}
             <button type="button" onClick={() => setFoiImpresso(foiImpresso === 'impresso' ? 'pendente' : 'impresso')} className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${foiImpresso === 'impresso' ? 'border-green-500 bg-green-50 text-green-600' : 'border-slate-100 text-slate-400'}`}>
               <CheckCircle2 size={20} /> <span className="text-[10px] font-black uppercase">Impresso</span>
             </button>
@@ -146,31 +148,38 @@ const ModalEditarDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, dtfId }) 
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Layout com Ctrl+V */}
+            {/* Layout - Agora com Ctrl+V e Drag and Drop */}
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Alterar Layout (Ctrl+V)</label>
-              <div className="relative h-32 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center overflow-hidden bg-slate-50">
+              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Alterar Layout (Ctrl+V / Arraste)</label>
+              <div 
+                onDragOver={(e) => onDragOver(e, setIsDraggingLayout)}
+                onDragLeave={() => onDragLeave(setIsDraggingLayout)}
+                onDrop={(e) => onDropFile(e, setNovoLayout, setIsDraggingLayout)}
+                className={`relative h-32 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center overflow-hidden transition-all duration-200 ${
+                  isDraggingLayout ? 'border-blue-500 bg-blue-50 scale-[1.02]' : 'border-slate-200 bg-slate-50'
+                }`}
+              >
                 <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => setNovoLayout(e.target.files![0])} />
                 {novoLayout ? (
                   <span className="text-[10px] font-bold text-blue-600 px-4 text-center truncate w-full">{novoLayout.name}</span>
                 ) : (
-                  <div className="flex flex-col items-center text-slate-400">
-                    <ImageIcon size={24} />
+                  <div className={`flex flex-col items-center transition-colors ${isDraggingLayout ? 'text-blue-500' : 'text-slate-400'}`}>
+                    <ImageIcon size={24} className={isDraggingLayout ? 'animate-bounce' : ''} />
                     <span className="text-[10px] font-bold uppercase mt-1">Trocar Imagem</span>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Comprovante com Drag and Drop */}
+            {/* Comprovante - Com Drag and Drop */}
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Comprovante de Pagamento</label>
               <div 
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
+                onDragOver={(e) => onDragOver(e, setIsDraggingComprovante)}
+                onDragLeave={() => onDragLeave(setIsDraggingComprovante)}
+                onDrop={(e) => onDropFile(e, setNovoComprovante, setIsDraggingComprovante)}
                 className={`relative h-32 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center overflow-hidden transition-all duration-200 ${
-                  isDragging ? 'border-blue-500 bg-blue-50 scale-[1.02]' : 'border-slate-200 bg-slate-50'
+                  isDraggingComprovante ? 'border-blue-500 bg-blue-50 scale-[1.02]' : 'border-slate-200 bg-slate-50'
                 }`}
               >
                 <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => setNovoComprovante(e.target.files![0])} />
@@ -182,11 +191,9 @@ const ModalEditarDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, dtfId }) 
                     </span>
                   </div>
                 ) : (
-                  <div className={`flex flex-col items-center transition-colors ${isDragging ? 'text-blue-500' : 'text-slate-400'}`}>
-                    <Upload size={24} className={isDragging ? 'animate-bounce' : ''} />
-                    <span className="text-[10px] font-bold uppercase mt-1 text-center">
-                      {isDragging ? 'Solte para anexar' : 'Arraste ou clique'}
-                    </span>
+                  <div className={`flex flex-col items-center transition-colors ${isDraggingComprovante ? 'text-blue-500' : 'text-slate-400'}`}>
+                    <Upload size={24} className={isDraggingComprovante ? 'animate-bounce' : ''} />
+                    <span className="text-[10px] font-bold uppercase mt-1 text-center">Arraste ou clique</span>
                   </div>
                 )}
               </div>
