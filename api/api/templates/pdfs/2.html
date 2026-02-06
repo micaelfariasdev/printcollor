@@ -1,0 +1,162 @@
+{% load humanize %}
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      @page {
+        size: A4;
+        margin: 1cm;
+      }
+      body {
+        font-family: Arial, sans-serif;
+        font-size: 11px;
+        color: #333;
+        margin: 0;
+        padding: 0;
+        line-height: 1.4;
+      }
+
+      /* Cabeçalho com o Azul Principal */
+      .header {
+        text-align: center;
+        width: 100%;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 20px;
+        text-transform: uppercase;
+        color: #0070c0; /* Azul do PDF */
+        text-decoration: underline;
+      }
+      .header p {
+        margin: 2px 0;
+        color: #000;
+        font-weight: bold;
+      }
+
+      .info-box {
+        width: 100%;
+        margin-bottom: 20px;
+      }
+      .info-row {
+        padding: 6px 0;
+        font-size: 13px;
+      }
+
+      /* Tabela Estilizada como o PDF */
+      .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 15px;
+      }
+      .items-table th {
+        background-color: #0070c0; /* Azul Principal */
+        color: #ffffff;
+        padding: 8px;
+        text-transform: uppercase;
+        border: 1px solid #000;
+      }
+      .items-table td {
+        border: 1px solid #8497b0; /* Bordas suaves */
+        padding: 8px;
+      }
+      /* Linhas azul claro como no modelo */
+      .items-table tbody tr {
+        background-color: #d9e1f2;
+      }
+
+      .total-row {
+        font-weight: bold;
+        background-color: #ffffff !important;
+      }
+
+      .footer {
+        margin-top: 40px;
+        text-align: center;
+      }
+      .signature-line {
+        width: 300px;
+        border-top: 2px solid #000;
+        margin: 0 auto 5px auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>FC INDÚSTRIA DE MALHAS</h1>
+      <p><strong>VITÓRIA F CARVALHO</strong></p>
+      <p>CNPJ N° 28.185.884/0001-15 | INSCRIÇÃO ESTADUAL N° 19.604.393-0</p>
+      <p>AV. ODILON ARAUJO N° 940/SALA C - BAIRRO: MONTE CASTELO</p>
+      <p>CEP: 64017-470 | TERESINA-PI | FONE: (86) 99983-0220</p>
+    </div>
+
+    <div class="info-box">
+      <div class="info-row">
+        <strong>CLIENTE:</strong> {{ orcamento.cliente.nome|default:"ALEPI" }}
+      </div>
+      <div class="date-row">
+        TERESINA (PI), {{ orcamento.data_criacao|date:"d"|default:"28" }} de {{
+        orcamento.data_criacao|date:"F"|default:"janeiro" }} de {{
+        orcamento.data_criacao|date:"Y"|default:"2026" }}
+      </div>
+    </div>
+
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th>Material</th>
+          <th style="width: 50px; text-align: center">Unid</th>
+          <th style="width: 50px; text-align: center">Quant.</th>
+          <th style="width: 100px; text-align: right">V. Unitário</th>
+          <th style="width: 100px; text-align: right">V. Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in itens %}
+        <tr>
+          <td>{{ item.descricao }}</td>
+          <td style="text-align: center">UNID</td>
+          <td style="text-align: center">{{ item.quantidade|intcomma }}</td>
+          <td style="text-align: right">
+            R$ {{ item.preco_negociado|intcomma }}
+          </td>
+          <td style="text-align: right">R$ {{ item.subtotal|intcomma }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4" style="text-align: right; font-weight: bold">
+            VALOR TOTAL
+          </td>
+          <td style="text-align: right; font-weight: bold">
+            R$ {{ orcamento.valor_total|intcomma|default:"1.860,00" }}
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div class="declaracao">
+      <strong>A EMPRESA: FC INDUSTRIA DE MALHAS DECLARA QUE:</strong>
+      <p>
+        1. Estão inclusas no valor cotado todas as despesas com mão de obra e,
+        bem como, todos os tributos e encargos fiscais, sociais, trabalhistas,
+        previdenciários e comerciais e, ainda, os gastos com transporte e
+        acondicionamento dos produtos em embalagens adequadas.
+      </p>
+      <p>2. VALIDADE DA PROPOSTA: 90 (NOVENTA) dias.</p>
+    </div>
+
+    <div class="footer">
+      <div class="signature-box">
+        <div class="signature-line"></div>
+        <strong>VITÓRIA FERREIRA CARVALHO</strong><br />
+        CPF: 041.117.283-24<br />
+        RG: 3609037
+      </div>
+    </div>
+  </body>
+</html>
