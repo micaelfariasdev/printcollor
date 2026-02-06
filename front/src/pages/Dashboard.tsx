@@ -57,6 +57,7 @@ const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isMaquina, setIsMaquina] = useState<boolean>(false);
   const [isFinanceiro, setIsFinanceiro] = useState<boolean>(false);
 
   const titles: Record<View, string> = {
@@ -77,14 +78,17 @@ const Dashboard: React.FC = () => {
 
   const { logout } = useAuth();
   useEffect(() => {
-    api.get('/me/').then((response) => {
-      setMeData(response.data);
-      setIsAdmin(response.data.is_staff);
-      setIsFinanceiro(response.data.nivel_acesso === 'financeiro');
-    })
-    .catch(() => {
-      window.location.href = '/login';
-    });
+    api
+      .get('/me/')
+      .then((response) => {
+        setMeData(response.data);
+        setIsAdmin(response.data.is_staff);
+        setIsFinanceiro(response.data.nivel_acesso === 'financeiro');
+        setIsMaquina(response.data.nivel_acesso === 'maquina');
+      })
+      .catch(() => {
+        window.location.href = '/login';
+      });
     api.get('/dashboard/').then((response) => {
       setStats(response.data);
     });
@@ -128,6 +132,51 @@ const Dashboard: React.FC = () => {
     return <DashboardSkeleton />;
   }
 
+  const menuItems = [
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: <LayoutDashboard size={20} />,
+      roles: ['admin', 'financeiro'], // Removido 'all' para esconder da máquina
+    },
+    {
+      id: 'orcamentos',
+      label: 'Orçamentos',
+      icon: <FileText size={20} />,
+      roles: ['admin', 'financeiro'], // Removido 'all'
+    },
+    {
+      id: 'dtf',
+      label: 'Vendas DTF',
+      icon: <Printer size={20} />,
+      roles: ['all'], // 'all' inclui a máquina
+    },
+    {
+      id: 'clientes',
+      label: 'Clientes',
+      icon: <Users size={20} />,
+      roles: ['admin', 'financeiro'], // Removido 'all'
+    },
+    {
+      id: 'produtos',
+      label: 'Produtos',
+      icon: <Package size={20} />,
+      roles: ['admin', 'financeiro'], // Removido 'all'
+    },
+    {
+      id: 'empresas',
+      label: 'Empresas',
+      icon: <Building2 size={20} />,
+      roles: ['admin', 'financeiro'],
+    },
+    {
+      id: 'usuarios',
+      label: 'Usuários',
+      icon: <Users size={20} />,
+      roles: ['admin'],
+    },
+  ];
+
   return (
     <div className="flex h-screen bg-gray-100 font-sans">
       {/* Sidebar */}
@@ -142,52 +191,23 @@ const Dashboard: React.FC = () => {
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
-          <NavItem
-            icon={<LayoutDashboard size={20} />}
-            label="Dashboard"
-            active={activeView === 'dashboard'}
-            onClick={() => setActiveView('dashboard')}
-          />
-          <NavItem
-            icon={<FileText size={20} />}
-            label="Orçamentos"
-            active={activeView === 'orcamentos'}
-            onClick={() => setActiveView('orcamentos')}
-          />
-          <NavItem
-            icon={<Printer size={20} />}
-            label="Vendas DTF"
-            active={activeView === 'dtf'}
-            onClick={() => setActiveView('dtf')}
-          />
-          <NavItem
-            icon={<Users size={20} />}
-            label="Clientes"
-            active={activeView === 'clientes'}
-            onClick={() => setActiveView('clientes')}
-          />
-          <NavItem
-            icon={<Package size={20} />}
-            label="Produtos"
-            active={activeView === 'produtos'}
-            onClick={() => setActiveView('produtos')}
-          />
-          {(isAdmin || isFinanceiro) && (
-            <NavItem
-              icon={<Building2 size={20} />}
-              label="Empresas"
-              active={activeView === 'empresas'}
-              onClick={() => setActiveView('empresas')}
-            />
-          )}
-          {isAdmin && (
-            <NavItem
-              icon={<Users size={20} />}
-              label="Usuarios"
-              active={activeView === 'usuarios'}
-              onClick={() => setActiveView('usuarios')}
-            />
-          )}
+          {menuItems
+            .filter(
+              (item) =>
+                item.roles.includes('all') ||
+                (item.roles.includes('admin') && isAdmin) ||
+                (item.roles.includes('financeiro') && isFinanceiro) ||
+                (item.roles.includes('maquina') && isMaquina) // Adicionado cargo maquina aqui
+            )
+            .map((item) => (
+              <NavItem
+                key={item.id}
+                icon={item.icon}
+                label={item.label}
+                active={activeView === item.id}
+                onClick={() => setActiveView(item.id as View)}
+              />
+            ))}
         </nav>
 
         <div className="p-4 border-t border-slate-800 relative">
@@ -231,7 +251,9 @@ const Dashboard: React.FC = () => {
 
             <div className="flex-1 text-left overflow-hidden">
               <p className="text-sm font-black text-white truncate uppercase italic">
-                {(meData?.first_name && meData?.last_name ? `${meData?.first_name} ${meData?.last_name}` : meData?.username) || 'Usuária'}
+                {(meData?.first_name && meData?.last_name
+                  ? `${meData?.first_name} ${meData?.last_name}`
+                  : meData?.username) || 'Usuária'}
               </p>
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">
                 {meData?.is_staff ? 'Administradora' : meData?.nivel_acesso}

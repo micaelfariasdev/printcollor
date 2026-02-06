@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Empresa, Cliente, Produto, Orcamento, DTFVendor, Usuario, ItemOrcamento
-from .permissions import IsAdminUserCustom, IsVendedor, IsFinanceiro
+from .permissions import IsAdminUserCustom, IsVendedor, IsFinanceiro, IsMaquina
 from .serializers import (
     EmpresaSerializer, ClienteSerializer,
     ProdutoSerializer, OrcamentoSerializer, DTFVendorSerializer, UsuarioSerializer,
@@ -107,9 +107,20 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
     search_fields = ['cliente__nome', 'layout_arquivo']
 
     def get_permissions(self):
-        if self.action in ['destroy', 'update', 'partial_update']:
-            return [(IsAdminUserCustom | IsFinanceiro)()]
-        return [(IsAdminUserCustom | IsVendedor)()]
+        # Ação de Deletar: Apenas Admin e Vendedor (Máquina fica de fora)
+        if self.action == 'destroy':
+            return [(IsAdminUserCustom | IsVendedor)()]
+        
+        # Ação de Editar (update/partial_update): Admin, Vendedor e Máquina podem
+        if self.action in ['update', 'partial_update']:
+            return [(IsAdminUserCustom | IsVendedor | IsMaquina)()]
+        
+        # Ação de Criar (create): Apenas Admin e Vendedor (Máquina não cria)
+        if self.action == 'create':
+            return [(IsAdminUserCustom | IsVendedor)()]
+
+        # Outras ações (list, retrieve, gerar_pdf): Todos os cargos autorizados podem ver
+        return [(IsAdminUserCustom | IsVendedor | IsMaquina)()]
 
     @action(detail=True, methods=['get'])
     def gerar_pdf(self, request, pk=None):

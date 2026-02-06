@@ -14,3 +14,7 @@ class IsVendedor(permissions.BasePermission):
 class IsFinanceiro(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.nivel_acesso == 'financeiro'
+
+class IsMaquina(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.nivel_acesso == 'maquina'

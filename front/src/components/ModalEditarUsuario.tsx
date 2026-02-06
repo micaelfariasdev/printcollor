@@ -59,6 +59,7 @@ const ModalEditarUsuario = ({ isOpen, onClose, onSuccess, userId }: any) => {
             >
               <option value="vendedor">Vendedor</option>
               <option value="financeiro">Financeiro</option>
+              <option value="maquina">Máquina</option>
             </select>
           </div>
 

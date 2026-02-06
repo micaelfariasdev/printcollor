@@ -8,6 +8,7 @@ class Usuario(AbstractUser):
     NIVEIS = (
         ('vendedor', 'Vendedor'),
         ('financeiro', 'Financeiro'),
+        ('maquina', 'Máquina'),
     )
     nivel_acesso = models.CharField(
         max_length=20, choices=NIVEIS, default='vendedor')
