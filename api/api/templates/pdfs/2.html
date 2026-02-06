@@ -90,18 +90,18 @@
   <body>
     <div class="header">
       <h1>FC INDÚSTRIA DE MALHAS</h1>
-      <p><strong>VITÓRIA F CARVALHO</strong></p>
-      <p>CNPJ N° 28.185.884/0001-15 | INSCRIÇÃO ESTADUAL N° 19.604.393-0</p>
-      <p>AV. ODILON ARAUJO N° 940/SALA C - BAIRRO: MONTE CASTELO</p>
-      <p>CEP: 64017-470 | TERESINA-PI | FONE: (86) 99983-0220</p>
+      <h1>VITÓRIA F CARVALHO</h1>
+      CNPJ N° 28.185.884/0001-15 INSCRIÇÃO ESTADUAL N° 19.604.393-0 CMC Nº
+      489982-2<br />
+      AV. ODILON ARAUJO Nº 940/SALA C<br />
+      BAIRRO: MONTE CASTELO<br />
+      CEP: 64017-470/ TERESINA-PI<br />
+      FONE: (86) 99983-0220
     </div>
 
     <div class="info-box">
       <div class="info-row">
         <strong>CLIENTE:</strong> {{ orcamento.cliente.nome }}
-      </div>
-      <div class="date-row">
-        TERESINA (PI), {{ orcamento.data_criacao|date:"d \d\e F \d\e Y" }}
       </div>
     </div>
 
@@ -128,18 +128,10 @@
         </tr>
         {% endfor %}
       </tbody>
-      <tfoot>
-        <tr>
-          <td colspan="4" style="text-align: right; font-weight: bold">
-            VALOR TOTAL
-          </td>
-          <td style="text-align: right; font-weight: bold">
-            R$ {{ orcamento.valor_total|intcomma|default:"1.860,00" }}
-          </td>
-        </tr>
-      </tfoot>
     </table>
-
+    <p style="text-align: right; font-weight: bold">
+      R$ {{ orcamento.valor_total|intcomma }}
+    </p>
     <div class="declaracao">
       <strong>A EMPRESA: FC INDUSTRIA DE MALHAS DECLARA QUE:</strong>
       <p>
@@ -150,7 +142,9 @@
       </p>
       <p>2. VALIDADE DA PROPOSTA: 90 (NOVENTA) dias.</p>
     </div>
-
+    <div class="date-row">
+      TERESINA (PI), {{ orcamento.data_criacao|date:"d \d\e F \d\e Y" }}
+    </div>
     <div class="footer">
       <div class="signature-box">
         <div class="signature-line"></div>
