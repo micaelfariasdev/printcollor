@@ -21,23 +21,22 @@ import ModalDelete from '../components/ModalDelete';
 const handleDownloadPDF = async (id: number) => {
   try {
     const response = await api.get(`dtf/${id}/gerar_pdf/`, {
-      responseType: 'blob', // Mantém como blob
+      responseType: 'blob',
     });
 
-    const url = window.URL.createObjectURL(
-      new Blob([response.data], { type: 'application/pdf' })
-    );
+    // Criamos o blob
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    
+    // Criamos a URL
+    const url = window.URL.createObjectURL(blob);
 
-    const link = document.createElement('a');
-    link.href = url;
+    // DICA: Para o nome aparecer melhor na aba em alguns navegadores,
+    // você pode tentar anexar um "slug" ao final da URL do blob (truque técnico)
+    // Mas o padrão mais limpo para visualização é apenas:
+    window.open(url, '_blank');
 
-    link.setAttribute('download', `pedido_dtf_${id}.pdf`); 
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    window.URL.revokeObjectURL(url);
+    // Não revogue o objeto imediatamente, ou o PDF some da aba nova!
+    // setTimeout(() => window.URL.revokeObjectURL(url), 5000); 
   } catch (error) {
     console.error('Erro ao gerar PDF:', error);
   }
