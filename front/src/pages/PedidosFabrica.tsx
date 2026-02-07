@@ -1,6 +1,4 @@
 import {
-  FileText,
-  Clock,
   Search,
   Plus,
   Edit3,
@@ -40,7 +38,6 @@ const handleDownloadPDF = async (id: number) => {
 };
 export const PedidosFabrica = () => {
   const [busca, setBusca] = useState('');
-  const [ordem, setOrdem] = useState('recente');
   const [pedidos, setPedidos] = React.useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -70,7 +67,7 @@ export const PedidosFabrica = () => {
     setSelectedItem({ id, nome_descricao });
     setIsDeleteOpen(true);
   };
-
+  const ordem = 'recente';
   const filtrados = pedidos
     .filter(
       (p) =>
