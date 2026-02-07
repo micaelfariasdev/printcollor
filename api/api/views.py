@@ -10,12 +10,12 @@ from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Empresa, Cliente, Produto, Orcamento, DTFVendor, Usuario, ItemOrcamento
+from .models import Empresa, Cliente, Produto, Orcamento, DTFVendor, Usuario, PedidoFabrica
 from .permissions import IsAdminUserCustom, IsVendedor, IsFinanceiro, IsMaquina
 from .serializers import (
     EmpresaSerializer, ClienteSerializer,
     ProdutoSerializer, OrcamentoSerializer, DTFVendorSerializer, UsuarioSerializer,
-    UserMeSerializer
+    UserMeSerializer, PedidoFabricaSerializer
 )
 from .tools.utils import gerar_pdf_from_html
 
@@ -84,7 +84,8 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
         # Adicionando o valor por extenso
         valor_extenso = num2words(
             orcamento.valor_total, lang='pt_BR', to='currency')
-        logo_path = os.path.join(settings.BASE_DIR, 'static', 'logo-yasprint.png')
+        logo_path = os.path.join(
+            settings.BASE_DIR, 'static', 'logo-yasprint.png')
         context = {
             'orcamento': orcamento,
             'itens': orcamento.itens.all(),
@@ -110,11 +111,11 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
         # Ação de Deletar: Apenas Admin e Vendedor (Máquina fica de fora)
         if self.action == 'destroy':
             return [(IsAdminUserCustom | IsVendedor)()]
-        
+
         # Ação de Editar (update/partial_update): Admin, Vendedor e Máquina podem
         if self.action in ['update', 'partial_update']:
             return [(IsAdminUserCustom | IsVendedor | IsMaquina)()]
-        
+
         # Ação de Criar (create): Apenas Admin e Vendedor (Máquina não cria)
         if self.action == 'create':
             return [(IsAdminUserCustom | IsVendedor)()]
@@ -212,3 +213,27 @@ class ChangePasswordView(APIView):
         user.set_password(new_password)
         user.save()
         return Response({"message": "Senha alterada com sucesso"}, status=status.HTTP_200_OK)
+
+
+class PedidoFabricaViewSet(viewsets.ModelViewSet):
+    queryset = PedidoFabrica.objects.all().order_by('-data_criacao')
+    serializer_class = PedidoFabricaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    @action(detail=True, methods=['get'])
+    def gerar_pdf(self, request, pk=None):
+        pedido = self.get_object()
+        # Adicionando o valor por extenso
+
+        logo_path = os.path.join(
+            settings.BASE_DIR, 'static', 'logo-printcollor.png')
+
+        context = {
+            'pedido': pedido,
+            'logo_url': f'file://{logo_path}',
+            'layout_url': f'file://{pedido.layout.path}' if pedido.layout else None,
+            'total': pedido.total_itens(),
+            'now': timezone.now(),
+        }
+
+        return gerar_pdf_from_html('pdfs/pedido.html', context, f'pedido_{pedido.id}.pdf')

@@ -8,7 +8,7 @@ from faker import Faker
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'project.settings')
 django.setup()
 
-from api.models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, DTFVendor, Usuario
+from api.models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, DTFVendor, Usuario, PedidoFabrica
 
 fake = Faker(['pt_BR'])
 
@@ -83,9 +83,46 @@ def popular_banco(n=10):
                 preco_negociado=prod.preco_base * random.uniform(0.9, 1.1)
             )
 
+    print("- Populando PedidoFabrica...")
+    materiais = ['Algodão', 'Poliéster', 'Dry Fit', 'Caneta Plástica', 'Bolsa Ecológica']
+    aplicacoes = ['Silk Screen', 'DTF Têxtil', 'Bordado', 'Sublimação']
+
+    for _ in range(n):
+        # Gerando a grade de tamanhos ou quantidade única aleatoriamente
+        if random.choice([True, False]):
+            # Simula uma grade de roupas
+            detalhes = {
+                'p': random.randint(5, 50),
+                'm': random.randint(5, 50),
+                'g': random.randint(5, 50),
+                'gg': random.randint(2, 20)
+            }
+        else:
+            # Simula brinde com quantidade única
+            detalhes = {'quantidade': random.randint(100, 1000)}
+
+        # Criando o arquivo dummy para o layout da fábrica
+        layout_fabrica = ContentFile(b"layout_fabrica_fake", name=f"layout_fab_{fake.word()}.pdf")
+
+        PedidoFabrica.objects.create(
+            cliente=random.choice(clientes),
+            nome_descricao=f"Pedido {fake.word().capitalize()}",
+            descricao=fake.sentence(),
+            material=random.choice(materiais),
+            aplicacao_arte=random.choice(aplicacoes),
+            layout=layout_fabrica,
+            detalhes_tamanho=detalhes,
+            status=random.choice(['pendente', 'em_producao', 'finalizado']),
+            # O argumento correto é end_date
+            data_entrega=fake.future_datetime(end_date="+15d") 
+        )
+
+    # ... (mantenha o bloco de Orçamentos e o print final)
+
     print("\n✅ Sucesso! Banco de dados populado com:")
     print(f"- {n} Pedidos de DTF")
     print(f"- {n} Orçamentos")
+    print(f"- {n} Pedidos de Fábrica")
 
 if __name__ == '__main__':
     popular_banco(10)

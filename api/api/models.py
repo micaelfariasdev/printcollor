@@ -3,18 +3,28 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from decimal import Decimal
 import os
+import random
+import string
+
+def gerar_codigo(tamanho=6):
+    # Define o conjunto de caracteres: ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
+    caracteres = string.ascii_uppercase + string.digits
+    codigo = ''.join(random.choices(caracteres, k=tamanho))
+    return codigo
 
 def path_layout_dtf(instance, filename):
-    # Pega a extensão original (ex: .png, .pdf)
     ext = filename.split('.')[-1]
-    # Define o nome como id_do_pedido.extensão
-    # Se for um novo pedido (sem ID ainda), usamos 'temp'
-    nome = f"layout_dtf_{instance.id if instance.id else 'novo'}.{ext}"
+    nome = f"layout_dtf_{instance.id if instance.id else gerar_codigo()}.{ext}"
     return os.path.join('dtf/layouts/', nome)
+
+def path_layout(instance, filename):
+    ext = filename.split('.')[-1]
+    nome = f"layout_pedido_{instance.id if instance.id else gerar_codigo()}.{ext}"
+    return os.path.join('pedidos/layouts/', nome)
 
 def path_comprovante_dtf(instance, filename):
     ext = filename.split('.')[-1]
-    nome = f"comprovante_dtf_{instance.id if instance.id else 'novo'}.{ext}"
+    nome = f"comprovante_dtf_{instance.id if instance.id else gerar_codigo()}.{ext}"
     return os.path.join('dtf/comprovantes/', nome)
 
 
@@ -51,8 +61,8 @@ class Empresa(models.Model):
 
 class Cliente(models.Model):
     nome = models.CharField(max_length=100)
-    cpf = models.CharField(max_length=14, unique=True, null=True, blank=True)
-    cnpj = models.CharField(max_length=18, unique=True, null=True, blank=True)
+    cpf = models.CharField(max_length=14, unique=False, null=True, blank=True)
+    cnpj = models.CharField(max_length=18, unique=False, null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
     telefone = models.CharField(max_length=15, null=True, blank=True)
 
@@ -150,3 +160,27 @@ class DTFVendor(models.Model):
         return f"{self.cliente.nome} - {self.tamanho_cm}cm ({self.get_foi_impresso_display()})"
 
 
+class PedidoFabrica(models.Model):
+    STATUS_PEDIDO = (
+        ('pendente', 'Pendente'),
+        ('em_producao', 'Em Produção'),
+        ('finalizado', 'Finalizado'),
+    )
+
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)  
+    nome_descricao = models.CharField(max_length=255)
+    descricao = models.CharField(max_length=255)
+    material = models.CharField(max_length=100)
+    aplicacao_arte = models.CharField(max_length=100)
+    detalhes_tamanho = models.JSONField(default=dict, help_text="Grade de tamanhos ou quantidade única")
+    layout = models.FileField(upload_to=path_layout, null=False, blank=False)
+    data_criacao = models.DateTimeField(auto_now_add=True)
+    data_entrega = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(
+        max_length=20, choices=STATUS_PEDIDO, default='pendente')
+    
+    def total_itens(self):
+        return sum(self.detalhes_tamanho.values())
+
+    def __str__(self):
+        return f"{self.cliente.nome} - {self.descricao} ({self.get_status_display()})"

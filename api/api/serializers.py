@@ -3,7 +3,7 @@ from django.core.files.base import ContentFile
 import io
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from .models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, Usuario, DTFVendor
+from .models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, Usuario, DTFVendor, PedidoFabrica
 
 
 class EmpresaSerializer(serializers.ModelSerializer):
@@ -172,3 +172,13 @@ class UserMeSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'first_name',
                   'last_name', 'email', 'nivel_acesso', 'is_staff']
         read_only_fields = ['id', 'nivel_acesso', 'is_staff']
+
+
+class PedidoFabricaSerializer(serializers.ModelSerializer):
+    # Método para facilitar a exibição do total no frontend
+    total_pecas = serializers.ReadOnlyField(source='total_itens')
+    cliente_nome = serializers.ReadOnlyField(source='cliente.nome')
+
+    class Meta:
+        model = PedidoFabrica
+        fields = '__all__'

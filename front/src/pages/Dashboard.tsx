@@ -21,8 +21,9 @@ import Empresas from './Empresas';
 import Usuarios from './Usuarios';
 import { DashboardSkeleton } from '../components/Skeleton';
 import Configuracoes from './Configuracoes';
+import { PedidosFabrica } from './PedidosFabrica';
 
-type View =
+export type View =
   | 'dashboard'
   | 'orcamentos'
   | 'dtf'
@@ -30,6 +31,7 @@ type View =
   | 'produtos'
   | 'empresas'
   | 'usuarios'
+  | 'pedidos'
   | 'configuracoes';
 
 // --- COMPONENTES DE APOIO ---
@@ -69,6 +71,7 @@ const Dashboard: React.FC = () => {
     empresas: 'Minhas Unidades',
     usuarios: 'Equipe PrintCollor',
     configuracoes: 'Configurações da Conta',
+    pedidos: 'Pedidos',
   };
 
   useEffect(() => {
@@ -141,6 +144,11 @@ const Dashboard: React.FC = () => {
       label: 'Dashboard',
       icon: <LayoutDashboard size={20} />,
       roles: ['admin', 'financeiro'], // Removido 'all' para esconder da máquina
+    },  {
+      id: 'pedidos',
+      label: 'Pedidos',
+      icon: <Package size={20} />,
+      roles: ['all'],
     },
     {
       id: 'orcamentos',
@@ -178,6 +186,7 @@ const Dashboard: React.FC = () => {
       icon: <Users size={20} />,
       roles: ['admin'],
     },
+  
   ];
 
   return (
@@ -281,6 +290,7 @@ const Dashboard: React.FC = () => {
 
         {/* Apenas DTF e Configurações são permitidos para Máquina */}
         {activeView === 'dtf' && <DTFTable />}
+        {activeView === 'pedidos' && <PedidosFabrica />}
         {activeView === 'configuracoes' && <Configuracoes />}
 
         {/* Abas restritas: Só renderizam se NÃO for máquina */}

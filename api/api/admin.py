@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, Usuario, DTFVendor
+from .models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, Usuario, DTFVendor, PedidoFabrica
 
 
 class ItemOrcamentoInline(admin.TabularInline):
@@ -18,3 +18,4 @@ admin.site.register(Cliente)
 admin.site.register(Produto)
 admin.site.register(Usuario)
 admin.site.register(DTFVendor)
+admin.site.register(PedidoFabrica)

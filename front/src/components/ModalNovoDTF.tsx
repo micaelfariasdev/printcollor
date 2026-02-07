@@ -114,7 +114,10 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
           <h2 className="text-2xl font-black text-slate-800 uppercase italic">
             Novo Pedido <span className={theme.colors.accentText}>DTF</span>
           </h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-all">
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-slate-100 rounded-full transition-all"
+          >
             <X size={24} className="text-slate-400" />
           </button>
         </div>
@@ -133,7 +136,9 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
             >
               <option value="">Selecione o cliente...</option>
               {clientes.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome}</option>
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
               ))}
             </select>
           </div>
@@ -153,7 +158,9 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-black text-slate-500 uppercase">Valor Estimado</label>
+              <label className="text-xs font-black text-slate-500 uppercase">
+                Valor Estimado
+              </label>
               <div className="bg-blue-50 text-blue-700 rounded-2xl p-4 font-black text-lg">
                 {formatarReal(calcularTotal())}
               </div>
@@ -162,23 +169,27 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
 
           {/* Upload de Arquivo com Efeito Drag and Drop */}
           <div className="space-y-2">
-            <label className="text-xs font-black text-slate-500 uppercase">Arquivo de Layout</label>
-            <div 
+            <label className="text-xs font-black text-slate-500 uppercase">
+              Arquivo de Layout
+            </label>
+            <div
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               className={`relative border-2 border-dashed rounded-3xl p-8 transition-all duration-200 flex flex-col items-center justify-center text-center cursor-pointer overflow-hidden ${
-                isDragging 
-                  ? 'border-blue-500 bg-blue-50 scale-[1.02]' 
+                isDragging
+                  ? 'border-blue-500 bg-blue-50 scale-[1.02]'
                   : 'border-slate-200 bg-slate-50/50 hover:border-blue-400'
               }`}
             >
               <input
                 type="file"
                 className="absolute inset-0 opacity-0 cursor-pointer"
-                onChange={(e) => setArquivo(e.target.files ? e.target.files[0] : null)}
+                onChange={(e) =>
+                  setArquivo(e.target.files ? e.target.files[0] : null)
+                }
               />
-              
+
               {arquivo ? (
                 <div className="animate-in fade-in zoom-in flex flex-col items-center">
                   <CheckCircle2 size={32} className="text-green-500 mb-2" />
@@ -190,10 +201,21 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
                   </span>
                 </div>
               ) : (
-                <div className={`flex flex-col items-center transition-colors ${isDragging ? 'text-blue-500' : 'text-slate-400'}`}>
-                  <Upload size={32} className={isDragging ? 'animate-bounce text-blue-500' : 'text-blue-500'} />
+                <div
+                  className={`flex flex-col items-center transition-colors ${isDragging ? 'text-blue-500' : 'text-slate-400'}`}
+                >
+                  <Upload
+                    size={32}
+                    className={
+                      isDragging
+                        ? 'animate-bounce text-blue-500'
+                        : 'text-blue-500'
+                    }
+                  />
                   <span className="text-sm font-bold text-slate-600 mt-2">
-                    {isDragging ? 'Solte para anexar' : 'Selecione, arraste ou use Ctrl + V'}
+                    {isDragging
+                      ? 'Solte para anexar'
+                      : 'Selecione, arraste ou use Ctrl + V'}
                   </span>
                   <span className="text-[10px] uppercase mt-1">
                     PDF, TIFF ou Imagens
@@ -233,16 +255,27 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
 };
 
 // Componente auxiliar de ícone para feedback
-const CheckCircle2 = ({ size, className }: { size: number; className: string }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    width={size} height={size} 
-    viewBox="0 0 24 24" fill="none" 
-    stroke="currentColor" strokeWidth="3" 
-    strokeLinecap="round" strokeLinejoin="round" 
+const CheckCircle2 = ({
+  size,
+  className,
+}: {
+  size: number;
+  className: string;
+}) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="3"
+    strokeLinecap="round"
+    strokeLinejoin="round"
     className={className}
   >
-    <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/>
+    <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+    <path d="m9 12 2 2 4-4" />
   </svg>
 );
 
