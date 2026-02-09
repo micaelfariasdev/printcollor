@@ -227,12 +227,16 @@ class PedidoFabricaViewSet(viewsets.ModelViewSet):
 
         logo_path = os.path.join(
             settings.BASE_DIR, 'static', 'logo-printcollor.png')
+        ordem_tamanhos = ["pp","p","m","g","gg","xgg","xxgg"]
+        ordem_bl = ["bl pp","bl p","bl m","bl g","bl gg","bl xgg","bl xxgg"]
 
         context = {
             'pedido': pedido,
             'logo_url': f'file://{logo_path}',
             'layout_url': f'file://{pedido.layout.path}' if pedido.layout else None,
             'total': pedido.total_itens(),
+            "ordem_tamanhos": ordem_tamanhos,
+            "ordem_bl": ordem_bl,
             'now': timezone.now(),
         }
 

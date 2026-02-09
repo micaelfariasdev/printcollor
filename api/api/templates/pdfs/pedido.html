@@ -50,7 +50,8 @@
 
       /* ÁREA DO LAYOUT - OCUPA O RESTO DO ESPAÇO */
       .layout-main {
-        width: 100%;
+        width: 290mm; /* Largura aproximada para ocupar o espaço restante */
+        margin: 0 auto;
         text-align: center;
         border: 1px dashed #cbd5e1;
         border-radius: 12px;
@@ -59,7 +60,7 @@
         align-items: center;
         justify-content: center;
         overflow: hidden;
-        height: 520px;
+        height: 480px;
       }
       
       .layout-img {
@@ -71,7 +72,8 @@
 
       /* Footer Técnico Fixo */
       .specs-footer {
-        display: table;
+        display: flex;
+        gap: 20px;
         width: 100%;
         background: #f1f5f9;
         padding: 10px;
@@ -80,16 +82,17 @@
         margin-top: 10px;
       }
 
+      .specs-footer > *{
+        padding: 0 10px;
+      }
+
       .grid-column { 
-        display: table-cell; 
-        width: 1%; /* Força a coluna a encolher até o limite do conteúdo (fit-content) */
         white-space: nowrap; /* Garante que as caixinhas não quebrem linha antes do necessário */
         vertical-align: top; 
         padding-right: 15px; 
       }
 
       .total-column { 
-        display: table-cell; 
         min-width: 10%; 
         vertical-align: top; 
         text-align: center; 
@@ -98,14 +101,12 @@
       }
 
       .specs-column { 
-        display: table-cell; 
-        /* Sem largura definida, ela herda todo o espaço que sobrou (flexível) */
         vertical-align: top; 
         padding-left: 15px; 
       }
 
-      .section-label { font-size: 8px; font-weight: 900; color: #64748b; text-transform: uppercase; margin-bottom: 3px; display: block; }
-      .spec-text { font-size: 10px; font-weight: bold; color: #1e293b; margin-bottom: 4px; display: block; }
+      .section-label { font-size: 18px; font-weight: 900; color: #64748b; text-transform: uppercase; margin-bottom: 3px; display: block; }
+      .spec-text { font-size: 20px; font-weight: bold; color: #1e293b; margin-bottom: 4px; display: block; }
 
       /* Estilo das caixinhas de tamanho */
       .grid-box {
@@ -117,8 +118,8 @@
         text-align: center;
         min-width: 32px;
       }
-      .grid-label { display: block; font-size: 12px; font-weight: bold; color: #000000; }
-      .grid-value { font-size: 15px; font-weight: 900; color: #2563eb; }
+      .grid-label { display: block; font-size: 16px; font-weight: bold; color: #000000; }
+      .grid-value { font-size: 20px; font-weight: 900; color: #2563eb; }
       
       .total-badge {
         background: #2563eb;
@@ -210,19 +211,19 @@
       <div class="total-column">
         <span class="section-label">Total</span>
         <div class="total-badge">
-          <div style="font-size: 18px; font-weight: 900">{{ total }}</div>
-          <div style="font-size: 7px; font-weight: bold; opacity: 0.8">UNIDADES</div>
+          <div style="font-size: 25px; font-weight: 900">{{ total }}</div>
+          <div style="font-size: 17px; font-weight: bold; opacity: 0.8">UNIDADES</div>
         </div>
       </div>
 
       <div class="specs-column">
         <span class="section-label">Informações</span>
         <span style="font-size: 12px; color: #64748b;">OBSERVAÇÃO:</span>
-        <span class="spec-text" style="font-size: 9px; line-height: 1;">{{ pedido.descricao|upper }}</span>
+        <span class="spec-text">{{ pedido.descricao|upper }}</span>
         <span style="font-size: 12px; color: #64748b;">MATERIAL:</span>
-        <span class="spec-text" style="font-size: 9px; line-height: 1;">{{ pedido.material|upper }}</span>
+        <span class="spec-text">{{ pedido.material|upper }}</span>
         <span style="font-size: 12px; color: #64748b;">APLICAÇÃO:</span>
-        <span class="spec-text" style="font-size: 9px; line-height: 1;">{{ pedido.aplicacao_arte|upper }}</span>
+        <span class="spec-text">{{ pedido.aplicacao_arte|upper }}</span>
       </div>
     </div>
     
