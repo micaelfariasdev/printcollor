@@ -50,7 +50,7 @@
 
       /* ÁREA DO LAYOUT - OCUPA O RESTO DO ESPAÇO */
       .layout-main {
-        width: 290mm; /* Largura aproximada para ocupar o espaço restante */
+        width: 290mm;
         margin: 0 auto;
         text-align: center;
         border: 1px dashed #cbd5e1;
@@ -62,19 +62,19 @@
         overflow: hidden;
         height: 480px;
       }
-      
       .layout-img {
         max-width: 100%;
         max-height: 100%;
-        object-fit: contain; 
-        image-rendering: auto; 
+        object-fit: contain;
       }
 
       /* Footer Técnico Fixo */
       .specs-footer {
         display: flex;
         gap: 20px;
-        width: 100%;
+        width: 285mm;
+        margin: 0 auto;
+
         background: #f1f5f9;
         padding: 10px;
         border-radius: 12px;
@@ -87,13 +87,13 @@
       }
 
       .grid-column { 
-        white-space: nowrap; /* Garante que as caixinhas não quebrem linha antes do necessário */
+        width: 135mm;
         vertical-align: top; 
         padding-right: 15px; 
       }
 
       .total-column { 
-        min-width: 10%; 
+        width: 40mm; 
         vertical-align: top; 
         text-align: center; 
         border-left: 1px solid #cbd5e1; 
@@ -101,11 +101,11 @@
       }
 
       .specs-column { 
+        width: 110mm;
         vertical-align: top; 
-        padding-left: 15px; 
       }
 
-      .section-label { font-size: 18px; font-weight: 900; color: #64748b; text-transform: uppercase; margin-bottom: 3px; display: block; }
+      .section-label { font-size: 12px; font-weight: 900; color: #64748b; text-transform: uppercase; margin-bottom: 3px; display: block; }
       .spec-text { font-size: 20px; font-weight: bold; color: #1e293b; margin-bottom: 4px; display: block; }
 
       /* Estilo das caixinhas de tamanho */
@@ -118,7 +118,7 @@
         text-align: center;
         min-width: 32px;
       }
-      .grid-label { display: block; font-size: 16px; font-weight: bold; color: #000000; }
+      .grid-label { display: block; font-size: 14px; font-weight: bold; color: #000000; }
       .grid-value { font-size: 20px; font-weight: 900; color: #2563eb; }
       
       .total-badge {
