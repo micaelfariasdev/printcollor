@@ -152,6 +152,7 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
               <input
                 required
                 type="number"
+                step="0.1" // Permite 12.1, 12.2, 12.3, etc.
                 placeholder="Ex: 150"
                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
                 onChange={(e) => setTamanhoCm(Number(e.target.value))}

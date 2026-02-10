@@ -4,12 +4,15 @@ import { BrowserRouter, Routes, Route } from 'react-router';
 import Login from './pages/Login.tsx';
 import Dashboard from './pages/Dashboard.tsx';
 import Register from './pages/Register.tsx';
+import { LoadingScreen } from './components/LoadingScreen.tsx';
 
 const root = document.getElementById('root');
 
 if (root) {
   ReactDOM.createRoot(root).render(
     <BrowserRouter>
+      <LoadingScreen />
+
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/login" element={<Login />} />
