@@ -55,10 +55,6 @@ export const DTFTable = () => {
 
     let statusMensagem = '';
 
-    if (!item.esta_pago) {
-      statusMensagem = `\n\n⚠️ *PAGAMENTO PENDENTE*\nPara agilizar a produção, realize o PIX:\n\n🔑 *Chave CNPJ:* 04.811.720/0001-98\n👤 *Favorecido:* D. R. OS SANTOS NETO\n🏦 *Banco:* Banco do Brasil\n\n_Por favor, envie o comprovante após o pagamento._`;
-    }
-
     if (item.esta_pago && item.foi_impresso !== 'impresso') {
       statusMensagem = `\n\n⏳ *PEDIDO EM PRODUÇÃO*\nEstamos cuidando do seu pedido com muito carinho! Assim que estiver pronto para envio, avisaremos por aqui.`;
     }
@@ -69,6 +65,10 @@ export const DTFTable = () => {
 
     if (item.foi_entregue) {
       statusMensagem = `\n\n✅ *PEDIDO ENTREGUE*\nAgradecemos pela preferência! Qualquer dúvida ou novo pedido, estamos à disposição.`;
+    }
+
+    if (!item.esta_pago) {
+      statusMensagem = `\n\n⚠️ *PAGAMENTO PENDENTE*\nPara agilizar a produção, realize o PIX:\n\n🔑 *Chave CNPJ:* 04.811.720/0001-98\n👤 *Favorecido:* D. R. OS SANTOS NETO\n🏦 *Banco:* Banco do Brasil\n\n_Por favor, envie o comprovante após o pagamento._`;
     }
 
     const mensagemFinal = saudacao + detalhes + statusMensagem;
