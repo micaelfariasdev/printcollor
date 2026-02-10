@@ -260,7 +260,6 @@ class PedidoFabricaViewSet(viewsets.ModelViewSet):
             and not ("a" in t or "anos" in t)
         ]
 
-        print(grade_adulto, grade_bl, grade_outros)
 
         context = {
             'pedido': pedido,
