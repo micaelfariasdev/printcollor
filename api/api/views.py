@@ -227,16 +227,50 @@ class PedidoFabricaViewSet(viewsets.ModelViewSet):
 
         logo_path = os.path.join(
             settings.BASE_DIR, 'static', 'logo-printcollor.png')
-        ordem_tamanhos = ["pp","p","m","g","gg","xgg","xxgg"]
-        ordem_bl = ["bl pp","bl p","bl m","bl g","bl gg","bl xgg","bl xxgg"]
+        ordem_tamanhos = ["pp", "p", "m", "g", "gg", "xgg", "xxgg"]
+        ordem_bl = ["bl pp", "bl p", "bl m",
+                    "bl g", "bl gg", "bl xgg", "bl xxgg"]
+
+        detalhes = {k.lower(): v for k, v in pedido.detalhes_tamanho.items()}
+
+        grade_adulto = [
+            {"tamanho": t, "qtd": detalhes[t]}
+            for t in ordem_tamanhos
+            if detalhes.get(t, 0) > 0
+        ]
+
+        grade_bl = [
+            {"tamanho": t, "qtd": detalhes[t]}
+            for t in ordem_bl
+            if detalhes.get(t, 0) > 0
+        ]
+
+        grade_inf = [
+            {"tamanho": t, "qtd": q}
+            for t, q in detalhes.items()
+            if q > 0 and ("a" in t or "anos" in t)
+        ]
+
+        grade_outros = [
+            {"tamanho": t, "qtd": q}
+            for t, q in detalhes.items()
+            if q > 0
+            and t not in ordem_tamanhos
+            and t not in ordem_bl
+            and not ("a" in t or "anos" in t)
+        ]
+
+        print(grade_adulto, grade_bl, grade_outros)
 
         context = {
             'pedido': pedido,
             'logo_url': f'file://{logo_path}',
             'layout_url': f'file://{pedido.layout.path}' if pedido.layout else None,
             'total': pedido.total_itens(),
-            "ordem_tamanhos": ordem_tamanhos,
-            "ordem_bl": ordem_bl,
+            'grade_adulto': grade_adulto,
+            'grade_bl': grade_bl,
+            'grade_inf': grade_inf,
+            'grade_outros': grade_outros,
             'now': timezone.now(),
         }
 

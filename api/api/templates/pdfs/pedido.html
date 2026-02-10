@@ -23,7 +23,7 @@
         transform: scale(0.98); /* Reduz um pouco o conteúdo para evitar cortes */
         transform-origin: top left;
       }
-
+      
       /* Header Fixo */
       .header-container {
         display: table;
@@ -44,7 +44,7 @@
         border-left: 2px solid #2563eb;
       }
       .date-section { display: table-cell; vertical-align: middle; text-align: right; width: 30%; }
-
+      
       .client-name { margin: 0; font-size: 18px; color: #1e293b; font-weight: 900; text-transform: uppercase; }
       .order-subtitle { font-size: 11px; color: #2563eb; font-weight: bold; }
 
@@ -67,14 +67,14 @@
         max-height: 480px;
         object-fit: contain;
       }
-
+      
       /* Footer Técnico Fixo */
       .specs-footer {
         display: flex;
         gap: 20px;
         width: 285mm;
         margin: 0 auto;
-
+        
         background: #f1f5f9;
         padding: 10px;
         border-radius: 12px;
@@ -85,13 +85,13 @@
       .specs-footer > *{
         padding: 0 10px;
       }
-
+      
       .grid-column { 
         width: 135mm;
         vertical-align: top; 
         padding-right: 15px; 
       }
-
+      
       .total-column { 
         width: 40mm; 
         vertical-align: top; 
@@ -99,14 +99,14 @@
         border-left: 1px solid #cbd5e1; 
         border-right: 1px solid #cbd5e1; 
       }
-
+      
       .specs-column { 
         width: 110mm;
         vertical-align: top; 
       }
 
       .section-label { font-size: 12px; font-weight: 900; color: #64748b; text-transform: uppercase; margin-bottom: 3px; display: block; }
-      .spec-text { font-size: 20px; font-weight: bold; color: #1e293b; margin-bottom: 4px; display: block; }
+      .spec-text { font-size: 16px; font-weight: bold; color: #1e293b; margin-bottom: 4px; display: block; }
 
       /* Estilo das caixinhas de tamanho */
       .grid-box {
@@ -152,7 +152,7 @@
         </div>
       </div>
     </div>
-
+    
     <div class="layout-main">
       {% if pedido.layout %}
       <img src="{{ layout_url }}" class="layout-img" />
@@ -166,46 +166,28 @@
         <span class="section-label">Grade de Quantidades</span>
         
         <div style="margin-bottom: 4px;">
-          {% for tamanho, qtd in pedido.detalhes_tamanho.items %}
-            {% with t=tamanho|lower %}
-            {% if "bl" not in t and "a" not in t and t.0 not in "0123456789" %}
-                <div class="grid-box"><span class="grid-label">{{ tamanho|upper }}</span><span class="grid-value">{{ qtd }}</span></div>
-              {% endif %}
-              {% endwith %}
+          {% for item in grade_adulto %}
+          <div class="grid-box" style="border-color: #fef3c7;"><span class="grid-label">{{ item.tamanho|upper }}</span><span class="grid-value">{{ item.qtd }}</span></div>
               {% endfor %}
             </div>
-
+            
             <div style="margin-bottom: 4px;">
-              {% for tamanho, qtd in pedido.detalhes_tamanho.items %}
-            {% if "bl" in tamanho|lower %}
-            <div class="grid-box" style="border-color: #fbcfe8;"><span class="grid-label">{{ tamanho|upper }}</span><span class="grid-value">{{ qtd }}</span></div>
-            {% endif %}
+              {% for item in grade_bl %}
+              <div class="grid-box" style="border-color: #fef3c7;"><span class="grid-label">{{ item.tamanho|upper }}</span><span class="grid-value">{{ item.qtd }}</span></div>
           {% endfor %}
         </div>
         
         <div style="margin-bottom: 4px;">
-          {% for tamanho, qtd in pedido.detalhes_tamanho.items %}
-          {% with t=tamanho|lower %}
-              {% if "bl" not in t %}
-                {% if "a" in t or "anos" in t %}
-                {% if t.0 in "0123456789" %}
-                      <div class="grid-box" style="border-color: #fef3c7;"><span class="grid-label">{{ tamanho|upper }}</span><span class="grid-value">{{ qtd }}</span></div>
-                  {% endif %}
-                  {% endif %}
-              {% endif %}
-              {% endwith %}
+          {% for item in grade_inf %}
+                      <div class="grid-box" style="border-color: #fef3c7;"><span class="grid-label">{{ item.tamanho|upper }}</span><span class="grid-value">{{ item.qtd }}</span></div>
           {% endfor %}
         </div>
-
-        <div>
-          {% for tamanho, qtd in pedido.detalhes_tamanho.items %}
-          {% with t=tamanho|lower %}
-              {% if t.0 in "3456" and "a" not in t and "bl" not in t %}
-                <div class="grid-box" style="border-color: #cbd5e1;"><span class="grid-label">{{ tamanho|upper }}</span><span class="grid-value">{{ qtd }}</span></div>
-                {% endif %}
-            {% endwith %}
-            {% endfor %}
-          </div>
+        <div style="margin-bottom: 4px;">
+          {% for item in grade_outros %}
+          <div class="grid-box" style="border-color: #fef3c7;"><span class="grid-label">{{ item.tamanho|upper }}</span><span class="grid-value">{{ item.qtd }}</span></div>
+          {% endfor %}
+        </div>
+        
       </div>
       
       <div class="total-column">
