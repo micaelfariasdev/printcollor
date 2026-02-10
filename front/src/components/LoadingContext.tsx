@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 
-const LoadingContext = createContext({ loading: false, setLoading: (v: boolean) => {} });
+const LoadingContext = createContext({ loading: false, setLoading: (_v: boolean) => {} });
 
 export const LoadingProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(false);

@@ -7,6 +7,7 @@ import {
   Plus,
   Edit3,
   Trash2,
+  MessageCircle,
 } from 'lucide-react';
 import { theme } from '../components/Theme';
 import React, { useState } from 'react';
@@ -24,19 +25,16 @@ const handleDownloadPDF = async (id: number) => {
       responseType: 'blob',
     });
 
-    // Criamos o blob
     const blob = new Blob([response.data], { type: 'application/pdf' });
-    
-    // Criamos a URL
+
     const url = window.URL.createObjectURL(blob);
 
-    // DICA: Para o nome aparecer melhor na aba em alguns navegadores,
     // você pode tentar anexar um "slug" ao final da URL do blob (truque técnico)
     // Mas o padrão mais limpo para visualização é apenas:
     window.open(url, '_blank');
 
     // Não revogue o objeto imediatamente, ou o PDF some da aba nova!
-    // setTimeout(() => window.URL.revokeObjectURL(url), 5000); 
+    // setTimeout(() => window.URL.revokeObjectURL(url), 5000);
   } catch (error) {
     console.error('Erro ao gerar PDF:', error);
   }
@@ -51,7 +49,34 @@ export const DTFTable = () => {
   const [mockData, setData] = React.useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // 2. Novos estados para Edição e Delete
+  const handleCopiarMensagem = (item: any) => {
+    const saudacao = 'Olá! Seguem os detalhes do seu pedido:';
+    const detalhes = `\n\n📌 *Pedido #* ${item.id}\n📏 *Tamanho:* ${item.tamanho_cm}cm\n💰 *Valor:* ${formatarReal(item.valor_total)}`;
+
+    let statusMensagem = '';
+
+    if (!item.esta_pago) {
+      statusMensagem = `\n\n⚠️ *PAGAMENTO PENDENTE*\nPara agilizar a produção, realize o PIX:\n\n🔑 *Chave CNPJ:* 04.811.720/0001-98\n👤 *Favorecido:* D. R. OS SANTOS NETO\n🏦 *Banco:* Banco do Brasil\n\n_Por favor, envie o comprovante após o pagamento._`;
+    }
+
+    if (item.esta_pago && item.foi_impresso !== 'impresso') {
+      statusMensagem = `\n\n⏳ *PEDIDO EM PRODUÇÃO*\nEstamos cuidando do seu pedido com muito carinho! Assim que estiver pronto para envio, avisaremos por aqui.`;
+    }
+
+    if (item.foi_impresso === 'impresso' && !item.foi_entregue) {
+      statusMensagem = `\n\n🚚 *PEDIDO IMPRESSO*\nPronto para retirada!\nAgradecemos pela paciência e preferência.`;
+    }
+
+    if (item.foi_entregue) {
+      statusMensagem = `\n\n✅ *PEDIDO ENTREGUE*\nAgradecemos pela preferência! Qualquer dúvida ou novo pedido, estamos à disposição.`;
+    }
+
+    const mensagemFinal = saudacao + detalhes + statusMensagem;
+
+    navigator.clipboard.writeText(mensagemFinal);
+    alert('Mensagem formatada copiada!');
+  };
+
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<{
@@ -234,6 +259,13 @@ export const DTFTable = () => {
                 )}
               </div>
               <div className="flex gap-1">
+                <button
+                  onClick={() => handleCopiarMensagem(item)}
+                  title="Copiar mensagem para cliente"
+                  className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition"
+                >
+                  <MessageCircle size={16} />
+                </button>
                 <button
                   onClick={() => handleEdit(item.id)}
                   className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition"
