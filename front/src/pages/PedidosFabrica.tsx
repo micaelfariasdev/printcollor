@@ -15,6 +15,7 @@ import { formatarDataHora } from '../tools/dataHora';
 import ModalDelete from '../components/ModalDelete';
 import ModalNovoPedidoFabrica from '../components/ModalNovoPedidoFabrica';
 import ModalEditarPedidoFabrica from '../components/ModalEditarPedidoFabrica';
+import { FilterToggle } from '../components/FilterToggle';
 
 const handleDownloadPDF = async (id: number) => {
   try {
@@ -42,7 +43,9 @@ export const PedidosFabrica = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-
+  const [filtroPendente, setFiltroPendente] = useState(true);
+  const [filtroProducao, setFiltroProducao] = useState(true);
+  const [filtroFinalizado, setFiltroFinalizado] = useState(true);
   const [selectedItem, setSelectedItem] = useState<{
     id: number | null;
     nome_descricao: string;
@@ -63,17 +66,42 @@ export const PedidosFabrica = () => {
     setIsEditOpen(true);
   };
 
+  const handleTrocarStatusRapido = async (id: number, statusAtual: string) => {
+    const proximosStatus: { [key: string]: string } = {
+      pendente: 'em_producao',
+      em_producao: 'finalizado',
+      finalizado: 'pendente',
+    };
+
+    const novoStatus = proximosStatus[statusAtual] || 'pendente';
+
+    try {
+      await api.patch(`pedidos/${id}/`, { status: novoStatus });
+      carregarDados(); // Recarrega a lista para refletir a mudança
+    } catch (error) {
+      console.error('Erro ao trocar status:', error);
+      alert('Não foi possível atualizar o status agora.');
+    }
+  };
+
   const handleDelete = (id: number, nome_descricao: string) => {
     setSelectedItem({ id, nome_descricao });
     setIsDeleteOpen(true);
   };
   const ordem = 'recente';
   const filtrados = pedidos
-    .filter(
-      (p) =>
+    .filter((p) => {
+      const bateBusca =
         p.cliente_nome?.toLowerCase().includes(busca.toLowerCase()) ||
-        p.nome_descricao?.toLowerCase().includes(busca.toLowerCase())
-    )
+        p.nome_descricao?.toLowerCase().includes(busca.toLowerCase());
+
+      const bateStatus =
+        (p.status === 'pendente' && filtroPendente) ||
+        (p.status === 'em_producao' && filtroProducao) ||
+        (p.status === 'finalizado' && filtroFinalizado);
+
+      return bateBusca && bateStatus;
+    })
     .sort((a, b) => {
       if (ordem === 'recente')
         return (
@@ -96,7 +124,29 @@ export const PedidosFabrica = () => {
             onChange={(e) => setBusca(e.target.value)}
           />
         </div>
+        <div className="flex flex-wrap items-center gap-2 mt-4">
+          <FilterToggle
+            label="Pendentes"
+            active={filtroPendente}
+            onClick={() => setFiltroPendente(!filtroPendente)}
+          />
+          <FilterToggle
+            label="Em Produção"
+            active={filtroProducao}
+            onClick={() => setFiltroProducao(!filtroProducao)}
+          />
+          <FilterToggle
+            label="Finalizados"
+            active={filtroFinalizado}
+            onClick={() => setFiltroFinalizado(!filtroFinalizado)}
+          />
 
+          <div className="h-6 w-px bg-slate-200 mx-2 hidden sm:block" />
+
+          <span className="text-[10px] font-black text-slate-400 uppercase italic">
+            {filtrados.length} Pedidos encontrados
+          </span>
+        </div>
         <button
           className={`${theme.colors.primaryButton} text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold shadow-md transition-all active:scale-95`}
           onClick={() => setIsModalOpen(true)}
@@ -129,10 +179,15 @@ export const PedidosFabrica = () => {
                   </span>
                 </div>
               )}
-              {/* Badge de Status flutuante */}
-              <div className="absolute top-3 right-3">
+
+              {/* Badge de Status Interativa */}
+              <button
+                onClick={() => handleTrocarStatusRapido(item.id, item.status)}
+                title="Clique para mudar o status"
+                className="absolute top-3 right-3 z-10"
+              >
                 <span
-                  className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase shadow-sm ${
+                  className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase shadow-md transition-all active:scale-90 hover:brightness-110 cursor-pointer ${
                     item.status === 'finalizado'
                       ? 'bg-green-500 text-white'
                       : item.status === 'em_producao'
@@ -142,7 +197,7 @@ export const PedidosFabrica = () => {
                 >
                   {item.status.replace('_', ' ')}
                 </span>
-              </div>
+              </button>
             </div>
 
             {/* Conteúdo do Card */}

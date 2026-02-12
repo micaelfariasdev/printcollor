@@ -22,6 +22,7 @@ import Usuarios from './Usuarios';
 import { DashboardSkeleton } from '../components/Skeleton';
 import Configuracoes from './Configuracoes';
 import { PedidosFabrica } from './PedidosFabrica';
+import logo from '../assets/logo-printcollor.png'; 
 
 export type View =
   | 'dashboard'
@@ -144,7 +145,8 @@ const Dashboard: React.FC = () => {
       label: 'Dashboard',
       icon: <LayoutDashboard size={20} />,
       roles: ['admin', 'financeiro'], // Removido 'all' para esconder da máquina
-    },  {
+    },
+    {
       id: 'pedidos',
       label: 'Pedidos',
       icon: <Package size={20} />,
@@ -186,7 +188,6 @@ const Dashboard: React.FC = () => {
       icon: <Users size={20} />,
       roles: ['admin'],
     },
-  
   ];
 
   return (
@@ -195,11 +196,25 @@ const Dashboard: React.FC = () => {
       <aside
         className={`w-64 ${theme.colors.sidebarBg} text-white flex flex-col`}
       >
-        <div className="p-6 text-2xl font-bold border-b border-slate-800">
-          {theme.appName}{' '}
-          <span className={theme.colors.accentText}>
-            {meData?.is_staff ? 'Administradora' : meData?.nivel_acesso}
-          </span>
+        <div className="p-6 border-b border-slate-800 flex flex-col gap-2">
+          <div className="flex items-center flex-wrap gap-3">
+            {/* Renderização da Logo */}
+            <img
+              src={logo}
+              alt="PrintCollor Logo"
+              className="w-full h-23 object-cover drop-shadow-[0_0_0_4px_white]"
+            />
+
+            <span
+              className={`text-xs font-black uppercase italic tracking-widest ${theme.colors.accentText}`}
+            >
+              {meData?.is_staff ? 'Administradora' : meData?.nivel_acesso}
+            </span>
+          </div>
+
+          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
+            Painel de Controle {theme.appVersion}
+          </div>
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
