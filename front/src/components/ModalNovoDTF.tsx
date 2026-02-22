@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, Save, Loader2, Ruler, User } from 'lucide-react';
+import { X, Upload, Save, Loader2, Ruler } from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
 import { formatarReal } from '../tools/formatReal';

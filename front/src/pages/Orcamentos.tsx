@@ -1,5 +1,5 @@
-import React, { use, useEffect, useState } from 'react';
-import { Search, Download, Eye, Plus, Edit } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Search, Download, Plus, Edit } from 'lucide-react';
 import { theme } from '../components/Theme';
 import { formatarReal } from '../tools/formatReal';
 import { api } from '../auth/useAuth';

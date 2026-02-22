@@ -1,4 +1,4 @@
-export const TriStateFilter = ({ label, state, onClick, colors }: any) => {
+export const TriStateFilter = ({ label, state, onClick }: any) => {
   const configs: any = {
     todos: { bg: 'bg-slate-100 text-slate-500', icon: '⚪' },
     sim: { bg: 'bg-green-500 text-white', icon: '✅' },

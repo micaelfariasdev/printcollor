@@ -9,10 +9,7 @@ import {
   Trash2,
   MessageCircle,
   Wallet,
-  XCircle,
-  RotateCcw,
 } from 'lucide-react';
-import { theme } from '../components/Theme';
 import React, { useState, useEffect } from 'react';
 import { api } from '../auth/useAuth';
 import { formatarDataHora } from '../tools/dataHora';
@@ -42,7 +39,7 @@ const handleDownloadPDF = async (id: number, client: string) => {
 
 export const DTFTable = () => {
   const [busca, setBusca] = useState('');
-  const [ordem, setOrdem] = useState('recente');
+  // const [ordem, setOrdem] = useState('recente');
 
   const [mockData, setData] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -132,13 +129,11 @@ export const DTFTable = () => {
       return bateBusca && batePago && bateImpresso && bateEntregue;
     })
     .sort((a, b) => {
-      if (ordem === 'recente')
-        return (
-          new Date(b.data_criacao).getTime() -
-          new Date(a.data_criacao).getTime()
-        );
-      if (ordem === 'valor_maior') return b.valor_total - a.valor_total;
-      return 0;
+      // Ordenação padrão por data de criação (recente)
+      return (
+        new Date(b.data_criacao).getTime() -
+        new Date(a.data_criacao).getTime()
+      );
     });
 
   const totalAReceber = mockData

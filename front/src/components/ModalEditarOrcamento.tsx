@@ -3,7 +3,6 @@ import { X, Plus, Trash2, Save, Loader2 } from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
 import { formatarReal } from '../tools/formatReal';
-import type { Orcamento } from '../pages/Orcamentos';
 import ModalDelete from './ModalDelete'; // Importe o seu Modal de Deletar
 
 interface Props {
