@@ -138,7 +138,7 @@
         {% for item in itens %}
         <tr>
           <td style="width: 30px; text-align: center">{{ forloop.counter }}</td>
-          <td>{% if item.descricao %}{{ item.descricao }}{% else %}{{ item.produto_nome }}{% endif %}</td>
+          <td>{% if item.descricao %}{{ item.descricao }}{% else %}{{ item.produto_nome_no_ato }}{% endif %}</td>
           <td style="text-align: center">{{ item.quantidade|intcomma }}</td>
           <td style="text-align: right">
             R$ {{ item.preco_negociado |intcomma}}

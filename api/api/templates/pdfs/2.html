@@ -120,7 +120,7 @@
       <tbody>
         {% for item in itens %}
         <tr>
-          <td><strong>{% if item.descricao %}{{ item.descricao }}{% else %}{{ item.produto_nome }}{% endif %}</strong></td>
+          <td><strong>{% if item.descricao %}{{ item.descricao }}{% else %}{{ item.produto_nome_no_ato }}{% endif %}</strong></td>
           <td style="text-align: center">UNID</td>
           <td style="text-align: center">{{ item.quantidade|intcomma }}</td>
           <td style="text-align: right">
@@ -148,7 +148,7 @@
       <p>2. VALIDADE DA PROPOSTA: 90 (NOVENTA) dias.</p>
     </div>
     <div class="date-row">
-      TERESINA (PI), {{ orcamento.data_criacao|date:"d \d\e F \d\e Y" }}
+      TERESINA (PI), {{ orcamento.data_print|default:orcamento.data_criacao|date:"d \d\e F \d\e Y" }}
     </div>
     <div class="footer">
       <div class="signature-box">

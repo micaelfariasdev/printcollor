@@ -1,0 +1,176 @@
+{% load humanize %}
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      @page {
+        size: A4;
+        margin: 1.5cm;
+      }
+      body {
+        font-family: 'Times New Roman', serif;
+        font-size: 11pt; /* Padrão 11pt para não ficar bruto */
+        color: #000;
+        line-height: 1.2;
+        margin: 0;
+      }
+
+      /* Garante que nada passe de 12pt */
+      h1, h2, div, p, span, table, th, td {
+        max-font-size: 12pt;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      .logo-text {
+        background-color: #c00000;
+        color: white;
+        display: inline-block;
+        padding: 5px 20px;
+        font-size: 12pt; /* No máximo 12pt como pediu */
+        font-weight: bold;
+        letter-spacing: 2px;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+      }
+      .header-info {
+        font-style: italic;
+        font-weight: bold;
+        font-size: 11pt;
+      }
+
+      .client-info {
+        margin-top: 15px;
+        margin-bottom: 15px;
+        text-transform: uppercase;
+        font-weight: bold;
+        font-size: 11pt;
+      }
+
+      .budget-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1.5pt solid #000;
+      }
+      .budget-table th {
+        border: 1pt solid #000;
+        padding: 5px;
+        text-transform: uppercase;
+        font-size: 10pt;
+        background-color: #f2f2f2;
+      }
+      .budget-table td {
+        border: 1pt solid #000;
+        padding: 5px;
+        font-size: 11pt;
+      }
+
+      .total-label {
+        text-align: right;
+        font-weight: bold;
+        padding-right: 10px !important;
+      }
+
+      .conditions {
+        margin-top: 15px;
+        font-size: 10pt;
+        text-transform: uppercase;
+        font-weight: bold;
+      }
+
+      .date-line {
+        margin-top: 20px;
+        font-size: 11pt;
+        font-weight: bold;
+      }
+
+      /* ASSINATURA NO FINAL DA FOLHA */
+      .footer-signature {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 10pt;
+        font-weight: bold;
+        line-height: 1.2;
+        border-top: 1pt solid #000; /* Linha opcional para separar */
+        padding-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="logo-text">A P F DE CARVALHO</div>
+      <div class="header-info">
+        CNPJ: 09.101.218/0001-07 Insc. Estadual 19.459.367-3<br />
+        Av. Rua Coelho de Rezende, 576 A / Centro CEP: 64001-370<br />
+        Fone: (86) 99955-7523 / Teresina-PI
+      </div>
+    </div>
+
+    <div class="client-info">
+      À<br />
+      CLIENTE: {{ orcamento.cliente.nome }}<br />
+      SECRETARIA: {% if orcamento.agencia %}{{ orcamento.agencia }}{% else %}--{% endif %} / 
+      CAMPANHA: {% if orcamento.campanha %}{{ orcamento.campanha }}{% else %}--{% endif %}
+    </div>
+
+    <table class="budget-table">
+      <thead>
+        <tr>
+          <th colspan="7" style="font-size: 12pt;">ORÇAMENTO</th>
+        </tr>
+        <tr>
+          <th style="width: 30px">ITEM</th>
+          <th>DESCRIÇÃO DO MATERIAL</th>
+          <th style="width: 40px">QTD.</th>
+          <th colspan="2">V. UNITARIO</th>
+          <th colspan="2">V. TOTAL</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in itens %}
+        <tr>
+          <td style="text-align: center">{{ forloop.counter }}</td>
+          <td>{{ item.descricao|default:item.produto_nome_no_ato }}</td>
+          <td style="text-align: center">{{ item.quantidade }}</td>
+          <td style="width: 20px; border-right: none; font-size: 9pt;">R$</td>
+          <td style="text-align: right; border-left: none">{{ item.preco_negociado|intcomma }}</td>
+          <td style="width: 20px; border-right: none; font-size: 9pt;">R$</td>
+          <td style="text-align: right; border-left: none">{{ item.subtotal|intcomma }}</td>
+        </tr>
+        {% endfor %}
+
+        <tr>
+          <td colspan="5" class="total-label">VALOR TOTAL:</td>
+          <td style="width: 20px; border-right: none">R$</td>
+          <td style="text-align: right; border-left: none; font-weight: bold">
+            {{ orcamento.valor_total|intcomma }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="conditions">
+      VALIDADE DA PROPOSTA: 30 dias<br />
+      CONDIÇÕES DE PAGAMENTO: CONFORME CONTRATO<br />
+      PRAZO DE ENTREGA: CONFORME CONTRATO
+    </div>
+
+    <div class="date-line">
+      Teresina, {{ orcamento.data_print|default:orcamento.data_criacao|date:"d \d\e F \d\e Y" }}
+    </div>
+
+    <div class="footer-signature">
+      ANA PAULA FIGUEIREDO DE CARVALHO<br />
+      IDENTIDADE Nº 335.406-PI / CPF Nº 200.860.243-53<br />
+      CARGO: PROPRIETÁRIA<br />
+      BANCO DO BRASIL - AG: 1637-3 / CONTA: 42705-5<br />
+      EMAIL: APFCARVALHO@IG.COM.BR
+    </div>
+  </body>
+</html>
