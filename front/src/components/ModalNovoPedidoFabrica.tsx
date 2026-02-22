@@ -191,21 +191,40 @@ export default function ModalNovoPedidoFabrica({
               <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
                 Cliente
               </label>
-              <select
+
+              {/* Campo de texto com busca */}
+              <input
                 required
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold"
-                value={formData.cliente}
-                onChange={(e) =>
-                  setFormData({ ...formData, cliente: e.target.value })
+                list="clientes-options"
+                placeholder="Buscar cliente..."
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                // Mostra o nome do cliente selecionado se já houver um ID no formData
+                defaultValue={
+                  clientes.find((c) => c.id === Number(formData.cliente))
+                    ?.nome || ''
                 }
-              >
-                <option value="">Selecione...</option>
+                onChange={(e) => {
+                  const valorDigitado = e.target.value;
+                  const clienteEncontrado = clientes.find(
+                    (c) => c.nome === valorDigitado
+                  );
+
+                  // Se achar o cliente pelo nome, grava o ID, senão grava o texto (ou limpa)
+                  setFormData({
+                    ...formData,
+                    cliente: clienteEncontrado
+                      ? clienteEncontrado.id
+                      : valorDigitado,
+                  });
+                }}
+              />
+
+              {/* Lista de sugestões vinculada pelo ID "clientes-options" */}
+              <datalist id="clientes-options">
                 {clientes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
+                  <option key={c.id} value={c.nome} />
                 ))}
-              </select>
+              </datalist>
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-black text-slate-400 uppercase ml-1">

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Search, Download, Eye, Plus } from 'lucide-react';
+import React, { use, useEffect, useState } from 'react';
+import { Search, Download, Eye, Plus, Edit } from 'lucide-react';
 import { theme } from '../components/Theme';
 import { formatarReal } from '../tools/formatReal';
 import { api } from '../auth/useAuth';
@@ -28,24 +28,27 @@ export interface Orcamento {
   valor_total: number;
 }
 
-const handleDownloadPDF = async (id: number) => {
+const handleDownloadPDF = async (id: number, emp: string, cliente: string) => {
   try {
     const response = await api.get(`orcamentos/${id}/gerar_pdf/`, {
       responseType: 'blob', // ESSENCIAL para receber arquivos
     });
 
-    // Cria um link temporário na memória do navegador
-    const url = window.URL.createObjectURL(
-      new Blob([response.data], { type: 'application/pdf' })
-    );
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
 
-    // Abre em uma nova aba de forma segura
-    window.open(url, '_blank');
+    // Aqui você define o nome que o arquivo terá ao ser baixado
+    link.setAttribute('download', `${emp}-${cliente}-${id}.pdf`);
 
-    // Opcional: Limpar a memória após um tempo
-    setTimeout(() => window.URL.revokeObjectURL(url), 100);
+    document.body.appendChild(link);
+    link.click();
+
+    // Limpeza
+    link.parentNode?.removeChild(link);
+    window.URL.revokeObjectURL(url);
   } catch (error) {
-    console.error('Erro ao gerar PDF:', error);
+    console.error('Erro ao baixar PDF:', error);
   }
 };
 
@@ -69,14 +72,8 @@ const Orcamentos: React.FC = () => {
   };
 
   useEffect(() => {
-    // Busca os orçamentos da sua API Django
-    api
-      .get('orcamentos/')
-      .then((res) => setOrcamentos(res.data))
-      .catch((err) => console.error('Erro ao carregar orçamentos', err));
-
-    console.log(orcamentos);
-  }, []);
+    carregarOrcamentos();
+  }, [isEditModalOpen, isModalOpen]);
 
   const filtrados = orcamentos.filter((o) =>
     o.nome_cliente.toLowerCase().includes(busca.toLowerCase())
@@ -158,11 +155,11 @@ const Orcamentos: React.FC = () => {
                         className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
                         onClick={() => handleEditar(orc.id)}
                       >
-                        <Eye size={18} />
+                        <Edit size={18} />
                       </button>
 
                       <button
-                        onClick={() => handleDownloadPDF(orc.id)}
+                        onClick={() => handleDownloadPDF(orc.id, orc.nome_empresa, orc.nome_cliente)}
                         className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                         title="Visualizar PDF Seguro"
                       >

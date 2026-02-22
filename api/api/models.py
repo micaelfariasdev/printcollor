@@ -6,21 +6,25 @@ import os
 import random
 import string
 
+
 def gerar_codigo(tamanho=6):
     # Define o conjunto de caracteres: ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
     caracteres = string.ascii_uppercase + string.digits
     codigo = ''.join(random.choices(caracteres, k=tamanho))
     return codigo
 
+
 def path_layout_dtf(instance, filename):
     ext = filename.split('.')[-1]
     nome = f"layout_dtf_{instance.id if instance.id else gerar_codigo()}.{ext}"
     return os.path.join('dtf/layouts/', nome)
 
+
 def path_layout(instance, filename):
     ext = filename.split('.')[-1]
     nome = f"layout_pedido_{instance.id if instance.id else gerar_codigo()}.{ext}"
     return os.path.join('pedidos/layouts/', nome)
+
 
 def path_comprovante_dtf(instance, filename):
     ext = filename.split('.')[-1]
@@ -83,6 +87,9 @@ class Orcamento(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     produtos = models.ManyToManyField(Produto, through='ItemOrcamento')
     data_criacao = models.DateTimeField(auto_now_add=True)
+    agencia = models.CharField(max_length=255, null=True, blank=True)
+    campanha = models.CharField(max_length=255, null=True, blank=True)
+    data_print = models.DateTimeField(null=True, blank=True)
 
     @property
     def valor_total(self):
@@ -167,18 +174,19 @@ class PedidoFabrica(models.Model):
         ('finalizado', 'Finalizado'),
     )
 
-    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)  
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     nome_descricao = models.CharField(max_length=255)
     descricao = models.CharField(max_length=255)
     material = models.CharField(max_length=100)
     aplicacao_arte = models.CharField(max_length=100)
-    detalhes_tamanho = models.JSONField(default=dict, help_text="Grade de tamanhos ou quantidade única")
+    detalhes_tamanho = models.JSONField(
+        default=dict, help_text="Grade de tamanhos ou quantidade única")
     layout = models.FileField(upload_to=path_layout, null=False, blank=False)
     data_criacao = models.DateTimeField(auto_now_add=True)
     data_entrega = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
         max_length=20, choices=STATUS_PEDIDO, default='pendente')
-    
+
     def total_itens(self):
         return sum(self.detalhes_tamanho.values())
 

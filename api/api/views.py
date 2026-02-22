@@ -94,9 +94,10 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
         }
 
         tid = orcamento.empresa.template_id
+        name = f'{orcamento.empresa.nome}-{orcamento.cliente.nome}-{orcamento.id}'
 
         template_nome = f'pdfs/{tid}.html'
-        return gerar_pdf_from_html(template_nome, context, f'orcamento_{orcamento.id}.pdf')
+        return gerar_pdf_from_html(template_nome, context, f'{name}.pdf')
 
 
 class DTFVendorViewSet(viewsets.ModelViewSet):
@@ -152,7 +153,9 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
             'rotate_comprovante': girar_comp,
         }
 
-        return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, f'pedido_{dtf.id}.pdf')
+        name = f'dtf-{dtf.cliente.nome}-{dtf.id}'
+
+        return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, f'{name}.pdf')
 
 
 class UserMeView(APIView):
@@ -260,7 +263,6 @@ class PedidoFabricaViewSet(viewsets.ModelViewSet):
             and not ("a" in t or "anos" in t)
         ]
 
-
         context = {
             'pedido': pedido,
             'logo_url': f'file://{logo_path}',
@@ -273,4 +275,6 @@ class PedidoFabricaViewSet(viewsets.ModelViewSet):
             'now': timezone.now(),
         }
 
-        return gerar_pdf_from_html('pdfs/pedido.html', context, f'pedido_{pedido.id}.pdf')
+        name = f'pedido-{pedido.cliente.nome}-{pedido.id}'
+
+        return gerar_pdf_from_html('pdfs/pedido.html', context, f'{name}.pdf')

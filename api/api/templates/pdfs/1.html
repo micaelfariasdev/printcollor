@@ -114,10 +114,14 @@
       <div class="info-row">
         <strong>Cliente:</strong> {{ orcamento.cliente.nome }}
       </div>
-      <div class="info-row"><strong>Agência:</strong></div>
-      <div class="info-row"><strong>Campanha:</strong></div>
+      <div class="info-row"><strong>Agência:</strong> {% if orcamento.agencia %}{{ orcamento.agencia }}{% endif %}</div>
+      <div class="info-row"><strong>Campanha:</strong> {% if orcamento.campanha %}{{ orcamento.campanha }}{% endif %}</div>
       <div class="date-row">
+        {% if orcamento.data_print %}
+        {{ orcamento.data_print|date:"d/m/Y" }} Teresina - PI
+        {% else %}
         {{ orcamento.data_criacao|date:"d/m/Y" }} Teresina - PI
+        {% endif %}
       </div>
     </div>
 
@@ -134,7 +138,7 @@
         {% for item in itens %}
         <tr>
           <td style="width: 30px; text-align: center">{{ forloop.counter }}</td>
-          <td>{{ item.descricao }}</td>
+          <td>{% if item.descricao %}{{ item.descricao }}{% else %}{{ item.produto_nome }}{% endif %}</td>
           <td style="text-align: center">{{ item.quantidade|intcomma }}</td>
           <td style="text-align: right">
             R$ {{ item.preco_negociado |intcomma}}

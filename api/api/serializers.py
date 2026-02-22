@@ -42,8 +42,7 @@ class OrcamentoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Orcamento
-        fields = ['id', 'empresa', 'nome_empresa', 'cliente',
-                  'nome_cliente', 'data_criacao', 'itens', 'valor_total']
+        fields = '__all__'
 
     def create(self, validated_data):
         itens_data = validated_data.pop('itens')
@@ -57,6 +56,9 @@ class OrcamentoSerializer(serializers.ModelSerializer):
         # Atualiza os campos básicos do orçamento
         instance.empresa = validated_data.get('empresa', instance.empresa)
         instance.cliente = validated_data.get('cliente', instance.cliente)
+        instance.data_print = validated_data.get('data_print', instance.data_print)
+        instance.agencia = validated_data.get('agencia', instance.agencia)
+        instance.campanha = validated_data.get('campanha', instance.campanha)
         instance.save()
 
         if itens_data is not None:

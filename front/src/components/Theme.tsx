@@ -1,7 +1,7 @@
 export const theme = {
   appName: 'PrintCollor',
   appTag: 'Admin',
-  appVersion: 'v2.0',
+  appVersion: 'v2.1',
   colors: {
     sidebarBg: 'bg-slate-900',
     sidebarActive: 'bg-blue-600',

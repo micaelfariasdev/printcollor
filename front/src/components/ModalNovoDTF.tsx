@@ -124,23 +124,30 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
 
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
           {/* Cliente */}
+          
           <div className="space-y-2">
-            <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
-              <User size={14} /> Cliente
+            <label className="text-xs font-black text-slate-500 uppercase ml-1">
+              Cliente Destino
             </label>
-            <select
-              required
-              value={clienteId}
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700"
-              onChange={(e) => setClienteId(e.target.value)}
-            >
-              <option value="">Selecione o cliente...</option>
+
+            {/* Input de texto que aceita busca */}
+            <input
+              list="clientes-list"
+              placeholder="Digite para buscar cliente..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700 transition-all"
+              onChange={(e) => {
+                // Encontra o ID do cliente baseado no nome escrito
+                const cliente = clientes.find((c) => c.nome === e.target.value);
+                if (cliente) setClienteId(cliente.id);
+              }}
+            />
+
+            {/* A lista de sugestões que aparece ao digitar */}
+            <datalist id="clientes-list">
               {clientes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
+                <option key={c.id} value={c.nome} />
               ))}
-            </select>
+            </datalist>
           </div>
 
           {/* Tamanho e Valor */}
@@ -152,7 +159,7 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
               <input
                 required
                 type="number"
-                step="0.1" // Permite 12.1, 12.2, 12.3, etc.
+                step="0.01" // Permite 12.1, 12.2, 12.3, etc.
                 placeholder="Ex: 150"
                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
                 onChange={(e) => setTamanhoCm(Number(e.target.value))}

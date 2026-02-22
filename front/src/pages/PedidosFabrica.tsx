@@ -17,26 +17,41 @@ import ModalNovoPedidoFabrica from '../components/ModalNovoPedidoFabrica';
 import ModalEditarPedidoFabrica from '../components/ModalEditarPedidoFabrica';
 import { FilterToggle } from '../components/FilterToggle';
 
-const handleDownloadPDF = async (id: number) => {
+const handleDownloadPDF = async (id: number, client: string) => {
   try {
     const response = await api.get(`pedidos/${id}/gerar_pdf/`, {
       responseType: 'blob', // ESSENCIAL para receber arquivos
     });
 
-    // Cria um link temporário na memória do navegador
-    const url = window.URL.createObjectURL(
-      new Blob([response.data], { type: 'application/pdf' })
-    );
+// 1. Captura o cabeçalho Content-Disposition
+    const contentDisposition = response.headers['content-disposition'];
+    let filename = `${client}-${id}.pdf`; // Nome padrão de segurança
 
-    // Abre em uma nova aba de forma segura
-    window.open(url, '_blank');
+    // 2. Extrai o nome do arquivo usando Regex
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+      if (filenameMatch && filenameMatch.length > 1) {
+        filename = filenameMatch[1];
+      }
+    }
 
-    // Opcional: Limpar a memória após um tempo
-    setTimeout(() => window.URL.revokeObjectURL(url), 100);
+    // 3. Cria o link e faz o download com o nome do BACK
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    
+    link.setAttribute('download', filename); // Aqui usamos o nome que veio do Django!
+    
+    document.body.appendChild(link);
+    link.click();
+    
+    link.parentNode?.removeChild(link);
+    window.URL.revokeObjectURL(url);
   } catch (error) {
-    console.error('Erro ao gerar PDF:', error);
+    console.error('Erro ao baixar PDF:', error);
   }
 };
+
 export const PedidosFabrica = () => {
   const [busca, setBusca] = useState('');
   const [pedidos, setPedidos] = React.useState<any[]>([]);
@@ -263,7 +278,7 @@ export const PedidosFabrica = () => {
               </p>
               <div className="flex gap-1">
                 <button
-                  onClick={() => handleDownloadPDF(item.id)}
+                  onClick={() => handleDownloadPDF(item.id, item.cliente_nome)}
                   className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                   title="Visualizar PDF Seguro"
                 >

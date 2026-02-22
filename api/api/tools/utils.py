@@ -7,6 +7,6 @@ def gerar_pdf_from_html(template_name, context, filename):
     html = HTML(string=html_string)
     result = html.write_pdf()
     response = HttpResponse(result, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="{filename}"'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
     
     return response
