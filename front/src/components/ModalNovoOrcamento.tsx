@@ -80,7 +80,11 @@ const ModalNovoOrcamento: React.FC<Props> = ({
   const salvarOrcamento = async () => {
     // 3. Validação com alerta animado
     if (!selectedCliente) {
-      addAlert('Você esqueceu de selecionar o cliente!', 'error');
+      addAlert('Selecione um cliente para vincular ao orçamento.', 'error');
+      return;
+    }
+    if (itens.some((i) => !i.produto)) {
+      addAlert('Existem itens na lista sem um produto selecionado.', 'error');
       return;
     }
     if (!selectedEmpresa) {
@@ -99,7 +103,7 @@ const ModalNovoOrcamento: React.FC<Props> = ({
       });
 
       // 4. Alerta de Sucesso
-      addAlert('Orçamento gerado com sucesso!', 'success');
+      addAlert('Pedido gerado! Você já pode visualizá-lo na lista.', 'success');
 
       onSuccess();
       onClose();
@@ -107,7 +111,7 @@ const ModalNovoOrcamento: React.FC<Props> = ({
     } catch (err) {
       console.error(err);
       // 5. Alerta de Erro de API
-      addAlert('Erro de conexão com o servidor.', 'error');
+      addAlert('Não foi possível salvar o orçamento. Verifique a conexão.', 'error');
     } finally {
       setLoading(false);
     }
@@ -349,7 +353,6 @@ const ModalNovoOrcamento: React.FC<Props> = ({
             </button>
             <button
               onClick={salvarOrcamento}
-              
               className={`${theme.colors.primaryButton} text-white px-10 py-4 rounded-3xl font-black uppercase tracking-widest flex items-center gap-3 shadow-xl shadow-blue-500/20 disabled:opacity-50 transition-all active:scale-95`}
             >
               {loading ? (

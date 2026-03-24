@@ -161,12 +161,12 @@ export default function ModalNovoPedidoFabrica({
       await api.post('pedidos/', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      addAlert('Pedido de fábrica criado com sucesso!', 'success');
+      addAlert('Ordem de produção aberta! O setor de corte já foi notificado.', 'success');
       onSuccess();
       onClose();
     } catch (err: any) {
       console.error(err.response?.data);
-     addAlert('Erro ao salvar pedido. Verifique os dados da grade.', 'error');
+     addAlert('Erro na grade. Verifique se há quantidades negativas.', 'error');
     } finally {
       setLoading(false);
     }

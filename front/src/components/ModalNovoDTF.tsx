@@ -53,11 +53,18 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clienteId || !arquivo || tamanhoCm <= 0){
-      addAlert('Preencha todos os campos obrigatórios!', 'error');
-      return 
+    if (!arquivo) {
+      addAlert('O arquivo de layout (PDF/Imagem) é obrigatório.', 'error');
+      return;
     }
-      
+    if (tamanhoCm <= 0) {
+      addAlert('Informe a metragem linear para calcular o valor.', 'error');
+      return;
+    }
+    if (!clienteId || !arquivo || tamanhoCm <= 0) {
+      addAlert('Preencha todos os campos obrigatórios!', 'error');
+      return;
+    }
 
     setLoading(true);
 
@@ -70,7 +77,7 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
       await api.post('dtf/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      addAlert('Pedido de DTF enviado para a fila!', 'success');
+      addAlert('DTF enviado com sucesso para a fila de impressão!', 'success');
       onSuccess();
       onClose();
       // Reset
@@ -78,8 +85,7 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
       setTamanhoCm(0);
       setArquivo(null);
     } catch (err) {
-      console.error(err);
-      addAlert('Erro ao salvar pedido de DTF no servidor.', 'error');
+      addAlert('Falha ao processar o arquivo. Tente um formato diferente.', 'error');
     } finally {
       setLoading(false);
     }

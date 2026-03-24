@@ -56,7 +56,6 @@ export const DTFTable = () => {
     carregarDados();
   }, []);
 
-  // LÓGICA DE TROCA DE STATUS RÁPIDA (Igual ao Pedido de Fábrica)
   const handleToggleBooleanStatus = async (
     id: number,
     campo: string,
@@ -64,10 +63,18 @@ export const DTFTable = () => {
   ) => {
     try {
       await api.patch(`dtf/${id}/`, { [campo]: !valorAtual });
-      addAlert('Status atualizado com sucesso!', 'info');
+      const msg =
+        campo === 'esta_pago'
+          ? !valorAtual
+            ? 'Pagamento confirmado!'
+            : 'Status revertido para Pendente.'
+          : !valorAtual
+            ? 'Pedido entregue ao cliente!'
+            : 'Retornado para expedição.';
+      addAlert(msg, 'success');
       carregarDados();
     } catch (error) {
-      addAlert('Erro ao atualizar status.', 'error');
+      addAlert('Erro ao sincronizar status com o servidor.', 'error');
     }
   };
 

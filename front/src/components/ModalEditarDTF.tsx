@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
+import { useAlert } from '../contexts/AlertContext';
 
 interface Props {
   isOpen: boolean;
@@ -27,7 +28,7 @@ const ModalEditarDTF: React.FC<Props> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [clientes, setClientes] = useState<any[]>([]);
-
+  const { addAlert } = useAlert();
   // Estados para feedback visual de arraste
   const [isDraggingLayout, setIsDraggingLayout] = useState(false);
   const [isDraggingComprovante, setIsDraggingComprovante] = useState(false);
@@ -123,10 +124,14 @@ const ModalEditarDTF: React.FC<Props> = ({
       await api.patch(`dtf/${dtfId}/`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+      addAlert('DTF editado com sucesso!', 'success');
       onSuccess();
       onClose();
     } catch (err) {
-      alert('Erro ao atualizar DTF.');
+      addAlert(
+        'Erro ao processar edição. Verifique o arquivo enviado.',
+        'error'
+      );
     } finally {
       setLoading(false);
     }

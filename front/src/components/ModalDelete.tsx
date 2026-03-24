@@ -20,24 +20,17 @@ const ModalDelete: React.FC<Props> = ({
   itemId,
   itemName,
 }) => {
-  const [loading, setLoading] = useState(false);
   const { addAlert } = useAlert();
   const handleDelete = async () => {
-    if (!itemId) return;
-    setLoading(true);
-    try {
-      // Faz a chamada DELETE para o endpoint configurado
-      await api.delete(`${endpoint}/${itemId}/`);
-      addAlert(`${itemName} removido com sucesso!`, 'success');
-      onSuccess();
-      onClose();
-    } catch (err) {
-      console.error('Erro ao deletar:', err);
-      addAlert('Não foi possível excluir este item.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    await api.delete(`${endpoint}/${itemId}/`);
+    addAlert(`O registro de ${itemName} foi removido permanentemente.`, 'info');
+    onSuccess();
+    onClose();
+  } catch (err) {
+    addAlert('Este item não pode ser removido pois possui vínculos ativos.', 'error');
+  }
+};
 
   if (!isOpen) return null;
 
@@ -63,17 +56,10 @@ const ModalDelete: React.FC<Props> = ({
         {/* Footer com Ações */}
         <div className="p-6 space-y-3">
           <button
-            disabled={loading}
             onClick={handleDelete}
             className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 transition-all active:scale-95 disabled:opacity-50"
           >
-            {loading ? (
-              <Loader2 className="animate-spin" size={20} />
-            ) : (
-              <>
                 <Trash2 size={20} /> Sim, Excluir
-              </>
-            )}
           </button>
 
           <button
