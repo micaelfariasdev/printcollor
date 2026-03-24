@@ -8,11 +8,13 @@ import { LoadingScreen } from './components/LoadingScreen.tsx';
 import VisualizarPedidoPage from './pages/VisualizarPedidoPage.tsx';
 import { PedidosCarrosselMobile } from './pages/PedidosCarrosselMobile.tsx';
 import VisualizarDTFPage from './pages/VisualizarDTFPage.tsx';
+import { AlertProvider } from './contexts/AlertContext.tsx';
 
 const root = document.getElementById('root');
 
 if (root) {
   ReactDOM.createRoot(root).render(
+    <AlertProvider>
     <BrowserRouter>
       <LoadingScreen />
 
@@ -25,5 +27,6 @@ if (root) {
         <Route path="/dtf/:id/visualizar" element={<VisualizarDTFPage />} />
       </Routes>
     </BrowserRouter>
+    </AlertProvider>
   );
 }

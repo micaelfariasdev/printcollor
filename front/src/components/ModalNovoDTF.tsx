@@ -3,6 +3,7 @@ import { X, Upload, Save, Loader2, Ruler } from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
 import { formatarReal } from '../tools/formatReal';
+import { useAlert } from '../contexts/AlertContext';
 
 interface Props {
   isOpen: boolean;
@@ -14,7 +15,7 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [clientes, setClientes] = useState<any[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-
+  const { addAlert } = useAlert();
   // Estados do Form
   const [clienteId, setClienteId] = useState('');
   const [tamanhoCm, setTamanhoCm] = useState<number>(0);
@@ -52,8 +53,11 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clienteId || !arquivo || tamanhoCm <= 0)
-      return alert('Preencha todos os campos!');
+    if (!clienteId || !arquivo || tamanhoCm <= 0){
+      addAlert('Preencha todos os campos obrigatórios!', 'error');
+      return 
+    }
+      
 
     setLoading(true);
 
@@ -66,6 +70,7 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
       await api.post('dtf/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+      addAlert('Pedido de DTF enviado para a fila!', 'success');
       onSuccess();
       onClose();
       // Reset
@@ -74,7 +79,7 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
       setArquivo(null);
     } catch (err) {
       console.error(err);
-      alert('Erro ao salvar pedido de DTF.');
+      addAlert('Erro ao salvar pedido de DTF no servidor.', 'error');
     } finally {
       setLoading(false);
     }
@@ -124,7 +129,7 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
 
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
           {/* Cliente */}
-          
+
           <div className="space-y-2">
             <label className="text-xs font-black text-slate-500 uppercase ml-1">
               Cliente Destino

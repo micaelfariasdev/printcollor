@@ -3,6 +3,7 @@ import { X, Plus, Trash2, Save, Loader2, Info } from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
 import { formatarReal } from '../tools/formatReal';
+import { useAlert } from '../contexts/AlertContext';
 
 interface Props {
   isOpen: boolean;
@@ -19,7 +20,7 @@ const ModalNovoOrcamento: React.FC<Props> = ({
   const [clientes, setClientes] = useState<any[]>([]);
   const [empresas, setEmpresas] = useState<any[]>([]);
   const [produtosDisponiveis, setProdutosDisponiveis] = useState<any[]>([]);
-
+  const { addAlert } = useAlert(); // 2. Inicialize o hook
   // Estados do Formulário
   const [selectedCliente, setSelectedCliente] = useState('');
   const [selectedEmpresa, setSelectedEmpresa] = useState('');
@@ -47,11 +48,11 @@ const ModalNovoOrcamento: React.FC<Props> = ({
   }, [isOpen]);
 
   const adicionarItem = () => {
-  setItens([
-    { produto: '', descricao: '', quantidade: 1, preco_negociado: 0 },
-    ...itens,
-  ]);
-};
+    setItens([
+      { produto: '', descricao: '', quantidade: 1, preco_negociado: 0 },
+      ...itens,
+    ]);
+  };
 
   const removerItem = (index: number) => {
     if (itens.length > 1) {
@@ -77,29 +78,36 @@ const ModalNovoOrcamento: React.FC<Props> = ({
   );
 
   const salvarOrcamento = async () => {
-    if (!selectedCliente || !selectedEmpresa)
-      return alert('Selecione cliente e empresa.');
+    // 3. Validação com alerta animado
+    if (!selectedCliente) {
+      addAlert('Você esqueceu de selecionar o cliente!', 'error');
+      return;
+    }
+    if (!selectedEmpresa) {
+      addAlert('Selecione a empresa emissora!', 'error');
+      return;
+    }
 
     setLoading(true);
     try {
       await api.post('orcamentos/', {
         cliente: selectedCliente,
         empresa: selectedEmpresa,
-        agencia: agencia, // Enviando agência
-        campanha: campanha, // Enviando campanha
+        agencia: agencia,
+        campanha: campanha,
         itens: itens,
       });
+
+      // 4. Alerta de Sucesso
+      addAlert('Orçamento gerado com sucesso!', 'success');
+
       onSuccess();
       onClose();
-      // Reset form
-      setItens([
-        { produto: '', descricao: '', quantidade: 1, preco_negociado: 0 },
-      ]);
-      setAgencia('');
-      setCampanha('');
+      // Reset form...
     } catch (err) {
       console.error(err);
-      alert('Erro ao salvar. Verifique as informações.');
+      // 5. Alerta de Erro de API
+      addAlert('Erro de conexão com o servidor.', 'error');
     } finally {
       setLoading(false);
     }
@@ -341,9 +349,7 @@ const ModalNovoOrcamento: React.FC<Props> = ({
             </button>
             <button
               onClick={salvarOrcamento}
-              disabled={
-                loading || !selectedCliente || itens.some((i) => !i.produto)
-              }
+              
               className={`${theme.colors.primaryButton} text-white px-10 py-4 rounded-3xl font-black uppercase tracking-widest flex items-center gap-3 shadow-xl shadow-blue-500/20 disabled:opacity-50 transition-all active:scale-95`}
             >
               {loading ? (

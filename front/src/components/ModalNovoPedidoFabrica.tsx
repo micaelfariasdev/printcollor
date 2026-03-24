@@ -9,6 +9,7 @@ import {
   Scissors,
 } from 'lucide-react';
 import { api } from '../auth/useAuth';
+import { useAlert } from '../contexts/AlertContext';
 
 export default function ModalNovoPedidoFabrica({
   isOpen,
@@ -19,7 +20,7 @@ export default function ModalNovoPedidoFabrica({
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [clientes, setClientes] = useState<any[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-
+  const { addAlert } = useAlert();
   const [formData, setFormData] = useState<any>({
     cliente: '',
     nome_descricao: '',
@@ -129,7 +130,10 @@ export default function ModalNovoPedidoFabrica({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!arquivo) return alert('O arquivo de layout é obrigatório!');
+    if (!arquivo) {
+       addAlert('O arquivo de layout é obrigatório para a fábrica!', 'error'); // Validação
+       return;
+    }
 
     setLoading(true);
 
@@ -157,11 +161,12 @@ export default function ModalNovoPedidoFabrica({
       await api.post('pedidos/', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+      addAlert('Pedido de fábrica criado com sucesso!', 'success');
       onSuccess();
       onClose();
     } catch (err: any) {
       console.error(err.response?.data);
-      alert('Erro ao salvar. Verifique os campos.');
+     addAlert('Erro ao salvar pedido. Verifique os dados da grade.', 'error');
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,4 @@
 import {
-  FileText,
   Printer,
   CheckCircle2,
   Clock,
@@ -9,6 +8,7 @@ import {
   Trash2,
   MessageCircle,
   Wallet,
+  Eye,
 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { api } from '../auth/useAuth';
@@ -18,7 +18,7 @@ import ModalNovoDTF from '../components/ModalNovoDTF';
 import ModalEditarDTF from '../components/ModalEditarDTF';
 import ModalDelete from '../components/ModalDelete';
 import { TriStateFilter } from '../components/TriStateFilter';
-
+import { useAlert } from '../contexts/AlertContext'; // Importando o sistema de alertas
 
 export const DTFTable = () => {
   const [busca, setBusca] = useState('');
@@ -26,6 +26,8 @@ export const DTFTable = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const { addAlert } = useAlert(); // Inicializando o alerta
+
   const [selectedItem, setSelectedItem] = useState<{
     id: number | null;
     nome: string;
@@ -54,6 +56,32 @@ export const DTFTable = () => {
     carregarDados();
   }, []);
 
+  // LÓGICA DE TROCA DE STATUS RÁPIDA (Igual ao Pedido de Fábrica)
+  const handleToggleBooleanStatus = async (
+    id: number,
+    campo: string,
+    valorAtual: boolean
+  ) => {
+    try {
+      await api.patch(`dtf/${id}/`, { [campo]: !valorAtual });
+      addAlert('Status atualizado com sucesso!', 'info');
+      carregarDados();
+    } catch (error) {
+      addAlert('Erro ao atualizar status.', 'error');
+    }
+  };
+
+  const handleToggleImpressao = async (id: number, statusAtual: string) => {
+    const novoStatus = statusAtual === 'impresso' ? 'pendente' : 'impresso';
+    try {
+      await api.patch(`dtf/${id}/`, { foi_impresso: novoStatus });
+      addAlert(`DTF #${id} marcado como ${novoStatus.toUpperCase()}`, 'info');
+      carregarDados();
+    } catch (error) {
+      addAlert('Erro ao atualizar impressão.', 'error');
+    }
+  };
+
   const handleEdit = (id: number) => {
     setSelectedItem({ ...selectedItem, id });
     setIsEditOpen(true);
@@ -80,7 +108,7 @@ export const DTFTable = () => {
     }
 
     navigator.clipboard.writeText(saudacao + detalhes + statusMensagem);
-    alert('Mensagem formatada copiada para o WhatsApp!');
+    addAlert('Mensagem de WhatsApp copiada!', 'success');
   };
 
   const filtrados = mockData
@@ -110,7 +138,6 @@ export const DTFTable = () => {
       return bateBusca && batePago && bateImpresso && bateEntregue;
     })
     .sort((a, b) => {
-      // Ordenação padrão por data de criação (recente)
       return (
         new Date(b.data_criacao).getTime() - new Date(a.data_criacao).getTime()
       );
@@ -141,10 +168,10 @@ export const DTFTable = () => {
       {/* Cards de Resumo */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
-          <div className="bg-red-100 p-3 rounded-xl text-red-600">
+          <div className="bg-red-100 p-3 rounded-xl text-red-600 font-black italic">
             <Wallet size={24} />
           </div>
-          <div>
+          <div className="text-left">
             <p className="text-[10px] font-black text-slate-400 uppercase">
               A Receber (Devedores)
             </p>
@@ -157,7 +184,7 @@ export const DTFTable = () => {
           <div className="bg-blue-100 p-3 rounded-xl text-blue-600">
             <Printer size={24} />
           </div>
-          <div>
+          <div className="text-left">
             <p className="text-[10px] font-black text-slate-400 uppercase">
               Fila de Produção
             </p>
@@ -167,10 +194,10 @@ export const DTFTable = () => {
           </div>
         </div>
         <div className="bg-slate-900 p-4 rounded-2xl shadow-md flex items-center gap-4 text-white">
-          <div className="bg-white/10 p-3 rounded-xl">
+          <div className="bg-white/10 p-3 rounded-xl text-blue-400">
             <Search size={24} />
           </div>
-          <div>
+          <div className="text-left">
             <p className="text-[10px] font-black uppercase opacity-60">
               Filtrados agora
             </p>
@@ -201,7 +228,6 @@ export const DTFTable = () => {
           </button>
         </div>
 
-        {/* CONTROLES DE FILTRO DE 3 ESTADOS */}
         <div className="flex flex-wrap items-center gap-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
           <span className="text-[10px] font-black text-slate-400 uppercase mr-1">
             Filtros:
@@ -238,28 +264,32 @@ export const DTFTable = () => {
         {filtrados.map((item) => (
           <div
             key={item.id}
-            className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 hover:shadow-xl transition-all flex flex-col justify-between border-b-4 border-b-slate-200"
+            className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 hover:shadow-xl transition-all flex flex-col justify-between border-b-4 border-b-slate-200 text-left"
           >
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h4 className="font-black text-slate-800 text-xl italic uppercase leading-none">
                   {item.nome_cliente}
                 </h4>
-                <p className="text-[10px] text-slate-400 font-bold uppercase mt-2">
+                <p className="text-[10px] text-slate-400 font-bold uppercase mt-2 italic">
                   OS #{item.id} • {formatarDataHora(item.data_criacao)}
                 </p>
               </div>
-              {/* Status de Entrega (Ícone Superior) */}
+
+              {/* INDICADOR VISUAL SUPERIOR (Apenas leitura) */}
               <div
-                title={item.foi_entregue ? 'Entregue' : 'Pendente de Entrega'}
-                className={`p-2 rounded-xl ${item.foi_entregue ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'}`}
+                className={`p-2 rounded-xl transition-all ${
+                  item.foi_entregue
+                    ? 'bg-green-500 text-white shadow-lg scale-110'
+                    : 'bg-slate-100 text-slate-300'
+                }`}
               >
                 <CheckCircle2 size={20} />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-6">
-              <div className="bg-slate-50 p-3 rounded-2xl">
+              <div className="bg-slate-50 p-3 rounded-2xl border border-transparent">
                 <p className="text-[9px] font-black text-slate-400 uppercase">
                   Tamanho
                 </p>
@@ -267,44 +297,73 @@ export const DTFTable = () => {
                   {item.tamanho_cm} cm
                 </p>
               </div>
-              <div className="bg-slate-50 p-3 rounded-2xl">
-                <p className="text-[9px] font-black text-slate-400 uppercase">
+
+              {/* CLIQUE RÁPIDO: PAGAMENTO (No card do Valor) */}
+              <button
+                onClick={() =>
+                  handleToggleBooleanStatus(
+                    item.id,
+                    'esta_pago',
+                    item.esta_pago
+                  )
+                }
+                className="bg-slate-50 p-3 rounded-2xl text-left hover:bg-slate-100 transition-colors border border-transparent hover:border-blue-100 group"
+              >
+                <p className="text-[9px] font-black text-slate-400 uppercase group-hover:text-blue-500 transition-colors">
                   Valor Total
                 </p>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-black text-blue-600">
                     {formatarReal(item.valor_total)}
                   </p>
-                  {/* Ícone de Pagamento colado no Valor */}
                   {item.esta_pago ? (
                     <CheckCircle2 size={14} className="text-green-500" />
                   ) : (
-                    <Clock size={14} className="text-red-500" />
+                    <Clock size={14} className="text-red-500 animate-pulse" />
                   )}
                 </div>
-              </div>
+              </button>
             </div>
 
             <div className="flex items-center justify-between pt-4 border-t border-slate-50">
               <div className="flex gap-2">
-                {/* Badge Impressão */}
-                <span
-                  className={`text-[10px] font-black px-3 py-1 rounded-lg ${item.foi_impresso === 'impresso' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'}`}
+                {/* AÇÃO: IMPRESSÃO */}
+                <button
+                  onClick={() =>
+                    handleToggleImpressao(item.id, item.foi_impresso)
+                  }
+                  className={`text-[10px] font-black px-3 py-1.5 rounded-lg transition-all active:scale-95 ${
+                    item.foi_impresso === 'impresso'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-amber-100 text-amber-600 hover:bg-amber-200'
+                  }`}
                 >
                   {item.foi_impresso === 'impresso' ? '✓ IMPRESSO' : '⚡ FILA'}
-                </span>
-                {/* Badge Entrega */}
-                <span
-                  className={`text-[10px] font-black px-3 py-1 rounded-lg ${item.foi_entregue ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-500'}`}
+                </button>
+
+                {/* AÇÃO: ENTREGA (Agora ao lado da Impressão) */}
+                <button
+                  onClick={() =>
+                    handleToggleBooleanStatus(
+                      item.id,
+                      'foi_entregue',
+                      item.foi_entregue
+                    )
+                  }
+                  className={`text-[10px] font-black px-3 py-1.5 rounded-lg transition-all active:scale-95 ${
+                    item.foi_entregue
+                      ? 'bg-green-600 text-white shadow-md'
+                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                  }`}
                 >
-                  {item.foi_entregue ? '📦 ENTREGUE' : '⏳ AGUARDANDO'}
-                </span>
+                  {item.foi_entregue ? '📦 ENTREGUE' : '⏳ ENTREGAR'}
+                </button>
               </div>
 
               <div className="flex gap-1">
                 <button
                   onClick={() => handleCopiarMensagem(item)}
-                  className="p-2 text-slate-400 hover:text-green-600 transition"
+                  className="p-2 text-slate-400 hover:text-green-600 transition-colors"
                 >
                   <MessageCircle size={18} />
                 </button>
@@ -312,19 +371,19 @@ export const DTFTable = () => {
                   onClick={() =>
                     window.open(`/dtf/${item.id}/visualizar`, '_blank')
                   }
-                  className="p-2 text-slate-400 hover:text-blue-600 transition"
+                  className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
                 >
-                  <FileText size={18} />
+                  <Eye size={18} />
                 </button>
                 <button
                   onClick={() => handleEdit(item.id)}
-                  className="p-2 text-slate-400 hover:text-slate-900 transition"
+                  className="p-2 text-slate-400 hover:text-slate-900 transition-colors"
                 >
                   <Edit3 size={18} />
                 </button>
                 <button
                   onClick={() => handleDelete(item.id, item.nome_cliente)}
-                  className="p-2 text-slate-400 hover:text-red-500 transition"
+                  className="p-2 text-slate-400 hover:text-red-500 transition-colors"
                 >
                   <Trash2 size={18} />
                 </button>

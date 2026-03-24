@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
+import { useAlert } from '../contexts/AlertContext';
 
 interface Props {
   isOpen: boolean;
@@ -29,12 +30,13 @@ const ModalNovaEmpresa: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
     endereco: '',
     template_id: 1,
   });
-
+  const { addAlert } = useAlert();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       await api.post('empresas/', formData);
+      addAlert('Empresa configurada com sucesso!', 'success');
       onSuccess();
       onClose();
       setFormData({
@@ -46,7 +48,7 @@ const ModalNovaEmpresa: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
         template_id: 1,
       });
     } catch (err) {
-      alert('Erro ao cadastrar empresa. Verifique se o CNPJ é único.');
+      addAlert('Erro ao cadastrar empresa. Verifique se o CNPJ é único.', 'error');
     } finally {
       setLoading(false);
     }

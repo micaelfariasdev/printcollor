@@ -16,8 +16,7 @@ import ModalDelete from '../components/ModalDelete';
 import ModalNovoPedidoFabrica from '../components/ModalNovoPedidoFabrica';
 import ModalEditarPedidoFabrica from '../components/ModalEditarPedidoFabrica';
 import { FilterToggle } from '../components/FilterToggle';
-
-
+import { useAlert } from '../contexts/AlertContext'; //
 
 export const PedidosFabrica = () => {
   const [busca, setBusca] = useState('');
@@ -27,12 +26,13 @@ export const PedidosFabrica = () => {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [filtroPendente, setFiltroPendente] = useState(true);
   const [filtroProducao, setFiltroProducao] = useState(true);
+  const { addAlert } = useAlert(); //
   const [filtroFinalizado, setFiltroFinalizado] = useState(true);
   const [selectedItem, setSelectedItem] = useState<{
     id: number | null;
     nome_descricao: string;
   }>({ id: null, nome_descricao: '' });
- 
+
   const carregarDados = () => {
     api.get('pedidos/').then((response) => {
       setPedidos(response.data);
@@ -59,10 +59,12 @@ export const PedidosFabrica = () => {
 
     try {
       await api.patch(`pedidos/${id}/`, { status: novoStatus });
-      carregarDados(); // Recarrega a lista para refletir a mudança
+      // Feedback visual de sucesso ao trocar o status
+      addAlert(`Pedido #${id} movido para ${novoStatus.replace('_', ' ')}`, 'info'); 
+      carregarDados();
     } catch (error) {
       console.error('Erro ao trocar status:', error);
-      alert('Não foi possível atualizar o status agora.');
+      addAlert('Não foi possível atualizar o status agora.', 'error'); //
     }
   };
 
@@ -70,6 +72,7 @@ export const PedidosFabrica = () => {
     setSelectedItem({ id, nome_descricao });
     setIsDeleteOpen(true);
   };
+  
   const ordem = 'recente';
   const filtrados = pedidos
     .filter((p) => {
@@ -145,7 +148,7 @@ export const PedidosFabrica = () => {
             key={item.id}
             className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all flex flex-col"
           >
-            {/* Imagem do Layout (Destaque) */}
+            {/* Imagem do Layout */}
             <div className="h-44 bg-slate-100 relative group">
               {item.layout ? (
                 <img
@@ -162,7 +165,6 @@ export const PedidosFabrica = () => {
                 </div>
               )}
 
-              {/* Badge de Status Interativa */}
               <button
                 onClick={() => handleTrocarStatusRapido(item.id, item.status)}
                 title="Clique para mudar o status"
@@ -183,7 +185,7 @@ export const PedidosFabrica = () => {
             </div>
 
             {/* Conteúdo do Card */}
-            <div className="p-5 flex-1">
+            <div className="p-5 flex-1 text-left">
               <div className="mb-4 flex justify-between">
                 <div>
                   <h4 className="font-bold text-slate-900 text-lg leading-tight">
@@ -193,12 +195,12 @@ export const PedidosFabrica = () => {
                     {item.nome_descricao}
                   </p>
                 </div>
-                <div>
-                  <h4 className="font-bold text-slate-900 text-lg leading-tight">
-                    Quantidade total:
+                <div className="text-right">
+                  <h4 className="font-black text-slate-400 text-[10px] uppercase tracking-tighter">
+                    Qtd Total
                   </h4>
-                  <p className="text-sm text-blue-600 font-semibold mt-1">
-                    {item.total_pecas} Unidades
+                  <p className="text-sm text-slate-900 font-black">
+                    {String(item.total_pecas).padStart(2, '0')} Unid.
                   </p>
                 </div>
               </div>
@@ -214,11 +216,11 @@ export const PedidosFabrica = () => {
                         key={key}
                         className="bg-white border border-slate-200 px-2 py-1 rounded-md shadow-sm"
                       >
-                        <span className="text-xs font-bold text-slate-700 uppercase">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase">
                           {key}:
                         </span>
                         <span className="text-xs ml-1 text-blue-600 font-black">
-                          {val}
+                          {String(val).padStart(2, '0')}
                         </span>
                       </div>
                     )
@@ -240,7 +242,7 @@ export const PedidosFabrica = () => {
 
             {/* Ações */}
             <div className="px-5 py-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
-              <p className="text-[10px] text-slate-400 font-medium">
+              <p className="text-[10px] text-slate-400 font-medium italic">
                 CRIADO EM {formatarDataHora(item.data_criacao)}
               </p>
               <div className="flex gap-1">
@@ -271,11 +273,13 @@ export const PedidosFabrica = () => {
           </div>
         ))}
       </div>
+      
+      {/* Modais com as ações de recarregamento */}
       <ModalEditarPedidoFabrica
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
         onSuccess={carregarDados}
-        pedidoId={selectedItem.id} // ID que o handleEdit setou
+        pedidoId={selectedItem.id} 
       />
       <ModalNovoPedidoFabrica
         isOpen={isModalOpen}
