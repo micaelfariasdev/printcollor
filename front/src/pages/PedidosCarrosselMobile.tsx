@@ -8,31 +8,39 @@ import {
   ArrowLeftCircle,
   ArrowRightCircle,
   RotateCcw,
+  RefreshCw, // Importado para o botão de atualizar
 } from 'lucide-react';
 
 export const PedidosCarrosselMobile = () => {
   const [pedidos, setPedidos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false); // Estado para animação do botão
   const { addAlert } = useAlert();
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const carregarDados = () => {
-    api.get('pedidos/').then((response) => {
+  const carregarDados = async () => {
+    setRefreshing(true);
+    try {
+      const response = await api.get('pedidos/');
       const lista = Object.values(response.data)
         .filter((p: any) => p.status !== 'finalizado')
         .sort((a: any, b: any) => b.id - a.id);
       setPedidos(lista);
+    } catch (error) {
+      addAlert('Erro ao atualizar lista.', 'error');
+    } finally {
       setLoading(false);
-    });
+      setRefreshing(false);
+    }
   };
 
   useEffect(() => {
     carregarDados();
-    const interval = setInterval(carregarDados, 300000);
+    // Atualização automática programada para 10 minutos (600.000ms)
+    const interval = setInterval(carregarDados, 600000); 
     return () => clearInterval(interval);
   }, []);
 
-  // ADICIONADO APENAS A FUNÇÃO DE STATUS
   const handleTrocarStatusRapido = async (id: number, statusAtual: string) => {
     const proximosStatus: { [key: string]: string } = {
       pendente: 'em_producao',
@@ -81,6 +89,14 @@ export const PedidosCarrosselMobile = () => {
             <span className="text-blue-500 font-black text-[10px] italic tracking-tighter">PRINT COLLOR</span>
             <div className="h-4 w-px bg-slate-700 mx-1" />
             <span className="text-[9px] text-slate-400 font-bold uppercase italic">{pedidos.length} Pedidos Ativos</span>
+            
+            {/* BOTÃO ATUALIZAR MANUALMENTE */}
+            <button 
+              onClick={carregarDados} 
+              className={`ml-2 text-slate-500 hover:text-blue-400 transition-all ${refreshing ? 'animate-spin text-blue-500' : ''}`}
+            >
+              <RefreshCw size={14} />
+            </button>
           </div>
 
           <div className="flex items-center gap-4">
@@ -123,7 +139,6 @@ export const PedidosCarrosselMobile = () => {
                     <span className="text-blue-400 font-bold text-[9px] uppercase truncate max-w-[150px] block">{item.cliente_nome}</span>
                   </div>
 
-                  {/* ADICIONADO APENAS O BOTÃO DE STATUS NO CANTO SUPERIOR DIREITO */}
                   <button
                     onClick={() => handleTrocarStatusRapido(item.id, item.status)}
                     className={`absolute top-2 right-2 px-3 py-1 rounded-lg text-[10px] font-black uppercase shadow-lg transition-all active:scale-90 ${
