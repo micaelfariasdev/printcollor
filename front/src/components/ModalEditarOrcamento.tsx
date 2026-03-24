@@ -224,6 +224,23 @@ const ModalEditarOrcamento: React.FC<Props> = ({
             </div>
 
             <div className="space-y-4">
+              <button
+                onClick={() =>
+                  setItens([
+                    // O novo item entra primeiro agora
+                    {
+                      produto: '',
+                      descricao: '',
+                      quantidade: 1,
+                      preco_negociado: 0,
+                    },
+                    ...itens,
+                  ])
+                }
+                className="w-full py-3 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+              >
+                <Plus size={18} /> Adicionar Novo Item
+              </button>
               {itens.map((item, index) => (
                 <div
                   key={index}
@@ -302,22 +319,6 @@ const ModalEditarOrcamento: React.FC<Props> = ({
                   />
                 </div>
               ))}
-              <button
-                onClick={() =>
-                  setItens([
-                    ...itens,
-                    {
-                      produto: '',
-                      descricao: '',
-                      quantidade: 1,
-                      preco_negociado: 0,
-                    },
-                  ])
-                }
-                className="w-full py-3 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
-              >
-                <Plus size={18} /> Adicionar Novo Item
-              </button>
             </div>
           </div>
 

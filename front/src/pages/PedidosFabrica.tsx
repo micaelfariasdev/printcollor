@@ -23,7 +23,7 @@ const handleDownloadPDF = async (id: number, client: string) => {
       responseType: 'blob', // ESSENCIAL para receber arquivos
     });
 
-// 1. Captura o cabeçalho Content-Disposition
+    // 1. Captura o cabeçalho Content-Disposition
     const contentDisposition = response.headers['content-disposition'];
     let filename = `${client}-${id}.pdf`; // Nome padrão de segurança
 
@@ -39,12 +39,12 @@ const handleDownloadPDF = async (id: number, client: string) => {
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
-    
+
     link.setAttribute('download', filename); // Aqui usamos o nome que veio do Django!
-    
+
     document.body.appendChild(link);
     link.click();
-    
+
     link.parentNode?.removeChild(link);
     window.URL.revokeObjectURL(url);
   } catch (error) {
@@ -61,11 +61,15 @@ export const PedidosFabrica = () => {
   const [filtroPendente, setFiltroPendente] = useState(true);
   const [filtroProducao, setFiltroProducao] = useState(true);
   const [filtroFinalizado, setFiltroFinalizado] = useState(true);
+  const [isViewOpen, setIsViewOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<{
     id: number | null;
     nome_descricao: string;
   }>({ id: null, nome_descricao: '' });
-
+  const handleView = (id: number) => {
+    setSelectedItem({ ...selectedItem, id });
+    setIsViewOpen(true);
+  };
   const carregarDados = () => {
     api.get('pedidos/').then((response) => {
       setPedidos(response.data);
@@ -278,9 +282,11 @@ export const PedidosFabrica = () => {
               </p>
               <div className="flex gap-1">
                 <button
-                  onClick={() => handleDownloadPDF(item.id, item.cliente_nome)}
-                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                  title="Visualizar PDF Seguro"
+                  onClick={() =>
+                    window.open(`/pedido/${item.id}/visualizar`, '_blank')
+                  }
+                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                  title="Visualizar para Impressão"
                 >
                   <Eye size={18} />
                 </button>

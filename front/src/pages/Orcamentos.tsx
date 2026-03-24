@@ -75,9 +75,11 @@ const Orcamentos: React.FC = () => {
     carregarOrcamentos();
   }, [isEditModalOpen, isModalOpen]);
 
-  const filtrados = orcamentos.filter((o) =>
-    o.nome_cliente.toLowerCase().includes(busca.toLowerCase())
-  );
+    const filtrados = orcamentos
+    .filter((o) =>
+      o.nome_cliente.toLowerCase().includes(busca.toLowerCase())
+    ) 
+    .sort((a, b) => b.id - a.id)
 
   return (
     <div className="space-y-6">

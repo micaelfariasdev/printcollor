@@ -13,3 +13,15 @@ button {
 nav {
     @apply cursor-pointer;
 }
+
+@media print {
+  /* Força o modo paisagem e remove margens chatas do navegador */
+  @page { 
+    size: landscape; 
+    margin: 0; 
+  }
+  body { 
+    margin: 0; 
+    -webkit-print-color-adjust: exact; 
+  }
+}

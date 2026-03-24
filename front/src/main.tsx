@@ -5,6 +5,8 @@ import Login from './pages/Login.tsx';
 import Dashboard from './pages/Dashboard.tsx';
 import Register from './pages/Register.tsx';
 import { LoadingScreen } from './components/LoadingScreen.tsx';
+import VisualizarPedidoPage from './pages/VisualizarPedidoPage.tsx';
+import { PedidosCarrosselMobile } from './pages/PedidosCarrosselMobile.tsx';
 
 const root = document.getElementById('root');
 
@@ -17,6 +19,8 @@ if (root) {
         <Route path="/" element={<Dashboard />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/pedido/:id/visualizar" element={<VisualizarPedidoPage />} />
+        <Route path="/pedidos" element={<PedidosCarrosselMobile />} />
       </Routes>
     </BrowserRouter>
   );

@@ -47,11 +47,11 @@ const ModalNovoOrcamento: React.FC<Props> = ({
   }, [isOpen]);
 
   const adicionarItem = () => {
-    setItens([
-      ...itens,
-      { produto: '', descricao: '', quantidade: 1, preco_negociado: 0 },
-    ]);
-  };
+  setItens([
+    { produto: '', descricao: '', quantidade: 1, preco_negociado: 0 },
+    ...itens,
+  ]);
+};
 
   const removerItem = (index: number) => {
     if (itens.length > 1) {
