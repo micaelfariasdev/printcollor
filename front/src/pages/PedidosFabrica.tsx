@@ -17,40 +17,7 @@ import ModalNovoPedidoFabrica from '../components/ModalNovoPedidoFabrica';
 import ModalEditarPedidoFabrica from '../components/ModalEditarPedidoFabrica';
 import { FilterToggle } from '../components/FilterToggle';
 
-const handleDownloadPDF = async (id: number, client: string) => {
-  try {
-    const response = await api.get(`pedidos/${id}/gerar_pdf/`, {
-      responseType: 'blob', // ESSENCIAL para receber arquivos
-    });
 
-    // 1. Captura o cabeçalho Content-Disposition
-    const contentDisposition = response.headers['content-disposition'];
-    let filename = `${client}-${id}.pdf`; // Nome padrão de segurança
-
-    // 2. Extrai o nome do arquivo usando Regex
-    if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
-      if (filenameMatch && filenameMatch.length > 1) {
-        filename = filenameMatch[1];
-      }
-    }
-
-    // 3. Cria o link e faz o download com o nome do BACK
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-
-    link.setAttribute('download', filename); // Aqui usamos o nome que veio do Django!
-
-    document.body.appendChild(link);
-    link.click();
-
-    link.parentNode?.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error('Erro ao baixar PDF:', error);
-  }
-};
 
 export const PedidosFabrica = () => {
   const [busca, setBusca] = useState('');
@@ -61,15 +28,11 @@ export const PedidosFabrica = () => {
   const [filtroPendente, setFiltroPendente] = useState(true);
   const [filtroProducao, setFiltroProducao] = useState(true);
   const [filtroFinalizado, setFiltroFinalizado] = useState(true);
-  const [isViewOpen, setIsViewOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<{
     id: number | null;
     nome_descricao: string;
   }>({ id: null, nome_descricao: '' });
-  const handleView = (id: number) => {
-    setSelectedItem({ ...selectedItem, id });
-    setIsViewOpen(true);
-  };
+ 
   const carregarDados = () => {
     api.get('pedidos/').then((response) => {
       setPedidos(response.data);
