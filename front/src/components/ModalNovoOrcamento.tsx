@@ -108,7 +108,7 @@ const ModalNovoOrcamento: React.FC<Props> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
       <div className="bg-white w-full max-w-4xl rounded-[2.5rem] shadow-2xl flex flex-col max-h-[95vh] border border-slate-100 overflow-hidden">
         {/* Header */}
         <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-white">
@@ -222,7 +222,7 @@ const ModalNovoOrcamento: React.FC<Props> = ({
               {itens.map((item, index) => (
                 <div
                   key={index}
-                  className="group relative flex flex-col gap-4 bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100 hover:border-blue-200 transition-all"
+                  className="group relative flex flex-col gap-4 bg-slate-50/50 p-6 rounded-4xl border border-slate-100 hover:border-blue-200 transition-all"
                 >
                   <div className="grid grid-cols-12 gap-4">
                     {/* Produto */}
@@ -344,7 +344,7 @@ const ModalNovoOrcamento: React.FC<Props> = ({
               disabled={
                 loading || !selectedCliente || itens.some((i) => !i.produto)
               }
-              className={`${theme.colors.primaryButton} text-white px-10 py-4 rounded-[1.5rem] font-black uppercase tracking-widest flex items-center gap-3 shadow-xl shadow-blue-500/20 disabled:opacity-50 transition-all active:scale-95`}
+              className={`${theme.colors.primaryButton} text-white px-10 py-4 rounded-3xl font-black uppercase tracking-widest flex items-center gap-3 shadow-xl shadow-blue-500/20 disabled:opacity-50 transition-all active:scale-95`}
             >
               {loading ? (
                 <Loader2 className="animate-spin" size={20} />

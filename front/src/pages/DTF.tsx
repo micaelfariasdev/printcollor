@@ -19,28 +19,9 @@ import ModalEditarDTF from '../components/ModalEditarDTF';
 import ModalDelete from '../components/ModalDelete';
 import { TriStateFilter } from '../components/TriStateFilter';
 
-const handleDownloadPDF = async (id: number, client: string) => {
-  try {
-    const response = await api.get(`dtf/${id}/gerar_pdf/`, {
-      responseType: 'blob',
-    });
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `dtf-${client}-${id}.pdf`);
-    document.body.appendChild(link);
-    link.click();
-    link.parentNode?.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error('Erro ao baixar PDF:', error);
-  }
-};
 
 export const DTFTable = () => {
   const [busca, setBusca] = useState('');
-  // const [ordem, setOrdem] = useState('recente');
-
   const [mockData, setData] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -131,8 +112,7 @@ export const DTFTable = () => {
     .sort((a, b) => {
       // Ordenação padrão por data de criação (recente)
       return (
-        new Date(b.data_criacao).getTime() -
-        new Date(a.data_criacao).getTime()
+        new Date(b.data_criacao).getTime() - new Date(a.data_criacao).getTime()
       );
     });
 
@@ -329,7 +309,9 @@ export const DTFTable = () => {
                   <MessageCircle size={18} />
                 </button>
                 <button
-                  onClick={() => handleDownloadPDF(item.id, item.nome_cliente)}
+                  onClick={() =>
+                    window.open(`/dtf/${item.id}/visualizar`, '_blank')
+                  }
                   className="p-2 text-slate-400 hover:text-blue-600 transition"
                 >
                   <FileText size={18} />

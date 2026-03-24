@@ -7,6 +7,7 @@ import Register from './pages/Register.tsx';
 import { LoadingScreen } from './components/LoadingScreen.tsx';
 import VisualizarPedidoPage from './pages/VisualizarPedidoPage.tsx';
 import { PedidosCarrosselMobile } from './pages/PedidosCarrosselMobile.tsx';
+import VisualizarDTFPage from './pages/VisualizarDTFPage.tsx';
 
 const root = document.getElementById('root');
 
@@ -21,6 +22,7 @@ if (root) {
         <Route path="/register" element={<Register />} />
         <Route path="/pedido/:id/visualizar" element={<VisualizarPedidoPage />} />
         <Route path="/pedidos" element={<PedidosCarrosselMobile />} />
+        <Route path="/dtf/:id/visualizar" element={<VisualizarDTFPage />} />
       </Routes>
     </BrowserRouter>
   );

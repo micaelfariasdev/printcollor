@@ -112,7 +112,7 @@ const ModalEditarOrcamento: React.FC<Props> = ({
 
   return (
     <>
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+      <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
         <div className="bg-white w-full max-w-4xl rounded-[2.5rem] shadow-2xl flex flex-col max-h-[95vh] overflow-hidden border border-slate-100">
           <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-white">
             <div className="flex items-center gap-4">
@@ -244,7 +244,7 @@ const ModalEditarOrcamento: React.FC<Props> = ({
               {itens.map((item, index) => (
                 <div
                   key={index}
-                  className="bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100 space-y-4"
+                  className="bg-slate-50/50 p-6 rounded-4xl border border-slate-100 space-y-4"
                 >
                   <div className="flex gap-4 items-end">
                     <div className="flex-1 space-y-1">
@@ -334,7 +334,7 @@ const ModalEditarOrcamento: React.FC<Props> = ({
             <button
               onClick={salvarEdicao}
               disabled={loading}
-              className={`${theme.colors.primaryButton} text-white px-10 py-4 rounded-[1.5rem] font-black uppercase tracking-widest flex items-center gap-3 shadow-xl disabled:opacity-50`}
+              className={`${theme.colors.primaryButton} text-white px-10 py-4 rounded-3xl font-black uppercase tracking-widest flex items-center gap-3 shadow-xl disabled:opacity-50`}
             >
               {loading ? (
                 <Loader2 className="animate-spin" size={20} />

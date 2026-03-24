@@ -20,7 +20,7 @@ export const LoadingScreen = () => {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-white/60 backdrop-blur-[2px] animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-999 flex items-center justify-center bg-white/60 backdrop-blur-[2px] animate-in fade-in duration-200">
       <div className="flex flex-col items-center gap-3">
         <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
         <span className="text-xs font-black text-slate-500 uppercase tracking-widest italic">
