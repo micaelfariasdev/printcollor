@@ -25,3 +25,37 @@ nav {
     -webkit-print-color-adjust: exact; 
   }
 }
+/* Esconde a scrollbar no Chrome, Safari e Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Esconde a scrollbar no IE, Edge e Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+/* Esconde o aviso por padrão */
+#aviso-orientacao {
+  display: none;
+}
+
+/* Quando o celular estiver em pé (Portrait) e for uma tela pequena */
+@media screen and (orientation: portrait) and (max-width: 1024px) {
+  #carrossel-principal { 
+    display: none !important; 
+  }
+  #aviso-orientacao {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    inset: 0;
+    background: #0f172a;
+    color: white;
+    z-index: 9999;
+    text-align: center;
+    padding: 20px;
+  }
+}

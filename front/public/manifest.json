@@ -1,0 +1,22 @@
+{
+  "short_name": "PrintCollor",
+  "name": "PrintCollor - Produção",
+  "icons": [
+    {
+      "src": "/logo-pwa.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo-pwa.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/pedidos",
+  "display": "standalone",
+  "theme_color": "#0f172a",
+  "background_color": "#0f172a",
+  "orientation": "landscape"
+}
