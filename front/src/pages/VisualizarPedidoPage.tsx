@@ -47,22 +47,42 @@ const VisualizarPedidoPage = () => {
       </div>
     );
 
-  // --- LÓGICA DE GRADES (RECUPERADA) ---
+  // --- LÓGICA DE ORDENAÇÃO DE TAMANHOS ---
+  const ordemTamanhos: { [key: string]: number } = {
+    'pp': 1, 'p': 2, 'm': 3, 'g': 4, 'gg': 5, 'xgg': 6, 'xxgg': 7,
+    'bl pp': 10, 'bl p': 11, 'bl m': 12, 'bl g': 13, 'bl gg': 14, 'bl xgg': 15, 'bl xxgg': 16,
+    '02': 20, '04': 21, '06': 22, '08': 23, '10': 24, '12': 25, '14': 26, '16': 27,
+    '2a': 20, '4a': 21, '6a': 22, '8a': 23, '10a': 24, '12a': 25, '14a': 26, '16a': 27
+  };
+
+  const ordenarGrade = (a: [string, any], b: [string, any]) => {
+    const pesoA = ordemTamanhos[a[0].toLowerCase()] || 99;
+    const pesoB = ordemTamanhos[b[0].toLowerCase()] || 99;
+    return pesoA - pesoB;
+  };
+
   const tamanhos = Object.entries(pedido.detalhes_tamanho || {});
-  const gradeBL = tamanhos.filter(([tam]) =>
-    tam.toLowerCase().startsWith('bl')
-  );
-  const gradeInfantil = tamanhos.filter(([tam]) => {
-    const n = parseInt(tam);
-    return !isNaN(n) && n <= 16 && !tam.toLowerCase().startsWith('bl');
-  });
-  const gradeAdulto = tamanhos.filter(([tam]) => {
-    const isBL = tam.toLowerCase().startsWith('bl');
-    const n = parseInt(tam);
-    const isInfantil = !isNaN(n) && n <= 16;
-    const isGeneric = tam.toLowerCase() === 'quantidade';
-    return !isBL && !isInfantil && !isGeneric;
-  });
+
+  const gradeBL = tamanhos
+    .filter(([tam]) => tam.toLowerCase().startsWith('bl'))
+    .sort(ordenarGrade);
+
+  const gradeInfantil = tamanhos
+    .filter(([tam]) => {
+      const n = parseInt(tam);
+      return !isNaN(n) && n <= 16 && !tam.toLowerCase().startsWith('bl');
+    })
+    .sort(ordenarGrade);
+
+  const gradeAdulto = tamanhos
+    .filter(([tam]) => {
+      const isBL = tam.toLowerCase().startsWith('bl');
+      const n = parseInt(tam);
+      const isInfantil = !isNaN(n) && n <= 16;
+      const isGeneric = tam.toLowerCase() === 'quantidade';
+      return !isBL && !isInfantil && !isGeneric;
+    })
+    .sort(ordenarGrade);
 
   return (
     <div className="min-h-screen bg-slate-800 flex flex-col items-center p-4 print:p-0 print:bg-white">
@@ -163,7 +183,7 @@ const VisualizarPedidoPage = () => {
           </div>
         </div>
 
-        {/* LAYOUT (DINÂMICO) */}
+        {/* LAYOUT */}
         <div className="layout-main">
           {pedido.layout ? (
             <img src={pedido.layout} className="layout-img" alt="Layout" />
@@ -172,7 +192,7 @@ const VisualizarPedidoPage = () => {
           )}
         </div>
 
-        {/* FOOTER (EXATAMENTE COMO VOCÊ QUERIA) */}
+        {/* FOOTER */}
         <div className="specs-footer">
           <div className="grid-column">
             <span className="section-label">Grade de Quantidades</span>
@@ -183,7 +203,7 @@ const VisualizarPedidoPage = () => {
                   <div
                     key={tam}
                     className="grid-box"
-                    style={{ borderColor: '#fef3c7' }}
+                    style={{ borderColor: '#e2e8f0' }}
                   >
                     <span className="grid-label">{tam}</span>
                     <span className="grid-value">{String(qtd).padStart(2, '0')}</span>
@@ -198,7 +218,7 @@ const VisualizarPedidoPage = () => {
                   <div
                     key={tam}
                     className="grid-box"
-                    style={{ borderColor: '#fef3c7' }}
+                    style={{ borderColor: '#e2e8f0' }}
                   >
                     <span className="grid-label">{tam}</span>
                     <span className="grid-value">{String(qtd).padStart(2, '0')}</span>
@@ -213,7 +233,7 @@ const VisualizarPedidoPage = () => {
                   <div
                     key={tam}
                     className="grid-box"
-                    style={{ borderColor: '#fef3c7' }}
+                    style={{ borderColor: '#e2e8f0' }}
                   >
                     <span className="grid-label">{tam}</span>
                     <span className="grid-value">{String(qtd).padStart(2, '0')}</span>
@@ -222,7 +242,6 @@ const VisualizarPedidoPage = () => {
               </div>
             )}
 
-            {/* Caso quantidade única (bolsa, etc) */}
             {gradeAdulto.length === 0 &&
               gradeBL.length === 0 &&
               gradeInfantil.length === 0 && (
@@ -247,7 +266,6 @@ const VisualizarPedidoPage = () => {
             </div>
           </div>
 
-          {/* INFORMAÇÕES EXATAMENTE COMO NO MODELO HTML */}
           <div className="specs-column">
             <span className="section-label">Informações</span>
             <span style={{ fontSize: '12px', color: '#64748b' }}>

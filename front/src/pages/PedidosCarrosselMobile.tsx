@@ -218,39 +218,42 @@ export const PedidosCarrosselMobile = () => {
                       </span>
                     </div>
 
-                    <div className="space-y-1 mt-1">
-                      <div>
-                        <span className="text-[8px] text-slate-500 font-black uppercase">
+                    <div className="grid grid-cols-3 gap-2 mt-1 pt-1 border-t border-slate-800">
+                      {/* Observação - Agora usando grid para controlar melhor o espaço */}
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[7px] text-slate-500 font-black uppercase leading-none mb-1">
                           Observação:
                         </span>
-                        <p className="text-white text-[10px] font-bold uppercase leading-tight line-clamp-2">
-                          {item.descricao || 'N/A'}
+                        <p className="text-white text-[9px] font-bold uppercase leading-tight line-clamp-4 break-all">
+                          {item.descricao || 'N/A'} 
                         </p>
                       </div>
-                      <div className="flex gap-4 border-t border-slate-800 pt-1">
-                        <div>
-                          <span className="text-[8px] text-slate-500 font-black uppercase">
-                            Material:
-                          </span>
-                          <p className="text-white text-[9px] font-bold uppercase truncate max-w-[80px]">
-                            {item.material}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-[8px] text-slate-500 font-black uppercase">
-                            Aplicação:
-                          </span>
-                          <p className="text-blue-400 text-[9px] font-bold uppercase truncate max-w-[80px]">
-                            {item.aplicacao_arte}
-                          </p>
-                        </div>
+
+                      {/* Material */}
+                      <div className="flex flex-col border-l border-slate-700 pl-2 min-w-0">
+                        <span className="text-[7px] text-slate-500 font-black uppercase leading-none mb-1">
+                          Material:
+                        </span>
+                        <p className="text-white text-[9px] font-bold uppercase truncate">
+                          {item.material}
+                        </p>
+                      </div>
+
+                      {/* Aplicação */}
+                      <div className="flex flex-col border-l border-slate-700 pl-2 min-w-0">
+                        <span className="text-[7px] text-slate-500 font-black uppercase leading-none mb-1">
+                          Aplicação:
+                        </span>
+                        <p className="text-blue-400 text-[9px] font-bold uppercase truncate">
+                          {item.aplicacao_arte}
+                        </p>
                       </div>
                     </div>
                   </div>
 
                   <div className="bg-white rounded-xl p-3 flex-1 flex flex-col min-h-0 shadow-md">
                     <span className="text-[10px] font-black text-slate-400 uppercase mb-2 shrink-0 tracking-widest">
-                      Grade de Peças
+                      Grade
                     </span>
                     <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                       {gradeAdulto.length > 0 && (
