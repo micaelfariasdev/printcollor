@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Trash2, AlertTriangle, Loader2 } from 'lucide-react';
+import React from 'react';
+import { Trash2, AlertTriangle } from 'lucide-react';
 import { api } from '../auth/useAuth';
 import { useAlert } from '../contexts/AlertContext';
 

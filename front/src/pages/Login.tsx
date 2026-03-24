@@ -9,7 +9,6 @@ const Login: React.FC = () => {
   const { login } = useAuth();
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const navigate = useNavigate();
   const { addAlert } = useAlert();
 
@@ -47,11 +46,6 @@ const Login: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-5">
-          {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-lg text-xs font-bold border border-red-100">
-              {error}
-            </div>
-          )}
 
           <div className="space-y-1">
             <label className="text-xs font-black text-slate-500 uppercase">
