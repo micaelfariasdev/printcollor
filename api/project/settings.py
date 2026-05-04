@@ -39,7 +39,6 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'django_filters',
-    'channels',  # Adicionado para WebSocket support
     'api',
     'rest_framework_simplejwt',
 ]
@@ -74,14 +73,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'project.wsgi.application'
-ASGI_APPLICATION = 'project.asgi.application'  # Para Channels/WebSocket
-
-# Channels configuration
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',  # Para produção, usar Redis
-    },
-}
 
 
 # Database
