@@ -69,6 +69,7 @@ class Cliente(models.Model):
     cnpj = models.CharField(max_length=18, unique=False, null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
     telefone = models.CharField(max_length=15, null=True, blank=True)
+    jid = models.CharField(max_length=50, null=True, blank=True, unique=True)
 
     def __str__(self):
         return self.nome
@@ -192,3 +193,67 @@ class PedidoFabrica(models.Model):
 
     def __str__(self):
         return f"{self.cliente.nome} - {self.descricao} ({self.get_status_display()})"
+
+
+class WhatsAppInstance(models.Model):
+    STATUS_CHOICES = (
+        ('ativo', 'Ativo'),
+        ('inativo', 'Inativo'),
+        ('conectando', 'Conectando'),
+        ('desconectado', 'Desconectado'),
+    )
+
+    nome = models.CharField(max_length=100, unique=True)
+    instance_id = models.CharField(max_length=100, unique=True)
+    numero = models.CharField(max_length=20, blank=True, default='')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='inativo')
+    cor = models.CharField(max_length=7, default='#25D366', help_text="Cor em hexadecimal para o chat")
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    profile_pic_url = models.URLField(max_length=500, blank=True, default='')
+    phone_number = models.CharField(max_length=20, blank=True, default='')
+    connection_status = models.CharField(max_length=50, blank=True, default='')
+
+    def __str__(self):
+        return f"{self.nome} ({self.numero})"
+
+    class Meta:
+        ordering = ['-criado_em']
+
+
+class WhatsAppMessage(models.Model):
+    MSG_TYPES = (
+        ('text', 'Texto'),
+        ('image', 'Imagem'),
+        ('video', 'Vídeo'),
+        ('audio', 'Áudio'),
+        ('document', 'Documento'),
+        ('sticker', 'Sticker'),
+        ('contact', 'Contato'),
+        ('location', 'Localização'),
+    )
+
+    message_id = models.CharField(max_length=255, unique=True)
+    instance = models.ForeignKey(
+        WhatsAppInstance, related_name='mensagens', on_delete=models.CASCADE)
+    from_number = models.CharField(max_length=20)
+    to_number = models.CharField(max_length=20)
+    body = models.TextField()
+    from_me = models.BooleanField(default=False)
+    timestamp = models.DateTimeField()
+    contato_nome = models.CharField(max_length=100, blank=True, default='')
+    lida = models.BooleanField(default=False)
+    msg_type = models.CharField(max_length=20, choices=MSG_TYPES, default='text')
+    media_url = models.TextField(blank=True, default='')
+    reply_to = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.from_number} -> {self.to_number}: {self.body[:50]}"
+
+    class Meta:
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['instance', 'from_number']),
+            models.Index(fields=['timestamp']),
+        ]
