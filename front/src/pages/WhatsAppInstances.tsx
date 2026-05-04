@@ -35,10 +35,26 @@ const WhatsAppInstances: React.FC = () => {
     console.log(`[${type.toUpperCase()}] ${message}`);
   };
 
+  // Helper pra normalizar status (backend pode vir em pt ou en)
+  const normalizeStatus = (s: string) => {
+    const map: Record<string, string> = {
+      'ativo': 'connected',
+      'inativo': 'disconnected',
+      'desconectado': 'disconnected',
+      'conectando': 'connecting',
+      'qrcode': 'connecting',
+      'connected': 'connected',
+      'disconnected': 'disconnected',
+      'connecting': 'connecting',
+      'open': 'connected',
+    };
+    return map[s?.toLowerCase()] || s;
+  };
+
   const loadInstances = useCallback(async () => {
     try {
       const res = await api.get('/whatsapp-instances/');
-      setInstances(res.data);
+      setInstances(res.data.map((i: any) => ({ ...i, status: normalizeStatus(i.status) })));
     } catch (error) {
       console.error('Erro ao carregar instâncias:', error);
     } finally {
@@ -153,7 +169,7 @@ const WhatsAppInstances: React.FC = () => {
     setShowWebhookModal(true);
     setWebhookLoading(true);
     try {
-      const res = await api.get(`/whatsapp/webhook/configure/?instance=${instance.nome}`);
+      const res = await api.get(`/webhook/configure/?instance=${instance.nome}`);
       const webhookData = res.data?.result?.webhook || res.data?.result || {};
       if (webhookData.url) {
         // Extrai a base URL (remove /api/whatsapp/webhook/ do final)

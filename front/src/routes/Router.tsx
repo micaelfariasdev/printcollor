@@ -64,7 +64,7 @@ export const AppRouter = () => {
         <Route path="/painel">
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dtf" element={<DTFTable />} />
-          <Route path="dashboard" element={<div>Dashboard</div>} />
+          <Route path="dashboard" element={<div className="p-6"><h1 className="text-2xl font-bold">Dashboard</h1><p>Bem-vindo ao painel.</p></div>} />
           <Route path="orcamentos" element={<AdminFinanceiroRoute><Orcamentos /></AdminFinanceiroRoute>} />
           <Route path="clientes" element={<AdminFinanceiroRoute><Clients /></AdminFinanceiroRoute>} />
           <Route path="produtos" element={<AdminFinanceiroRoute><Produtos /></AdminFinanceiroRoute>} />

@@ -43,6 +43,11 @@ nav {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+/* Esconde scrollbar no nav da sidebar (Chrome/Safari) */
+nav.overflow-y-auto::-webkit-scrollbar {
+  display: none;
+}
 /* Esconde o aviso por padrão */
 #aviso-orientacao {
   display: none;

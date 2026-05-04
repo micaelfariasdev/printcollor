@@ -103,6 +103,34 @@ class WhatsAppInstanceSerializer(serializers.ModelSerializer):
         model = WhatsAppInstance
         fields = ['id', 'nome', 'instance_id', 'numero', 'status', 'cor', 'ativo', 'criado_em']
 
+    def to_internal_value(self, data):
+        # Traduz status da Evolution API (inglês) para o formato do modelo (português)
+        # antes que a validação de choices ocorra
+        if 'status' in data:
+            status_map = {
+                'connected': 'ativo',
+                'disconnected': 'desconectado',
+                'connecting': 'conectando',
+                'qrcode': 'conectando',
+            }
+            if not isinstance(data, dict):
+                data = dict(data)
+            val = data['status']
+            data['status'] = status_map.get(val.lower() if isinstance(val, str) else val, val)
+        return super().to_internal_value(data)
+
+    def to_representation(self, instance):
+        # Traduz status do modelo (português) para a Evolution API (inglês) na saída
+        data = super().to_representation(instance)
+        status_map = {
+            'ativo': 'connected',
+            'inativo': 'disconnected',
+            'desconectado': 'disconnected',
+            'conectando': 'connecting',
+        }
+        data['status'] = status_map.get(data['status'], data['status'])
+        return data
+
 
 class WhatsAppInstanceViewSet(viewsets.ModelViewSet):
     """ViewSet para gerenciar instâncias WhatsApp via Evolution API"""

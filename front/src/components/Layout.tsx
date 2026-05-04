@@ -110,7 +110,7 @@ export const Layout: React.FC = () => {
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto no-scrollbar">
           {menuItems
             .filter(item => {
               if (isAdmin) return true;

@@ -19,7 +19,7 @@ db.sqlite3-journal
 # Arquivos de mídia e estáticos locais
 /media/
 /static_root/
-
+migrations
 ### --- REACT / NODE --- ###
 node_modules/
 dist/

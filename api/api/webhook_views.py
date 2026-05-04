@@ -31,7 +31,6 @@ class WhatsAppWebhookView(View):
             event = data.get('event')
             instance_name = data.get('instance')
             payload = data.get('data', {})
-
             logger.info(f"[WEBHOOK] Evento '{event}' da instância '{instance_name}'")
 
             if not instance_name:
@@ -73,7 +72,7 @@ class WhatsAppWebhookView(View):
             return JsonResponse({'error': str(e)}, status=500)
 
     def _process_message(self, instance, payload):
-        """Processa mensagem recebida da Evolution API"""
+        """Processa mensagem recebida da Evolution API e envia via WebSocket (sem salvar no banco)"""
         try:
             # Formato real da Evolution API: dados vêm direto no payload
             key = payload.get('key', {})
@@ -83,11 +82,6 @@ class WhatsAppWebhookView(View):
             if not message_id:
                 return JsonResponse({'warning': 'Mensagem sem ID, ignorando'}, status=200)
 
-            # Verifica se já existe
-            if WhatsAppMessage.objects.filter(message_id=message_id).exists():
-                logger.info(f"[WEBHOOK] Mensagem {message_id} já existe, ignorando")
-                return JsonResponse({'success': True, 'message': 'Mensagem já processada'})
-
             # Extrai dados da mensagem (pode estar em message ou direto no payload)
             msg_data = payload.get('message', payload)
             message_timestamp = payload.get('messageTimestamp', 0)
@@ -96,7 +90,6 @@ class WhatsAppWebhookView(View):
             body = ''
             message_type = 'text'
             media_url = ''
-            media_type = ''
 
             if 'conversation' in msg_data:
                 body = msg_data['conversation']
@@ -105,51 +98,24 @@ class WhatsAppWebhookView(View):
             elif 'imageMessage' in msg_data:
                 body = msg_data['imageMessage'].get('caption', '')
                 message_type = 'image'
-                media_type = 'image'
-                # Não salva URL da Evolution API (expira). Salva msg_id: pro front usar /media/
                 media_url = f"msg_id:{message_id}" if message_id else ''
             elif 'videoMessage' in msg_data:
                 body = msg_data['videoMessage'].get('caption', '')
                 message_type = 'video'
-                media_type = 'video'
                 media_url = f"msg_id:{message_id}" if message_id else ''
             elif 'documentMessage' in msg_data:
                 body = msg_data['documentMessage'].get('caption', '')
                 message_type = 'document'
-                media_type = 'document'
                 media_url = f"msg_id:{message_id}" if message_id else ''
             elif 'audioMessage' in msg_data:
                 body = 'Áudio'
                 message_type = 'audio'
-                media_type = 'audio'
                 media_url = f"msg_id:{message_id}" if message_id else ''
 
             # Determina remetente/destinatário
             from_me = key.get('fromMe', False)
             remote_jid = key.get('remoteJid', '')
             from_number = remote_jid.partition('@')[0] if remote_jid else ''
-
-            if from_me:
-                sender = instance.numero
-                receiver = from_number
-            else:
-                sender = from_number
-                receiver = instance.numero
-
-            # Salva no banco
-            msg = WhatsAppMessage.objects.create(
-                instance=instance,
-                message_id=message_id,
-                from_number=sender,
-                to_number=receiver,
-                body=body,
-                from_me=from_me,
-                timestamp=timezone.now(),
-                contato_nome=push_name or from_number,
-                lida=False,
-                media_type=media_type,
-                media_url=media_url,
-            )
 
             # Envia para o WebSocket em tempo real
             channel_layer = get_channel_layer()
@@ -158,14 +124,14 @@ class WhatsAppWebhookView(View):
             # Envia o JID e pushName para o front fazer match
             message_data = {
                 'type': 'whatsapp_message',
-                'message_id': msg.message_id,
+                'message_id': message_id,
                 'body': body,
                 'from_me': from_me,
                 'instanceId': instance.id,
                 'instance_nome': instance.nome,
                 'jid': remote_jid,
                 'pushName': push_name,
-                'timestamp': str(msg.timestamp),
+                'timestamp': str(message_timestamp),
                 'messageType': message_type,
             }
 
@@ -178,9 +144,9 @@ class WhatsAppWebhookView(View):
                 async_to_sync(channel_layer.group_send)(group_name, message_data)
                 logger.info(f"[WEBHOOK] Mensagem enviada via WS com sucesso")
             except Exception as ws_error:
-                logger.error(f"[WEBHOOK] Erro ao enviar via WS: {ws_error}")
+                logger.error(f"[WEBHOOK] Erro ao enviar via WebSocket: {ws_error}")
 
-            return JsonResponse({'success': True, 'message': 'Mensagem processada'})
+            return JsonResponse({'success': True})
 
         except Exception as e:
             logger.error(f"[WEBHOOK] Erro ao processar mensagem: {e}")
@@ -218,7 +184,7 @@ class WhatsAppWebhookConfigureView(View):
             data = {
     "webhook": {
         "enabled": True,
-        "url": f"{webhook_url}/api/whatsapp/webhook/",
+        "url": f"{webhook_url}/api/webhook/evolution/",
         "events": [
             "MESSAGES_UPSERT"
         ]

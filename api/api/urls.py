@@ -28,5 +28,7 @@ urlpatterns = [
     path('whatsapp-instances/<int:pk>/media/', WhatsAppInstanceViewSet.as_view({'get': 'media'}), name='whatsapp-media'),
     path('whatsapp/unificado/', WhatsAppInstanceViewSet.as_view({'get': 'unificado'}), name='whatsapp-unificado'),
     path('webhook/evolution/', WhatsAppWebhookView.as_view(), name='webhook-evolution'),
+    path('whatsapp/webhook/', WhatsAppWebhookView.as_view(), name='webhook-evolution-alt'),
     path('webhook/configure/', WhatsAppWebhookConfigureView.as_view(), name='webhook-configure'),
+    path('whatsapp/webhook/configure/', WhatsAppWebhookConfigureView.as_view(), name='webhook-configure-alt'),
 ]

@@ -69,7 +69,7 @@ class Cliente(models.Model):
     cnpj = models.CharField(max_length=18, unique=False, null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
     telefone = models.CharField(max_length=15, null=True, blank=True)
-    jid = models.CharField(max_length=50, null=True, blank=True, unique=True)
+    jid = models.CharField(max_length=53, null=True, blank=True, unique=True)
 
     def __str__(self):
         return self.nome
@@ -207,7 +207,7 @@ class WhatsAppInstance(models.Model):
     instance_id = models.CharField(max_length=100, unique=True)
     numero = models.CharField(max_length=20, blank=True, default='')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='inativo')
-    cor = models.CharField(max_length=7, default='#25D366', help_text="Cor em hexadecimal para o chat")
+    cor = models.CharField(max_length=7, default='#25D366', help_text="Cor em hexadecimal para o chat!")
     ativo = models.BooleanField(default=True)
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
