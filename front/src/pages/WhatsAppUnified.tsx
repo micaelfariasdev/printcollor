@@ -128,7 +128,7 @@ const WhatsAppUnified: React.FC = () => {
 
   const loadChats = useCallback(async () => {
     try {
-      const res = await api.get('/whatsapp-messages/unified/');
+      const res = await api.get('/whatsapp/unificado/');
       const chatsData: Chat[] = res.data.chats || [];
       const instancesRes = await api.get('/whatsapp-instances/');
       const insts = instancesRes.data || [];
