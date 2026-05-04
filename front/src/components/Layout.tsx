@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Link, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, Printer, Users, LogOut,
   Package, Building2, ChevronUp, UserCog, Menu, X,
   MessageCircle,
   DatabaseBackup,
-  Monitor, // Adicionado
-  Activity, // Adicionado
-  MessageSquare, // WhatsApp icon
+  Monitor,
+  Activity,
+  MessageSquare,
 } from 'lucide-react';
 import { theme } from './Theme';
-import { useAuth } from '../auth/useAuth';
+import { api, useAuth } from '../auth/useAuth';
 import logo from '../assets/logo-printcollor.png';
 
 const NavItem = ({ icon, label, active, onClick }: any) => (
@@ -26,12 +26,24 @@ const NavItem = ({ icon, label, active, onClick }: any) => (
   </button>
 );
 
-export const Layout: React.FC<{ children: React.ReactNode; meData: any }> = ({ children, meData }) => {
+export const Layout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [meData, setMeData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) { window.location.href = '/login'; return; }
+    api.get('/me/')
+      .then(res => { setMeData(res.data); setLoading(false); })
+      .catch(() => { localStorage.removeItem('access_token'); localStorage.removeItem('refresh_token'); window.location.href = '/login'; });
+  }, []);
+
+  if (loading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Carregando...</div>;
 
   const activeView = location.pathname.split('/').pop() || 'dashboard';
   const isAdmin = meData?.is_staff;
@@ -150,7 +162,7 @@ export const Layout: React.FC<{ children: React.ReactNode; meData: any }> = ({ c
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto relative custom-scrollbar pb-24 md:pb-0">
         <div className="p-4 md:p-10 max-w-7xl mx-auto">
-          {children}
+          <Outlet />
         </div>
       </main>
 

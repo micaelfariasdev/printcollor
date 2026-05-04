@@ -1,6 +1,6 @@
 from django.db.models import Count, Sum, Q, F
 from django.utils import timezone
-from api.models import Orcamento, PedidoFabrica, DTFVendor, SolicitacaoOrcamento
+from api.models import Orcamento, PedidoFabrica, DTFVendor
 
 
 class DashboardService:
@@ -35,7 +35,6 @@ class DashboardService:
         dtf_pendentes = dtf_total - dtf_pagos
 
         # Solicitações
-        solicitacoes_pendentes = SolicitacaoOrcamento.objects.filter(lido=False).count()
 
         return {
             'orcamentos': {
@@ -53,5 +52,4 @@ class DashboardService:
                 'pagos': dtf_pagos,
                 'pendentes': dtf_pendentes,
             },
-            'solicitacoes_pendentes': solicitacoes_pendentes,
         }

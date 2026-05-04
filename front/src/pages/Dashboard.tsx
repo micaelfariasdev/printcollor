@@ -33,7 +33,8 @@ export type View =
   | 'empresas'
   | 'usuarios'
   | 'pedidos'
-  | 'configuracoes';
+  | 'configuracoes'
+  | 'whatsapp';
 
 // --- COMPONENTES DE APOIO ---
 

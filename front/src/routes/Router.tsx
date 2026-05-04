@@ -1,14 +1,13 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import Dashboard from '../pages/Dashboard';
 import Login from '../pages/Login';
 import Register from '../pages/Register';
+import { Layout } from '../components/Layout';
 
 // Visualização externa
 import VisualizarPedidoPage from '../pages/VisualizarPedidoPage';
 import VisualizarDTFPage from '../pages/VisualizarDTFPage';
 
 // Páginas internas
-import SummaryCards from '../components/SummaryCards';
 import Orcamentos from '../pages/Orcamentos';
 import Clients from '../pages/Clients';
 import Produtos from '../pages/Produtos';
@@ -20,24 +19,34 @@ import { ConfiguracoesBackup } from '../pages/ConfiguracoesBackup';
 import WhatsAppUnified from '../pages/WhatsAppUnified';
 import WhatsAppInstances from '../pages/WhatsAppInstances';
 import { LandingPage } from '../pages/LandingPage';
-import { PedidosCarrosselMobile } from '../pages/PedidosCarrosselMobile';
+import { PedidosCarrosselMobile } from '../pages/pedidosCarrosselMobile';
 import { DTFTable } from '../pages/DTF';
 import { PedidosFabrica } from '../pages/PedidosFabrica';
+import { useState, useEffect } from 'react';
 
-interface UsuarioData {
-  nivel_acesso?: string;
-  is_staff?: boolean;
-  [key: string]: any;
-}
+// Componente para verificar se o usuário é admin ou financeiro
+const AdminFinanceiroRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [meData, setMeData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-interface AppRouterProps {
-  meData: UsuarioData | null;
-}
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) { window.location.href = '/login'; return; }
+    import('../auth/useAuth').then(module => {
+      module.api.get('/me/')
+        .then(res => { setMeData(res.data); setLoading(false); })
+        .catch(() => { localStorage.removeItem('access_token'); localStorage.removeItem('refresh_token'); window.location.href = '/login'; });
+    });
+  }, []);
 
-export const AppRouter = ({ meData }: AppRouterProps) => {
-  const isMaquina = meData?.nivel_acesso === 'maquina';
-  const isAdminOrFinanceiro = meData?.is_staff || meData?.nivel_acesso === 'financeiro';
+  if (loading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Carregando...</div>;
+  if (meData?.is_staff || meData?.nivel_acesso === 'financeiro') {
+    return <>{children}</>;
+  }
+  return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Acesso restrito.</div>;
+};
 
+export const AppRouter = () => {
   return (
     <Routes>
       {/* Rotas Públicas */}
@@ -50,41 +59,27 @@ export const AppRouter = ({ meData }: AppRouterProps) => {
       <Route path="/dtf/:id/visualizar" element={<VisualizarDTFPage />} />
       <Route path="/pedidos-carrossel" element={<PedidosCarrosselMobile />} />
 
-      {/* Painel Interno */}
-      <Route path="/painel" element={<Dashboard meData={meData} />}>
-        <Route
-          index
-          element={<Navigate to={isMaquina ? 'dtf' : 'dashboard'} replace />}
-        />
-
-        <Route path="dtf" element={<DTFTable />} />
-        <Route path="pedidos" element={<PedidosFabrica />} />
-        <Route path="configuracoes" element={<Configuracoes />} />
-
-        {!isMaquina && (
-          <>
-            <Route path="dashboard" element={<SummaryCards />} />
-            <Route path="orcamentos" element={<Orcamentos />} />
-            <Route path="clientes" element={<Clients />} />
-            <Route path="produtos" element={<Produtos />} />
-            <Route path="orcamentos-clientes" element={<AdminOrcamentosClientes />} />
-            <Route path="backup" element={<ConfiguracoesBackup />} />
-          </>
-        )}
-
-        {isAdminOrFinanceiro && (
-          <>
-            <Route path="empresas" element={<Empresas />} />
-            <Route path="usuarios" element={<Usuarios />} />
-          </>
-        )}
-
-        <Route path="whatsapp" element={<WhatsAppUnified />} />
-        <Route path="whatsapp-instances" element={<WhatsAppInstances />} />
+      {/* Painel Interno com Layout sidebar */}
+      <Route element={<Layout />}>
+        <Route path="/painel">
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dtf" element={<DTFTable />} />
+          <Route path="dashboard" element={<div>Dashboard</div>} />
+          <Route path="orcamentos" element={<AdminFinanceiroRoute><Orcamentos /></AdminFinanceiroRoute>} />
+          <Route path="clientes" element={<AdminFinanceiroRoute><Clients /></AdminFinanceiroRoute>} />
+          <Route path="produtos" element={<AdminFinanceiroRoute><Produtos /></AdminFinanceiroRoute>} />
+          <Route path="empresas" element={<AdminFinanceiroRoute><Empresas /></AdminFinanceiroRoute>} />
+          <Route path="usuarios" element={<AdminFinanceiroRoute><Usuarios /></AdminFinanceiroRoute>} />
+          <Route path="pedidos" element={<PedidosFabrica />} />
+          <Route path="configuracoes" element={<Configuracoes />} />
+          <Route path="whatsapp" element={<WhatsAppUnified />} />
+          <Route path="whatsapp-instances" element={<WhatsAppInstances />} />
+          <Route path="orcamentos-clientes" element={<AdminFinanceiroRoute><AdminOrcamentosClientes /></AdminFinanceiroRoute>} />
+          <Route path="backup" element={<AdminFinanceiroRoute><ConfiguracoesBackup /></AdminFinanceiroRoute>} />
+        </Route>
       </Route>
 
       {/* Fallbacks */}
-      <Route path="/" element={<Navigate to="/painel" replace />} />
       <Route path="*" element={<Navigate to="/painel" replace />} />
     </Routes>
   );
