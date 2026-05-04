@@ -1,0 +1,58 @@
+/**
+ * Scrollbar global - Kommo/WhatsApp/Tawk.to inspired
+ * Uso: importe no index.css ou App.tsx
+ */
+
+/* Chrome, Safari, Opera - Webkit */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+
+/* Scrollbar invisível por padrão, aparece no hover (estilo Kommo/Tawk.to) */
+.hide-scrollbar::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+}
+
+.hide-scrollbar:hover::-webkit-scrollbar {
+  width: 6px;
+}
+
+.hide-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+
+/* Scrollbar verde estilo WhatsApp (pra áreas específicas) */
+.whatsapp-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 168, 132, 0.4);
+  border-radius: 10px;
+}
+
+.whatsapp-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 168, 132, 0.6);
+}
+
+.whatsapp-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 168, 132, 0.05);
+}

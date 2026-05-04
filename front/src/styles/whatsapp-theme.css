@@ -1,0 +1,81 @@
+/**
+ * Tema WhatsApp - Cores e variáveis padrão
+ * Inspirado na interface oficial do WhatsApp Web
+ * Uso: importar no index.css ou componente principal
+ */
+
+:root {
+  /* Cores principais WhatsApp */
+  --wa-green-primary: #00a884;
+  --wa-green-dark: #008069;
+  --wa-green-light: #ccf4e4;
+  --wa-green-bg: #f0f2f5;
+
+  /* Cores da sidebar */
+  --wa-sidebar-bg: #ffffff;
+  --wa-sidebar-header-bg: #f0f2f5;
+  --wa-sidebar-hover: #f5f6f6;
+  --wa-sidebar-active: #e9edef;
+  --wa-sidebar-border: #e9edef;
+
+  /* Cores do chat */
+  --wa-chat-bg: #e5ddd5;
+  --wa-chat-bg-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cg fill='%23d4d4d4' fill-opacity='0.2'%3E%3Cpath d='M0 0h200v200H0z'/%3E%3C/g%3E%3C/svg%3E");
+
+  /* Cores das mensagens */
+  --wa-msg-out: #d9fdd3;
+  --wa-msg-in: #ffffff;
+  --wa-msg-shadow: 0 1px 2px rgba(11, 20, 26, 0.08);
+
+  /* Cores de texto */
+  --wa-text-primary: #111b21;
+  --wa-text-secondary: #667781;
+  --wa-text-placeholder: #8696a0;
+  --wa-text-white: #ffffff;
+
+  /* Cores de status */
+  --wa-status-online: #00a884;
+  --wa-status-offline: #8696a0;
+  --wa-status-warning: #f4b400;
+  --wa-status-error: #fa5151;
+
+  /* Cores de ação */
+  --wa-icon-green: #00a884;
+  --wa-icon-secondary: #54656f;
+  --wa-icon-white: #ffffff;
+
+  /* Espaçamentos */
+  --wa-padding-xs: 4px;
+  --wa-padding-sm: 8px;
+  --wa-padding-md: 12px;
+  --wa-padding-lg: 16px;
+  --wa-padding-xl: 20px;
+
+  /* Bordas */
+  --wa-radius-sm: 4px;
+  --wa-radius-md: 8px;
+  --wa-radius-lg: 12px;
+  --wa-radius-full: 50%;
+
+  /* Sombras */
+  --wa-shadow-sm: 0 1px 2px rgba(11, 20, 26, 0.08);
+  --wa-shadow-md: 0 2px 4px rgba(11, 20, 26, 0.12);
+  --wa-shadow-lg: 0 4px 12px rgba(11, 20, 26, 0.15);
+}
+
+/* Tema escuro (opcional, preparado pra futuro) */
+[data-theme="dark"] {
+  --wa-green-primary: #00a884;
+  --wa-green-dark: #008069;
+  --wa-sidebar-bg: #111b21;
+  --wa-sidebar-header-bg: #202c33;
+  --wa-sidebar-hover: #202c33;
+  --wa-sidebar-active: #2a3942;
+  --wa-sidebar-border: #2a3942;
+  --wa-chat-bg: #0b141a;
+  --wa-msg-out: #005c4b;
+  --wa-msg-in: #202c33;
+  --wa-text-primary: #e9edef;
+  --wa-text-secondary: #8696a0;
+  --wa-text-placeholder: #8696a0;
+}
