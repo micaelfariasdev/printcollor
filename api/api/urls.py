@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import EmpresaViewSet, PedidoFabricaViewSet, ClienteViewSet, ProdutoViewSet, OrcamentoViewSet, DTFVendorViewSet, UserViewSet, UserMeView, DashboardStatsView, ChangePasswordView
+from .views import EmpresaViewSet, PedidoFabricaViewSet, ClienteViewSet, ProdutoViewSet, OrcamentoViewSet, DTFVendorViewSet, UserViewSet, UserMeView, DashboardStatsView, ChangePasswordView, BackupExportView, BackupImportView
 from .evolution_views import WhatsAppInstanceViewSet
 from .webhook_views import WhatsAppWebhookView, WhatsAppWebhookConfigureView
 
@@ -31,4 +31,7 @@ urlpatterns = [
     path('whatsapp/webhook/', WhatsAppWebhookView.as_view(), name='webhook-evolution-alt'),
     path('webhook/configure/', WhatsAppWebhookConfigureView.as_view(), name='webhook-configure'),
     path('whatsapp/webhook/configure/', WhatsAppWebhookConfigureView.as_view(), name='webhook-configure-alt'),
+    # Backup
+    path('backup/exportar/', BackupExportView.as_view(), name='backup-export'),
+    path('backup/importar/', BackupImportView.as_view(), name='backup-import'),
 ]

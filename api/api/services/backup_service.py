@@ -1,6 +1,7 @@
 import zipfile
 import os
 import logging
+import json
 from pathlib import Path
 from django.conf import settings
 from django.http import JsonResponse
@@ -29,18 +30,17 @@ class BackupService:
         buffer = BytesIO()
         with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
             # 1. Backup do Banco de Dados
-            data = []
             api_app = apps.get_app_config('api')
+            all_objects = []
             for model_name in MODELOS_BACKUP:
                 try:
                     model = api_app.get_model(model_name)
-                    data.extend(
-                        serializers.deserialize('json', model.objects.all())
-                    )
+                    all_objects.extend(model.objects.all())
                 except LookupError:
                     continue
 
-            zip_file.writestr('db_backup.json', serializers.serialize('json', data))
+            json_data = serializers.serialize('json', all_objects)
+            zip_file.writestr('db_backup.json', json_data)
 
             # 2. Backup dos Arquivos de Mídia
             media_root = Path(settings.MEDIA_ROOT)
@@ -64,9 +64,9 @@ class BackupService:
             with zipfile.ZipFile(backup_file, 'r') as zip_ref:
                 # 1. Restaurar Banco de Dados
                 if 'db_backup.json' in zip_ref.namelist():
-                    db_data = zip_ref.read('db_backup.json')
-                    for obj in serializers.deserialize('json', db_data):
-                        obj.save()
+                    db_data = zip_ref.read('db_backup.json').decode('utf-8')
+                    for deserialized_obj in serializers.deserialize('json', db_data):
+                        deserialized_obj.save()
 
                 # 2. Restaurar Mídia (apenas para MEDIA_ROOT)
                 media_root = Path(settings.MEDIA_ROOT)

@@ -18,6 +18,7 @@ from .serializers import (
     UserMeSerializer, PedidoFabricaSerializer
 )
 from .tools.utils import gerar_pdf_from_html
+from .services.backup_service import BackupService
 
 import base64
 from io import BytesIO
@@ -278,3 +279,47 @@ class PedidoFabricaViewSet(viewsets.ModelViewSet):
         name = f'pedido-{pedido.cliente.nome}-{pedido.id}'
 
         return gerar_pdf_from_html('pdfs/pedido.html', context, f'{name}.pdf')
+
+
+class BackupExportView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request):
+        from django.http import FileResponse
+        buffer = BackupService.export_backup()
+        response = FileResponse(
+            buffer,
+            as_attachment=True,
+            filename='backup_printcollor.zip'
+        )
+        return response
+
+
+class BackupImportView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request):
+        from django.contrib.auth.hashers import check_password
+
+        password = request.data.get('password')
+        backup_file = request.FILES.get('backup')
+
+        if not password or not backup_file:
+            return Response(
+                {'error': 'Senha e arquivo de backup são obrigatórios.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not check_password(password, request.user.password):
+            return Response(
+                {'error': 'Senha incorreta.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        success, message = BackupService.import_backup(backup_file)
+        if success:
+            return Response({'message': message})
+        return Response(
+            {'error': message},
+            status=status.HTTP_400_BAD_REQUEST
+        )
