@@ -786,7 +786,7 @@ const WhatsAppUnified: React.FC = () => {
                           />
 
                           {msg.body && !['[Imagem]', 'imageMessage'].includes(msg.body) && (
-                            <div className="text-sm mt-2 leading-relaxed break-words px-1">
+                            <div className="text-sm mt-2 leading-relaxed break-words px-1 whitespace-pre-wrap overflow-wrap-anywhere">
                               {msg.body}
                             </div>
                           )}
@@ -1005,7 +1005,7 @@ const WhatsAppUnified: React.FC = () => {
               setShowNovoPedidoModal(false);
               addAlert('Pedido criado com sucesso!', 'success');
             }}
-            initialClienteId={selectedChatClienteId}
+            clienteId={selectedChatClienteId ? Number(selectedChatClienteId) : undefined}
           />
         )}
       </div>

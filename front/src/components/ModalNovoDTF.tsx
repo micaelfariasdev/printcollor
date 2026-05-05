@@ -9,40 +9,64 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  clienteId?: number;
 }
 
-const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
+const TIPOS = [
+  { value: 'dtf_textil', label: 'DTF Têxtil', unit: 'ml' },
+  { value: 'dtf_uv', label: 'DTF UV', unit: 'ml' },
+  { value: 'sublimacao', label: 'Sublimação', unit: 'm2' },
+];
+
+const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: propClienteId }) => {
   const [loading, setLoading] = useState(false);
   const [clientes, setClientes] = useState<any[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const { addAlert } = useAlert();
-  // Estados do Form
+
   const [clienteId, setClienteId] = useState('');
+  const [tipoProduto, setTipoProduto] = useState('dtf_textil');
   const [tamanhoCm, setTamanhoCm] = useState<number>(0);
   const [arquivo, setArquivo] = useState<File | null>(null);
+  const [configs, setConfigs] = useState<any[]>([]);
+  const [config, setConfig] = useState<any>(null);
 
   useEffect(() => {
     if (isOpen) {
-      api.get('clientes/').then((res) => setClientes(res.data));
+      Promise.all([
+        api.get('dtf-config/'),
+        api.get('clientes/'),
+      ]).then(([resCfg, resCli]) => {
+        setConfigs(resCfg.data);
+        const found = resCfg.data.find((c: any) => c.tipo_produto === 'dtf_textil');
+        setConfig(found);
+        setClientes(resCli.data);
+      });
+      if (propClienteId) {
+        setClienteId(String(propClienteId));
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, propClienteId]);
 
-  // Cálculo do Valor Total
+  useEffect(() => {
+    const found = configs.find((c) => c.tipo_produto === tipoProduto);
+    setConfig(found || null);
+  }, [tipoProduto, configs]);
+
   const calcularTotal = () => {
-    const precoPorMetro = 35.0;
+    if (!config) return 0;
+    const precoPorMetro = Number(config.valor_metro);
+    const precoMinimo = Number(config.preco_minimo);
     const valorCalculado = (tamanhoCm / 100) * precoPorMetro;
-    return valorCalculado < 20.0 ? 20.0 : valorCalculado;
+    return valorCalculado < precoMinimo ? precoMinimo : valorCalculado;
   };
 
-  // Handlers para Drag and Drop
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
   };
 
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
+  const handleDragLeave = () => setIsDragging(false);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -58,40 +82,39 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
       return;
     }
     if (tamanhoCm <= 0) {
-      addAlert('Informe a metragem linear para calcular o valor.', 'error');
+      addAlert('Informe a metragem.', 'error');
       return;
     }
-    if (!clienteId || !arquivo || tamanhoCm <= 0) {
-      addAlert('Preencha todos os campos obrigatórios!', 'error');
+    if (!clienteId) {
+      addAlert('Selecione um cliente.', 'error');
       return;
     }
 
     setLoading(true);
-
     const formData = new FormData();
     formData.append('cliente', clienteId);
     formData.append('tamanho_cm', tamanhoCm.toString());
+    formData.append('tipo_produto', tipoProduto);
     formData.append('layout_arquivo', arquivo);
 
     try {
       await api.post('dtf/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      addAlert('DTF enviado com sucesso para a fila de impressão!', 'success');
+      addAlert('Pedido DTF criado! Valor: ' + formatarReal(calcularTotal()), 'success');
       onSuccess();
       onClose();
-      // Reset
       setClienteId('');
+      setTipoProduto('dtf_textil');
       setTamanhoCm(0);
       setArquivo(null);
-    } catch (err) {
-      addAlert('Falha ao processar o arquivo. Tente um formato diferente.', 'error');
+    } catch (err: any) {
+      addAlert(err?.response?.data?.detail || 'Erro ao criar pedido.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  // Suporte a Ctrl+V
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
       if (!isOpen) return;
@@ -110,7 +133,6 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
         }
       }
     };
-
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
   }, [isOpen]);
@@ -120,45 +142,52 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
       <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100">
-        {/* Header */}
         <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-white">
           <h2 className="text-2xl font-black text-slate-800 uppercase italic">
             Novo Pedido <span className={theme.colors.accentText}>DTF</span>
           </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-full transition-all"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-all">
             <X size={24} className="text-slate-400" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
           {/* Cliente */}
-
           <div className="space-y-2">
             <label className="text-xs font-black text-slate-500 uppercase ml-1">
               Cliente Destino
             </label>
-
-            {/* Input de texto que aceita busca */}
             <input
               list="clientes-list"
               placeholder="Digite para buscar cliente..."
               className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700 transition-all"
+              disabled={!!propClienteId}
               onChange={(e) => {
-                // Encontra o ID do cliente baseado no nome escrito
                 const cliente = clientes.find((c) => c.nome === e.target.value);
                 if (cliente) setClienteId(cliente.id);
               }}
             />
-
-            {/* A lista de sugestões que aparece ao digitar */}
             <datalist id="clientes-list">
               {clientes.map((c) => (
                 <option key={c.id} value={c.nome} />
               ))}
             </datalist>
+          </div>
+
+          {/* Tipo de Produto */}
+          <div className="space-y-2">
+            <label className="text-xs font-black text-slate-500 uppercase ml-1">
+              Tipo de Produto
+            </label>
+            <select
+              value={tipoProduto}
+              onChange={(e) => setTipoProduto(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700"
+            >
+              {TIPOS.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
           </div>
 
           {/* Tamanho e Valor */}
@@ -170,7 +199,7 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
               <input
                 required
                 type="number"
-                step="0.01" // Permite 12.1, 12.2, 12.3, etc.
+                step="0.01"
                 placeholder="Ex: 150"
                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
                 onChange={(e) => setTamanhoCm(Number(e.target.value))}
@@ -186,7 +215,7 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
             </div>
           </div>
 
-          {/* Upload de Arquivo com Efeito Drag and Drop */}
+          {/* Upload de Arquivo */}
           <div className="space-y-2">
             <label className="text-xs font-black text-slate-500 uppercase">
               Arquivo de Layout
@@ -208,10 +237,9 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
                   setArquivo(e.target.files ? e.target.files[0] : null)
                 }
               />
-
               {arquivo ? (
                 <div className="animate-in fade-in zoom-in flex flex-col items-center">
-                  <CheckCircle2 size={32} className="text-green-500 mb-2" />
+                  <span className="text-green-500 mb-2">✔</span>
                   <span className="text-sm font-bold text-slate-700 truncate max-w-[250px]">
                     {arquivo.name}
                   </span>
@@ -220,25 +248,12 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
                   </span>
                 </div>
               ) : (
-                <div
-                  className={`flex flex-col items-center transition-colors ${isDragging ? 'text-blue-500' : 'text-slate-400'}`}
-                >
-                  <Upload
-                    size={32}
-                    className={
-                      isDragging
-                        ? 'animate-bounce text-blue-500'
-                        : 'text-blue-500'
-                    }
-                  />
+                <div className={`flex flex-col items-center ${isDragging ? 'text-blue-500' : 'text-slate-400'}`}>
+                  <Upload size={32} className={isDragging ? 'animate-bounce text-blue-500' : 'text-blue-500'} />
                   <span className="text-sm font-bold text-slate-600 mt-2">
-                    {isDragging
-                      ? 'Solte para anexar'
-                      : 'Selecione, arraste ou use Ctrl + V'}
+                    {isDragging ? 'Solte para anexar' : 'Selecione, arraste ou use Ctrl + V'}
                   </span>
-                  <span className="text-[10px] uppercase mt-1">
-                    PDF, TIFF ou Imagens
-                  </span>
+                  <span className="text-[10px] uppercase mt-1">PDF, TIFF ou Imagens</span>
                 </div>
               )}
             </div>
@@ -258,13 +273,7 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
               disabled={loading}
               className={`flex-[2] ${theme.colors.primaryButton} text-white py-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-blue-500/20 disabled:opacity-50`}
             >
-              {loading ? (
-                <Loader2 className="animate-spin" size={20} />
-              ) : (
-                <>
-                  <Save size={20} /> Salvar Pedido
-                </>
-              )}
+              {loading ? <Loader2 className="animate-spin" size={20} /> : <><Save size={20} /> Salvar Pedido</>}
             </button>
           </div>
         </form>
@@ -272,30 +281,5 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
     </div>
   );
 };
-
-// Componente auxiliar de ícone para feedback
-const CheckCircle2 = ({
-  size,
-  className,
-}: {
-  size: number;
-  className: string;
-}) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="3"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
-    <path d="m9 12 2 2 4-4" />
-  </svg>
-);
 
 export default ModalNovoDTF;

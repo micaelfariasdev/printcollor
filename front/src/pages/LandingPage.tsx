@@ -37,7 +37,7 @@ export const LandingPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] font-sans text-white overflow-x-hidden">
+    <div className="min-h-screen bg-[#020617] font-sans text-white overflow-x-hidden overflow-y-auto">
       
       {/* Navbar Premium */}
       <nav className="fixed top-4 inset-x-4 z-50">

@@ -20,7 +20,7 @@ const Login: React.FC = () => {
       await login(formData);
       // Correção: acessando o username diretamente do formData
       addAlert(`Bem-vinda de volta, ${formData.username}!`, 'success');
-      navigate('/');
+      navigate('/painel');
     } catch (err) {
       // Feedback visual via sistema de alertas animado
       addAlert(

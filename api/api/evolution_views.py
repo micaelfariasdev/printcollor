@@ -133,6 +133,7 @@ class WhatsAppInstanceSerializer(serializers.ModelSerializer):
 
 
 class WhatsAppInstanceViewSet(viewsets.ModelViewSet):
+    queryset = WhatsAppInstance.objects.all()
     """ViewSet para gerenciar instâncias WhatsApp via Evolution API"""
 
     serializer_class = WhatsAppInstanceSerializer

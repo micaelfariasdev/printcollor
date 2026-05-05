@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
+import { useAlert } from '../contexts/AlertContext';
 
 interface Props {
   isOpen: boolean;
@@ -64,7 +65,7 @@ const ModalEditarEmpresa: React.FC<Props> = ({
       onSuccess();
       onClose();
     } catch (err) {
-      alert('Erro ao atualizar empresa. Verifique se o CNPJ é válido e único.');
+      addAlert('Erro ao atualizar empresa. Verifique se o CNPJ é válido e único.', 'error');
     } finally {
       setLoading(false);
     }

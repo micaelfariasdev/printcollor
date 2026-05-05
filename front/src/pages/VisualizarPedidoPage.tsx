@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { api } from '../auth/useAuth';
-import { Printer, ArrowLeft, FileDown, Loader2 } from 'lucide-react';
+import { Printer, ArrowLeft, FileDown, Loader2, Camera } from 'lucide-react';
 import logo from '../assets/logo-printcollor-blk.png';
+import html2canvas from 'html2canvas';
 
 const VisualizarPedidoPage = () => {
   const { id } = useParams();
@@ -39,6 +40,64 @@ const VisualizarPedidoPage = () => {
       setIsDownloading(false);
     }
   };
+
+  const { addAlert } = useAlert();
+
+  const captureAndCopy = async () => {
+    const folha = document.querySelector('.folha-a4');
+    if (!folha) return;
+    try {
+      const canvas = await html2canvas(folha as HTMLElement, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        onclone: (doc) => {
+          const el = doc.querySelector('.folha-a4');
+          if (el) {
+            (el as HTMLElement).style.boxShadow = 'none';
+            (el as HTMLElement).style.filter = 'none';
+          }
+          doc.querySelectorAll('*').forEach((node) => {
+            const el = node as HTMLElement;
+            const style = (doc as Document).defaultView?.getComputedStyle(el);
+            if (!style) return;
+            if (style.color && style.color.includes('oklch')) {
+              el.style.color = '#000000';
+            }
+            if (style.backgroundColor && style.backgroundColor.includes('oklch')) {
+              el.style.backgroundColor = '#ffffff';
+            }
+            if (style.borderColor && style.borderColor.includes('oklch')) {
+              el.style.borderColor = '#e2e8f0';
+            }
+            if (style.fill && style.fill.includes('oklch')) {
+              el.style.fill = '#000000';
+            }
+          });
+        },
+      });
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': blob }),
+        ]);
+        addAlert('Print copiado! Use Ctrl+V para colar.', 'success');
+      }, 'image/png');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    if (!pedido) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        e.preventDefault();
+        captureAndCopy();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [pedido]);
 
   if (loading)
     return (
@@ -85,7 +144,7 @@ const VisualizarPedidoPage = () => {
     .sort(ordenarGrade);
 
   return (
-    <div className="min-h-screen bg-slate-800 flex flex-col items-center p-4 print:p-0 print:bg-white">
+    <div className="min-h-screen bg-slate-800 flex flex-col items-center p-4 print:p-0 print:bg-white overflow-y-auto">
       <style>{`
         @media print {
           .no-print { display: none !important; }
@@ -144,6 +203,12 @@ const VisualizarPedidoPage = () => {
               <FileDown size={18} />
             )}{' '}
             PDF
+          </button>
+          <button
+            onClick={captureAndCopy}
+            className="bg-slate-700 text-white px-4 py-2 rounded-lg font-bold shadow-md flex items-center gap-2"
+          >
+            <Camera size={18} /> Print
           </button>
           <button
             onClick={() => window.print()}

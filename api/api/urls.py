@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import EmpresaViewSet, PedidoFabricaViewSet, ClienteViewSet, ProdutoViewSet, OrcamentoViewSet, DTFVendorViewSet, UserViewSet, UserMeView, DashboardStatsView, ChangePasswordView, BackupExportView, BackupImportView
+from .views import EmpresaViewSet, PedidoFabricaViewSet, ClienteViewSet, ProdutoViewSet, OrcamentoViewSet, DTFVendorViewSet, UserViewSet, UserMeView, DashboardStatsView, ChangePasswordView, BackupExportView, BackupImportView, DTFConfigViewSet
 from .evolution_views import WhatsAppInstanceViewSet
 from .webhook_views import WhatsAppWebhookView, WhatsAppWebhookConfigureView
 
@@ -12,7 +12,7 @@ router.register(r'orcamentos', OrcamentoViewSet)
 router.register(r'dtf', DTFVendorViewSet)
 router.register(r'usuarios', UserViewSet)
 router.register(r'pedidos', PedidoFabricaViewSet)
-router.register(r'whatsapp-instances', WhatsAppInstanceViewSet, basename='whatsapp-instances')
+router.register(r'whatsapp-instances', WhatsAppInstanceViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -34,4 +34,7 @@ urlpatterns = [
     # Backup
     path('backup/exportar/', BackupExportView.as_view(), name='backup-export'),
     path('backup/importar/', BackupImportView.as_view(), name='backup-import'),
+    # DTF Config
+    path('dtf-config/', DTFConfigViewSet.as_view({'get': 'list', 'post': 'create'}), name='dtf-config-list'),
+    path('dtf-config/<int:pk>/', DTFConfigViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='dtf-config-detail'),
 ]

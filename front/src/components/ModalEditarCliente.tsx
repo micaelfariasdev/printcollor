@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, Loader2, User, Mail, Phone, CreditCard, Building2 } from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
+import { useAlert } from '../contexts/AlertContext';
 
 interface Props {
   isOpen: boolean;
@@ -56,7 +57,7 @@ const ModalEditarCliente: React.FC<Props> = ({ isOpen, onClose, onSuccess, clien
       onSuccess();
       onClose();
     } catch (err) {
-      alert("Erro ao atualizar cliente.");
+      addAlert("Erro ao atualizar cliente.", 'error');
     } finally {
       setLoading(false);
     }

@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { X, Loader2, Shield } from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
+import { useAlert } from '../contexts/AlertContext';
 
 const ModalEditarUsuario = ({ isOpen, onClose, onSuccess, userId }: any) => {
+  const { addAlert } = useAlert();
   const [loading, setLoading] = useState(false);
   const [nivel, setNivel] = useState('vendedor');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -27,7 +29,7 @@ const ModalEditarUsuario = ({ isOpen, onClose, onSuccess, userId }: any) => {
       onSuccess();
       onClose();
     } catch (err) {
-      alert('Erro ao mudar cargo.');
+      addAlert('Erro ao mudar cargo.', 'error');
     } finally {
       setLoading(false);
     }

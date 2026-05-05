@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Save, Loader2 } from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
+import { useAlert } from '../contexts/AlertContext';
 import { formatarReal } from '../tools/formatReal';
 import ModalDelete from './ModalDelete'; // Importe o seu Modal de Deletar
 
@@ -102,7 +103,7 @@ const ModalEditarOrcamento: React.FC<Props> = ({
       onSuccess();
       onClose();
     } catch (err) {
-      alert('Erro ao atualizar orçamento.');
+      addAlert('Erro ao atualizar orçamento.', 'error');
     } finally {
       setLoading(false);
     }

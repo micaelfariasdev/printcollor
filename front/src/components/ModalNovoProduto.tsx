@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Save, Loader2, Package, DollarSign } from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
+import { useAlert } from '../contexts/AlertContext';
 
 interface Props {
   isOpen: boolean;
@@ -28,7 +29,7 @@ const ModalNovoProduto: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
       setNome('');
       setPrecoBase('');
     } catch (err) {
-      alert("Erro ao salvar produto.");
+      addAlert("Erro ao salvar produto.", 'error');
     } finally {
       setLoading(false);
     }

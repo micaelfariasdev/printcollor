@@ -3,7 +3,7 @@ from django.core.files.base import ContentFile
 import io
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from .models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, Usuario, DTFVendor, PedidoFabrica
+from .models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, Usuario, DTFVendor, PedidoFabrica, DTFConfig
 
 
 class EmpresaSerializer(serializers.ModelSerializer):
@@ -124,14 +124,25 @@ class UsuarioSerializer(serializers.ModelSerializer):
 class DTFVendorSerializer(serializers.ModelSerializer):
     valor_total = serializers.ReadOnlyField()
     nome_cliente = serializers.ReadOnlyField(source='cliente.nome')
+    tipo_produto = serializers.CharField(default='dtf_textil')
+    tipo_produto_display = serializers.SerializerMethodField()
 
     class Meta:
         model = DTFVendor
         fields = [
             'id', 'cliente', 'nome_cliente', 'layout_arquivo', 'tamanho_cm',
             'data_criacao', 'foi_impresso', 'esta_pago', 'foi_entregue',
-            'comprovante_pagamento', 'valor_total'
+            'comprovante_pagamento', 'valor_total', 'tipo_produto', 'tipo_produto_display', 'unidade'
         ]
+
+    def get_tipo_produto_display(self, obj):
+        return dict(obj.TIPOS_PRODUTO).get(obj.tipo_produto, 'DTF Têxtil')
+
+
+class DTFConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DTFConfig
+        fields = '__all__'
 
     def validate_layout_arquivo(self, value):
         """Comprime o layout mantendo a qualidade para impressão DTF."""

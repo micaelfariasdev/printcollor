@@ -10,12 +10,12 @@ from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Empresa, Cliente, Produto, Orcamento, DTFVendor, Usuario, PedidoFabrica
+from .models import Empresa, Cliente, Produto, Orcamento, DTFVendor, Usuario, PedidoFabrica, DTFConfig
 from .permissions import IsAdminUserCustom, IsVendedor, IsFinanceiro, IsMaquina
 from .serializers import (
     EmpresaSerializer, ClienteSerializer,
     ProdutoSerializer, OrcamentoSerializer, DTFVendorSerializer, UsuarioSerializer,
-    UserMeSerializer, PedidoFabricaSerializer
+    UserMeSerializer, PedidoFabricaSerializer, DTFConfigSerializer
 )
 from .tools.utils import gerar_pdf_from_html
 from .services.backup_service import BackupService
@@ -323,3 +323,9 @@ class BackupImportView(APIView):
             {'error': message},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+
+class DTFConfigViewSet(viewsets.ModelViewSet):
+    queryset = DTFConfig.objects.all()
+    serializer_class = DTFConfigSerializer
+    permission_classes = [permissions.IsAuthenticated]

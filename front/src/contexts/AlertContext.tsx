@@ -18,7 +18,7 @@ const AlertContext = createContext<AlertContextData>({} as AlertContextData);
 // URLs de sons curtos e limpos (pode trocar por arquivos locais na pasta public)
 const SOUNDS = {
   success: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
-  error: 'https://assets.mixkit.co/active_storage/sfx/2873/2873-preview.mp3',
+  error: 'https://assets.mixkit.co/active_storage/sfx/2890/2890-preview.mp3',
   info: 'https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'
 };
 

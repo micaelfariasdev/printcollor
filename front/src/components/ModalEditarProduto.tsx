@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, Loader2, Package, DollarSign } from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
+import { useAlert } from '../contexts/AlertContext';
 
 interface Props {
   isOpen: boolean;
@@ -40,7 +41,7 @@ const ModalEditarProduto: React.FC<Props> = ({ isOpen, onClose, onSuccess, produ
       onSuccess();
       onClose();
     } catch (err) {
-      alert("Erro ao atualizar produto.");
+      addAlert("Erro ao atualizar produto.", 'error');
     } finally {
       setLoading(false);
     }

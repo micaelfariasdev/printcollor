@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Save, Loader2, User, Mail, Lock, ShieldCheck } from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
+import { useAlert } from '../contexts/AlertContext';
 
 interface Props {
   isOpen: boolean;
@@ -32,7 +33,7 @@ const ModalNovoUsuario: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
       setFormData({ username: '', email: '', password: '', nivel_acesso: 'vendedor', codigo_convite: 'PRINTCOLLOR2026', is_staff: false });
     } catch (err) {
       console.error(err);
-      alert("Erro ao criar usuária. Verifique se o nome de usuário ou e-mail já existem.");
+      addAlert("Erro ao criar usuária. Verifique se o nome de usuário ou e-mail já existem.", 'error');
     } finally {
       setLoading(false);
     }

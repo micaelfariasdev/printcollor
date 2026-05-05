@@ -131,6 +131,16 @@ class ItemOrcamento(models.Model):
 
 
 class DTFVendor(models.Model):
+    TIPOS_PRODUTO = (
+        ('dtf_textil', 'DTF Têxtil'),
+        ('dtf_uv', 'DTF UV'),
+        ('sublimacao', 'Sublimação'),
+    )
+    UNIDADES = (
+        ('ml', 'Metro Linear'),
+        ('m2', 'Metro Quadrado'),
+    )
+
     STATUS_IMPRESSAO = (
         ('pendente', 'Pendente'),
         ('impresso', 'Impresso'),
@@ -140,6 +150,9 @@ class DTFVendor(models.Model):
     layout_arquivo = models.FileField(upload_to=path_layout_dtf)
     tamanho_cm = models.DecimalField(
         max_digits=10, decimal_places=2, help_text="Tamanho em centímetros lineares")
+    tipo_produto = models.CharField(
+        max_length=20, choices=TIPOS_PRODUTO, default='dtf_textil')
+    unidade = models.CharField(max_length=2, choices=UNIDADES, default='ml')
 
     data_criacao = models.DateTimeField(auto_now_add=True)
     data_entrega = models.DateTimeField(null=True, blank=True)
@@ -152,20 +165,59 @@ class DTFVendor(models.Model):
     comprovante_pagamento = models.ImageField(
         upload_to=path_comprovante_dtf, null=True, blank=True)
 
+    def save(self, *args, **kwargs):
+        if self.tipo_produto in ('dtf_textil', 'dtf_uv'):
+            self.unidade = 'ml'
+        else:
+            self.unidade = 'm2'
+        super().save(*args, **kwargs)
+
     def valor_total(self):
-        # Transforme todos os números em Decimal
-        preco_por_metro = Decimal('35.00')
-        cem = Decimal('100.0')
-        tot = (self.tamanho_cm / cem) * preco_por_metro
+        from django.conf import settings
+        from .models import DTFConfig
+        try:
+            config = DTFConfig.objects.get(tipo_produto=self.tipo_produto)
+            preco_por_metro = config.valor_metro
+            preco_minimo = config.preco_minimo
+        except DTFConfig.DoesNotExist:
+            preco_por_metro = Decimal('35.00')
+            preco_minimo = Decimal('20.00')
 
-        if tot < Decimal('20.00'):
-            return Decimal('20.00')
+        if self.unidade == 'm2':
+            # Sublimação: tamanho_cm é tratado como cm², converter para m²
+            area_m2 = self.tamanho_cm / Decimal('10000')
+            tot = area_m2 * preco_por_metro
+        else:
+            # DTF Têxtil/UV: tamanho_cm / 100 = metros lineares
+            tot = (self.tamanho_cm / Decimal('100')) * preco_por_metro
 
-        # Agora o cálculo funciona perfeitamente
-        return (self.tamanho_cm / cem) * preco_por_metro
+        if tot < preco_minimo:
+            return preco_minimo
+
+        return tot
 
     def __str__(self):
-        return f"{self.cliente.nome} - {self.tamanho_cm}cm ({self.get_foi_impresso_display()})"
+        tipo = dict(self.TIPOS_PRODUTO).get(self.tipo_produto, '')
+        return f"{self.cliente.nome} - {self.tamanho_cm}cm ({self.get_foi_impresso_display()}) [{tipo}]"
+
+
+class DTFConfig(models.Model):
+    TIPOS_PRODUTO = (
+        ('dtf_textil', 'DTF Têxtil'),
+        ('dtf_uv', 'DTF UV'),
+        ('sublimacao', 'Sublimação'),
+    )
+
+    tipo_produto = models.CharField(max_length=20, choices=TIPOS_PRODUTO, unique=True)
+    valor_metro = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('35.00'))
+    preco_minimo = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('20.00'))
+
+    class Meta:
+        verbose_name = 'Configuração DTF'
+        verbose_name_plural = 'Configurações DTF'
+
+    def __str__(self):
+        return f"{self.get_tipo_produto_display()}: R$ {self.valor_metro}/m"
 
 
 class PedidoFabrica(models.Model):

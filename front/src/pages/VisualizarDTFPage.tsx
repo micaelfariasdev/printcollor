@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { api } from '../auth/useAuth';
-import { Printer, ArrowLeft, Loader2, FileDown } from 'lucide-react';
+import { Printer, ArrowLeft, Loader2, FileDown, Camera } from 'lucide-react';
 import { formatarReal } from '../tools/formatReal';
 import logo from '../assets/logo-printcollor-blk.png';
+import html2canvas from 'html2canvas';
+import { useAlert } from '../contexts/AlertContext';
 
 const VisualizarDTFPage = () => {
   const { id } = useParams();
@@ -39,6 +41,64 @@ const VisualizarDTFPage = () => {
     }
   };
 
+  const { addAlert } = useAlert();
+
+  const captureAndCopy = async () => {
+    const folha = document.getElementById('folha-dtf');
+    if (!folha) return;
+    try {
+      const canvas = await html2canvas(folha, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        onclone: (doc) => {
+          const el = doc.getElementById('folha-dtf');
+          if (el) {
+            (el as HTMLElement).style.boxShadow = 'none';
+            (el as HTMLElement).style.filter = 'none';
+          }
+          doc.querySelectorAll('*').forEach((node) => {
+            const el = node as HTMLElement;
+            const style = (doc as Document).defaultView?.getComputedStyle(el);
+            if (!style) return;
+            if (style.color && style.color.includes('oklch')) {
+              el.style.color = '#000000';
+            }
+            if (style.backgroundColor && style.backgroundColor.includes('oklch')) {
+              el.style.backgroundColor = '#ffffff';
+            }
+            if (style.borderColor && style.borderColor.includes('oklch')) {
+              el.style.borderColor = '#e2e8f0';
+            }
+            if (style.fill && style.fill.includes('oklch')) {
+              el.style.fill = '#000000';
+            }
+          });
+        },
+      });
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': blob }),
+        ]);
+        addAlert('Print copiado! Use Ctrl+V para colar.', 'success');
+      }, 'image/png');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    if (!dtf) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        e.preventDefault();
+        captureAndCopy();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [dtf]);
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white font-bold uppercase italic">
       <Loader2 className="animate-spin mr-3" size={24} /> Carregando DTF...
@@ -46,17 +106,17 @@ const VisualizarDTFPage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-800 p-4 md:p-8 flex flex-col items-center print:bg-white print:p-0">
-      
+    <div className="min-h-screen bg-slate-800 p-4 md:p-8 flex flex-col items-center print:bg-white print:p-0 overflow-y-auto">
+
       <style>{`
         @media print {
           body, html { background: white !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; }
           .no-print { display: none !important; }
           #folha-dtf {
-            position: absolute; top: 0; left: 0; 
-            width: 210mm !important; 
+            position: absolute; top: 0; left: 0;
+            width: 210mm !important;
             height: 297mm !important;
-            margin: 0 !important; padding: 0.8cm !important; 
+            margin: 0 !important; padding: 0.8cm !important;
             box-shadow: none !important; border: none !important;
             overflow: hidden !important;
             display: flex !important;
@@ -76,6 +136,9 @@ const VisualizarDTFPage = () => {
           <button onClick={handleDownload} disabled={isDownloading} className="bg-white hover:bg-slate-100 text-slate-800 px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95">
             {isDownloading ? <Loader2 className="animate-spin" size={20} /> : <FileDown size={20} />} PDF
           </button>
+          <button onClick={captureAndCopy} className="bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95">
+            <Camera size={20} /> Print
+          </button>
           <button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-black flex items-center gap-2 shadow-lg transition-all active:scale-95">
             <Printer size={20} /> IMPRIMIR DTF
           </button>
@@ -83,26 +146,26 @@ const VisualizarDTFPage = () => {
       </div>
 
       {/* FOLHA A4 VERTICAL */}
-      <div 
-        id="folha-dtf" 
-        className="bg-white shadow-2xl flex flex-col" 
-        style={{ 
-          width: '210mm', 
-          height: '297mm', 
-          padding: '0.8cm', 
-          boxSizing: 'border-box', 
+      <div
+        id="folha-dtf"
+        className="bg-white shadow-2xl flex flex-col"
+        style={{
+          width: '210mm',
+          height: '297mm',
+          padding: '0.8cm',
+          boxSizing: 'border-box',
           fontFamily: 'Arial, sans-serif',
-          overflow: 'hidden' 
+          overflow: 'hidden'
         }}
       >
         {/* Header - Shrink-0 para não amassar */}
-        <div className="flex justify-between border-b-4 items-center border-slate-900  mb-2 flex-shrink-0">
+        <div className="flex justify-between border-b-4 items-center border-slate-900 mb-2 flex-shrink-0">
             <img
               src={logo}
               alt="PrintCollor Logo"
               className="h-20 w-30 object-cover drop-shadow-[0_0_0_4px_white]"
             />
-            <div className=" inline-block bg-slate-100 px-3  rounded-full text-[10px] font-black uppercase tracking-widest text-slate-600">
+            <div className=" inline-block bg-slate-100 px-3 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-600">
               Pedido #{dtf.id}
             </div>
             <div className="text-right flex flex-col justify-end">
@@ -119,7 +182,7 @@ const VisualizarDTFPage = () => {
             <span className="text-[9px] font-black text-slate-400 uppercase block leading-none mb-1">Cliente</span>
             <span className="text-lg font-bold text-slate-900 uppercase leading-none">{dtf.nome_cliente}</span>
           </div>
-          
+
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
             <span className="text-[9px] font-black text-slate-400 uppercase block leading-none mb-1">Tamanho</span>
             <span className="text-md font-bold text-slate-900 leading-none">{dtf.tamanho_cm} cm</span>
@@ -132,7 +195,7 @@ const VisualizarDTFPage = () => {
 
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
             <span className="text-[9px] font-black text-slate-400 uppercase block leading-none mb-1">Pagamento</span>
-            <span className={`text-md font-black uppercase leading-none ${dtf.esta_pago ? 'text-green-600' : 'text-red-600'}`}>
+            <span className={`text-md font-bold uppercase leading-none ${dtf.esta_pago ? 'text-green-600' : 'text-red-600'}`}>
               {dtf.esta_pago ? '✓ PAGO' : '⚠ PENDENTE'}
             </span>
           </div>
@@ -141,6 +204,13 @@ const VisualizarDTFPage = () => {
             <span className="text-[9px] font-black text-slate-400 uppercase block leading-none mb-1">Produção</span>
             <span className="text-md font-bold text-slate-900 uppercase leading-none">{dtf.foi_impresso}</span>
           </div>
+
+          {dtf.tipo_produto_display && (
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+              <span className="text-[9px] font-black text-slate-400 uppercase block leading-none mb-1">Tipo</span>
+              <span className="text-md font-bold text-slate-900 leading-none">{dtf.tipo_produto_display}</span>
+            </div>
+          )}
         </div>
 
         {/* Alerta de PIX - Shrink-0 */}
