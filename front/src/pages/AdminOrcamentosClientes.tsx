@@ -1,11 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../auth/useAuth';
-import { 
-  MessageCircle, 
-  FileText, 
-  CheckCircle, 
-  Clock, 
-  Trash2, 
+import {
+  MessageCircle,
+  FileText,
+  CheckCircle,
   Download,
   User
 } from 'lucide-react';

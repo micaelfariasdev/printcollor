@@ -3,7 +3,6 @@ import {
   X,
   Save,
   Loader2,
-  Upload,
   CheckCircle2,
   DollarSign,
   Image as ImageIcon,

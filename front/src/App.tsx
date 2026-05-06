@@ -1,8 +1,7 @@
-import React from 'react';
 import { AppRouter } from './routes/Router';
 
 const App = () => {
-  return <AppRouter meData={null} />;
+  return <AppRouter />;
 };
 
 export default App;

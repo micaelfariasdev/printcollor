@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { 
-  Printer, Shirt, Zap, ArrowRight, MessageCircle, 
-  Upload, Loader2, CheckCircle, Star, ShieldCheck, Timer,
+import { useState } from 'react';
+import {
+  Printer, Zap, ArrowRight, Upload, Loader2,
+  CheckCircle,
   Scissors, Activity, Layers, Cpu
 } from 'lucide-react';
 import { api } from '../auth/useAuth';

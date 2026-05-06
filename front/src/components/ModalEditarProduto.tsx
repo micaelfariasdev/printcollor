@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Save, Loader2, Package, DollarSign } from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
@@ -13,6 +13,7 @@ interface Props {
 
 const ModalEditarProduto: React.FC<Props> = ({ isOpen, onClose, onSuccess, produtoId }) => {
   const [loading, setLoading] = useState(false);
+  const { addAlert } = useAlert();
   const [nome, setNome] = useState('');
   const [precoBase, setPrecoBase] = useState('');
 

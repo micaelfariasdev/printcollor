@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Save, Loader2 } from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
@@ -20,6 +20,7 @@ const ModalEditarOrcamento: React.FC<Props> = ({
   orcamentoId,
 }) => {
   const [loading, setLoading] = useState(false);
+  const { addAlert } = useAlert();
   const [showDeleteModal, setShowDeleteModal] = useState(false); // Estado para controlar o modal de confirmação
 
   const [clientes, setClientes] = useState<any[]>([]);

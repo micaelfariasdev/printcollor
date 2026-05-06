@@ -12,6 +12,7 @@ interface Props {
 
 const ModalNovoProduto: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
+  const { addAlert } = useAlert();
   const [nome, setNome] = useState('');
   const [precoBase, setPrecoBase] = useState('');
 

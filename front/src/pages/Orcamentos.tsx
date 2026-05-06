@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, Download, Plus, Edit } from 'lucide-react';
 import { theme } from '../components/Theme';
 import { formatarReal } from '../tools/formatReal';
@@ -75,11 +75,11 @@ const Orcamentos: React.FC = () => {
     carregarOrcamentos();
   }, [isEditModalOpen, isModalOpen]);
 
-    const filtrados = orcamentos
+  const filtrados = orcamentos
     .filter((o) =>
       o.nome_cliente.toLowerCase().includes(busca.toLowerCase())
-    ) 
-    .sort((a, b) => b.id - a.id)
+    )
+    .sort((a, b) => b.id - a.id);
 
   return (
     <div className="space-y-6">

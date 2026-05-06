@@ -28,6 +28,7 @@ const ModalEditarEmpresa: React.FC<Props> = ({
   empresaId,
 }) => {
   const [loading, setLoading] = useState(false);
+  const { addAlert } = useAlert();
   const [formData, setFormData] = useState({
     nome: '',
     cnpj: '',

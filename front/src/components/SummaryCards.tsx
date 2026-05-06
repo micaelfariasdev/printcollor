@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../auth/useAuth';
 import { formatarReal } from '../tools/formatReal';
 import { TrendingUp, Printer, FileText, LayoutDashboard } from 'lucide-react';

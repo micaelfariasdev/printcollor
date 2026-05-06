@@ -1,11 +1,13 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { api } from '../auth/useAuth';
 import { Printer, ArrowLeft, FileDown, Loader2, Camera } from 'lucide-react';
 import logo from '../assets/logo-printcollor-blk.png';
 import html2canvas from 'html2canvas';
+import { useAlert } from '../contexts/AlertContext';
 
 const VisualizarPedidoPage = () => {
+  const { addAlert } = useAlert();
   const { id } = useParams();
   const navigate = useNavigate();
   const [pedido, setPedido] = useState<any>(null);
@@ -40,8 +42,6 @@ const VisualizarPedidoPage = () => {
       setIsDownloading(false);
     }
   };
-
-  const { addAlert } = useAlert();
 
   const captureAndCopy = async () => {
     const folha = document.querySelector('.folha-a4');

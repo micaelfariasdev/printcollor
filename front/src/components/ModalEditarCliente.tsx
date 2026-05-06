@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Save, Loader2, User, Mail, Phone, CreditCard, Building2 } from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
@@ -13,6 +13,7 @@ interface Props {
 
 const ModalEditarCliente: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId }) => {
   const [loading, setLoading] = useState(false);
+  const { addAlert } = useAlert();
   const [tipoDocumento, setTipoDocumento] = useState<'CPF' | 'CNPJ'>('CPF');
   const [formData, setFormData] = useState({
     nome: '',

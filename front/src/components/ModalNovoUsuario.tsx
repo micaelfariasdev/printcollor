@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { X, Save, Loader2, User, Mail, Lock, ShieldCheck } from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
@@ -12,6 +12,7 @@ interface Props {
 
 const ModalNovoUsuario: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
+  const { addAlert } = useAlert();
   const [formData, setFormData] = useState({
     username: '',
     email: '',

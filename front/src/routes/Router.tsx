@@ -19,9 +19,10 @@ import { ConfiguracoesBackup } from '../pages/ConfiguracoesBackup';
 import WhatsAppUnified from '../pages/WhatsAppUnified';
 import WhatsAppInstances from '../pages/WhatsAppInstances';
 import { LandingPage } from '../pages/LandingPage';
-import { PedidosCarrosselMobile } from '../pages/pedidosCarrosselMobile';
+import { PedidosCarrosselMobile } from '../pages/PedidosCarrosselMobile';
 import { DTFTable } from '../pages/DTF';
 import { PedidosFabrica } from '../pages/PedidosFabrica';
+// useState e useEffect removidos - não utilizados
 import { useState, useEffect } from 'react';
 
 // Componente para verificar se o usuário é admin ou financeiro

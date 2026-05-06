@@ -74,6 +74,7 @@ const Dashboard: React.FC = () => {
     usuarios: 'Equipe PrintCollor',
     configuracoes: 'Configurações da Conta',
     pedidos: 'Pedidos',
+    whatsapp: 'WhatsApp',
   };
 
   useEffect(() => {
