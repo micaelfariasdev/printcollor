@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../auth/useAuth';
 import { useAlert } from '../contexts/AlertContext';
 
@@ -16,54 +16,43 @@ interface CreateClientModalProps {
 
 const CreateClientModal: React.FC<CreateClientModalProps> = ({ chat, onClose, onSuccess }) => {
   const { addAlert } = useAlert();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [clientes, setClientes] = useState<any[]>([]);
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const [nome, setNome] = useState(chat.name || '');
   const [telefone, setTelefone] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const getNumberFromJid = (jid: string) => {
-    if (!jid) return '';
-    return jid.split('@')[0];
+  useEffect(() => {
+    if (chat.jid) {
+      // Extrai número do JID
+      const num = chat.jid.split('@')[0];
+      setTelefone(num);
+    }
+    // Carrega lista de clientes
+    api.get('clientes/').then(res => {
+      setClientes(res.data);
+    });
+  }, [chat.jid]);
+
+  const handleSelectClient = (value: string) => {
+    const cliente = clientes.find(c => c.nome === value);
+    if (cliente) {
+      setSelectedClient(cliente);
+      setNome(cliente.nome);
+      setTelefone(cliente.telefone || '');
+    } else {
+      setSelectedClient(null);
+      setNome(value);
+    }
   };
 
-  useEffect(() => {
-    if (!selectedClient) {
-      setTelefone(getNumberFromJid(chat.jid));
-    }
-  }, [chat.jid, selectedClient]);
-
-  const searchClients = useCallback(async (term: string) => {
-    if (!term || term.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-    setSearching(true);
-    try {
-      const { data } = await api.get('/clientes/', { params: { search: term } });
-      setSearchResults(data.results || data || []);
-    } catch (error) {
-      console.error('Erro ao buscar clientes:', error);
-    } finally {
-      setSearching(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchTerm) searchClients(searchTerm);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm, searchClients]);
-
-  const handleLinkClient = async (cliente: any) => {
+  const handleLinkClient = async () => {
+    if (!selectedClient) return;
     setLoading(true);
     try {
-      await api.patch(`/clientes/${cliente.id}/`, { jid: chat.jid });
-      addAlert(`Cliente "${cliente.nome}" vinculado com sucesso!`, 'success');
-      onSuccess(cliente.id);
+      await api.patch(`clientes/${selectedClient.id}/`, { jid: chat.jid });
+      addAlert(`Cliente "${selectedClient.nome}" vinculado com sucesso!`, 'success');
+      onSuccess(selectedClient.id);
     } catch (error: any) {
       addAlert('Erro ao vincular cliente: ' + (error.response?.data?.detail || error.message), 'error');
     } finally {
@@ -76,7 +65,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({ chat, onClose, on
     if (!nome.trim()) return;
     setLoading(true);
     try {
-      const { data } = await api.post('/clientes/', {
+      const { data } = await api.post('clientes/', {
         nome,
         telefone,
         jid: chat.jid,
@@ -92,73 +81,56 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({ chat, onClose, on
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
         <h3 className="text-lg font-semibold mb-4">Vincular Cliente</h3>
         <p className="text-sm text-gray-600 mb-4">
           Chat: {chat.name || chat.jid} ({chat.instanceName})
         </p>
 
+        {/* Busca cliente existente - padrão igual ModalNovoDTF */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-xs font-black text-slate-500 uppercase ml-1 mb-2">
             Buscar cliente existente
           </label>
           <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setSelectedClient(null);
-            }}
-            placeholder="Digite o nome do cliente..."
-            className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+            list="clientes-modal-list"
+            placeholder="Digite para buscar cliente..."
+            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700"
+            onChange={(e) => handleSelectClient(e.target.value)}
           />
-          {searching && <p className="text-xs text-gray-500 mt-1">Buscando...</p>}
-          {searchResults.length > 0 && (
-            <div className="mt-2 border border-gray-200 rounded-lg max-h-32 overflow-y-auto">
-              {searchResults.map(cliente => (
-                <div
-                  key={cliente.id}
-                  onClick={() => {
-                    setSelectedClient(cliente);
-                    setSearchTerm(cliente.nome);
-                    setSearchResults([]);
-                    setNome(cliente.nome);
-                    setTelefone(cliente.telefone || '');
-                  }}
-                  className="p-2 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
-                >
-                  <div className="font-medium text-sm">{cliente.nome}</div>
-                  <div className="text-xs text-gray-500">{cliente.telefone}</div>
-                </div>
-              ))}
-            </div>
-          )}
+          <datalist id="clientes-modal-list">
+            {clientes.map((c) => (
+              <option key={c.id} value={c.nome} />
+            ))}
+          </datalist>
         </div>
 
-        <form onSubmit={selectedClient ? (e: React.FormEvent) => { e.preventDefault(); handleLinkClient(selectedClient); } : handleCreateClient}>
+        {/* Formulário */}
+        <form onSubmit={handleCreateClient}>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+              <label className="block text-xs font-black text-slate-500 uppercase ml-1 mb-2">Nome</label>
               <input
                 type="text"
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 required
-                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
+              <label className="block text-xs font-black text-slate-500 uppercase ml-1 mb-2">Telefone</label>
               <input
                 type="text"
                 value={telefone}
                 onChange={(e) => setTelefone(e.target.value)}
                 required
-                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700"
               />
             </div>
             <input type="hidden" value={chat.jid} />
           </div>
+
           <div className="flex gap-3 mt-6">
             <button
               type="button"
@@ -169,9 +141,10 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({ chat, onClose, on
             </button>
             {selectedClient ? (
               <button
-                type="submit"
+                type="button"
                 disabled={loading}
-                className="flex-1 p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                onClick={handleLinkClient}
+                className="flex-[2] bg-green-600 text-white py-2 rounded-2xl font-bold uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-green-500/20 disabled:opacity-50"
               >
                 {loading ? 'Vinculando...' : `Vincular ${selectedClient.nome}`}
               </button>
@@ -179,7 +152,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({ chat, onClose, on
               <button
                 type="submit"
                 disabled={loading || !nome.trim()}
-                className="flex-1 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="flex-[2] bg-blue-600 text-white py-2 rounded-2xl font-bold uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-blue-500/20 disabled:opacity-50"
               >
                 {loading ? 'Criando...' : 'Criar Novo'}
               </button>
