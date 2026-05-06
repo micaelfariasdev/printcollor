@@ -26,8 +26,27 @@ def normalize_message(m, instance_nome='', instance_id=0):
     key = m.get('key', {})
     msg_obj = m.get('message', {})
     from_me = key.get('fromMe', False)
+
+    # Extrai o remoteJid real (pode estar em remoteJid ou remoteJidAlt)
     remote_jid = key.get('remoteJid', '')
-    from_number = remote_jid.replace('@s.whatsapp.net', '').replace('@g.us', '').replace('@lid', '')
+    remote_jid_alt = key.get('remoteJidAlt', '')
+    participant = key.get('participant', '')
+    participant_alt = key.get('participantAlt', '')
+
+    # Prioriza remoteJidAlt se o remoteJid for @lid
+    if remote_jid.endswith('@lid') and remote_jid_alt:
+        actual_jid = remote_jid_alt
+    else:
+        actual_jid = remote_jid
+
+    # Para grupos, o participant pode ter o JID real
+    if remote_jid.endswith('@g.us') and participant:
+        if participant.endswith('@lid') and participant_alt:
+            actual_jid = participant_alt
+        else:
+            actual_jid = participant
+
+    from_number = actual_jid.replace('@s.whatsapp.net', '').replace('@g.us', '').replace('@lid', '')
 
     # Extrai o corpo da mensagem
     body = ''
@@ -41,7 +60,6 @@ def normalize_message(m, instance_nome='', instance_id=0):
     elif msg_obj.get('imageMessage'):
         msg_type = 'image'
         img = msg_obj.get('imageMessage', {})
-        # Não salva a URL da Evolution API (expira). Salva o message_id pro front usar o endpoint /media/
         media_url = f"msg_id:{key.get('id')}" if key.get('id') else ''
         body = img.get('caption', '') or 'Imagem'
     elif msg_obj.get('videoMessage'):
@@ -82,17 +100,21 @@ def normalize_message(m, instance_nome='', instance_id=0):
     if msg_updates:
         read = any(u.get('status') == 'READ' for u in msg_updates)
 
+    # pushName: tenta várias fontes
+    push_name = m.get('pushName', '') or ''
+
     return {
         'id': key.get('id', ''),
         'body': body,
         'from_me': from_me,
         'instanceId': instance_id,
         'instance_nome': instance_nome,
-        'numero': from_number if not from_me else remote_jid.replace('@s.whatsapp.net', '').replace('@lid', ''),
+        'numero': from_number if not from_me else actual_jid.replace('@s.whatsapp.net', '').replace('@lid', ''),
+        'jid': actual_jid,
         'timestamp': timestamp,
         'messageType': msg_type,
         'media_url': media_url,
-        'pushName': m.get('pushName', ''),
+        'pushName': push_name,
         'read': read,
         'fileName': body if msg_type == 'document' else '',
     }
@@ -304,7 +326,9 @@ class WhatsAppInstanceViewSet(viewsets.ModelViewSet):
             # Busca JIDs que já têm cliente cadastrado
             cliente_jids = set(Cliente.objects.filter(jid__isnull=False).values_list('jid', flat=True))
             # Busca dados dos clientes para mostrar nome salvo
-            cliente_por_jid = {c.jid: {'id': c.id, 'nome': c.nome} for c in Cliente.objects.filter(jid__isnull=False)}
+            cliente_por_jid = {}
+            for c in Cliente.objects.filter(jid__isnull=False):
+                cliente_por_jid[c.jid] = {'id': c.id, 'nome': c.nome}
 
             limite = int(request.query_params.get('limite', 50))
 
@@ -314,31 +338,42 @@ class WhatsAppInstanceViewSet(viewsets.ModelViewSet):
                     for chat in chats:
                         # remoteJid vem direto no objeto do /chat/findChats/
                         jid = chat.get('remoteJid') or chat.get('jid', '')
-                        if not jid or jid in seen_jids:
+                        if not jid:
+                            continue
+
+                        # Se for @lid, tenta obter o JID real do lastMessage
+                        if jid.endswith('@lid'):
+                            last_msg = chat.get('lastMessage') or {}
+                            last_msg_key = last_msg.get('key') or {}
+                            alt_jid = last_msg_key.get('remoteJidAlt') or last_msg_key.get('participantAlt') or ''
+                            if alt_jid:
+                                jid = alt_jid
+
+                        if jid in seen_jids:
                             continue
                         seen_jids.add(jid)
 
-                        # Lógica de extração baseada no seu JSON
+                        # Extração de nome
                         last_msg = chat.get('lastMessage') or {}
                         last_msg_key = last_msg.get('key') or {}
                         from_me = last_msg_key.get('fromMe', False)
 
-                        # 1. Tenta o pushName do chat (contato)
-                        # 2. Se for "Você" ou nulo, e não for do contato, tenta o pushName da mensagem
-                        # 3. Fallback final para o remoteJid (número)
-                        display_name = chat.get('pushName')
+                        display_name = chat.get('pushName', '') or ''
 
                         if not display_name or display_name == "Você":
-                            # Se a última msg não for minha, o pushName da msg é o nome do contato
-                            if not from_me and last_msg.get('pushName'):
-                                display_name = last_msg.get('pushName')
+                            msg_push = last_msg.get('pushName', '') or ''
+                            if msg_push and msg_push != "Você":
+                                display_name = msg_push
                             else:
-                                display_name = jid.partition('@')[0] if '@' in jid else jid  # Pega só o número antes do @
+                                if '@' in jid:
+                                    display_name = jid.split('@')[0]
+                                else:
+                                    display_name = jid
 
-                        # Extração do conteúdo
+                        # Extração do conteúdo da mensagem
                         last_msg_message = last_msg.get('message') or {}
                         text_content = (
-                            last_msg_message.get('conversation') or 
+                            last_msg_message.get('conversation') or
                             last_msg_message.get('extendedTextMessage', {}).get('text', '')
                         )
 

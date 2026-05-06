@@ -237,7 +237,6 @@ export default function ModalNovoPedidoFabrica({
               </label>
               <input
                 type="date"
-                required
                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold"
                 value={formData.data_entrega}
                 onChange={(e) =>

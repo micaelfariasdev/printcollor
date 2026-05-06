@@ -1,8 +1,9 @@
-import { api } from '../auth/useAuth';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useAlert } from '../contexts/AlertContext';
 import CachedImage from '../components/CachedImage';
 import ModalNovoDTF from '../components/ModalNovoDTF';
+import CreateClientModal from '../components/CreateClientModal';
+import { api } from '../auth/useAuth';
+import { useAlert } from '../contexts/AlertContext';
 
 interface Chat {
   jid: string;
@@ -34,6 +35,7 @@ interface Message {
   profilePicUrl?: string | null;
   isGroup?: boolean;
   read?: boolean;
+  reply_to?: any;
 }
 
 const WhatsAppUnified: React.FC = () => {
@@ -79,14 +81,14 @@ const WhatsAppUnified: React.FC = () => {
   }, [messages.length, selectedChat]);
 
   useEffect(() => {
-    if (selectedChat?.has_client && selectedChat?.cliente_id) {
+    if (selectedChat?.cliente_id) {
       setSelectedChatClienteId(selectedChat.cliente_id.toString());
     } else {
       setSelectedChatClienteId('');
     }
   }, [selectedChat?.jid]);
 
-  const downloadFile = (base64String, fileName) => {
+  const downloadFile = (base64String: string, fileName: string) => {
     try {
       const cleanBase64 = base64String.includes(',')
         ? base64String.split(',')[1]
@@ -162,7 +164,7 @@ const WhatsAppUnified: React.FC = () => {
   useEffect(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const token = localStorage.getItem('access_token') || '';
-    const wsUrl = `${protocol}//${window.location.hostname}:8000/ws/whatsapp/?token=${encodeURIComponent(token)}`;
+    const wsUrl = `${protocol}//${window.location.hostname}/ws/whatsapp/?token=${encodeURIComponent(token)}`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
@@ -186,7 +188,6 @@ const WhatsAppUnified: React.FC = () => {
 
         // Extrai o número limpo (sem @s.whatsapp.net, @lid, etc)
         const remoteJid = data.jid || data.numero || data.from_number || '';
-        const fromNumber = extractNumberFromJid(remoteJid);
         const instanceName = data.instance_nome || data.instanceName || '';
         const pushName = data.pushName || data.push_name || '';
 
@@ -206,10 +207,10 @@ const WhatsAppUnified: React.FC = () => {
           read: data.read || false,
         };
 
-        // Atualiza mensagens se for do chat selecionado (match por pushName ou jid)
+        // Atualiza mensagens se for do chat selecionado (match por jid + instance)
         if (selectedChat && remoteJid && instanceName) {
           const isFromSelectedChat =
-            (remoteJid === selectedChat.jid || pushName === selectedChat.name) &&
+            remoteJid === selectedChat.jid &&
             instanceName === selectedChat.instanceName;
 
           if (isFromSelectedChat) {
@@ -221,46 +222,48 @@ const WhatsAppUnified: React.FC = () => {
         }
 
         // Atualiza a lista de conversas quando recebe mensagem via WS
-        // Match por pushName (JID pode variar entre @s.whatsapp.net e @lid)
-        if (pushName && instanceName) {
+        // Match por JID (único e estável)
+        if (remoteJid && instanceName) {
           setChats(prev => {
             const existing = prev.find(c =>
-              c.name === pushName &&
+              c.jid === remoteJid &&
               c.instanceName === instanceName
             );
 
             // Verifica se é o chat selecionado
             const isSelectedChat = selectedChat &&
-              selectedChat.name === pushName &&
+              selectedChat.jid === remoteJid &&
               selectedChat.instanceName === instanceName;
 
             if (existing) {
               // Atualiza a última mensagem do chat existente
               return prev.map(c =>
-                (c.name === pushName && c.instanceName === instanceName)
+                (c.jid === remoteJid && c.instanceName === instanceName)
                   ? {
                       ...c,
+                      name: pushName || c.name,
                       lastMessage: msg.body,
                       lastMessageTimestamp: msg.timestamp,
-                      // Só incrementa se não for o chat selecionado e msg não for do usuário
                       unreadCount: (!isSelectedChat && !msg.from_me)
                         ? (c.unreadCount || 0) + 1
                         : (isSelectedChat ? 0 : c.unreadCount)
-                    }
+                    } as Chat
                   : c
-              );
+              ) as Chat[];
             } else {
               // Adiciona novo chat na lista
               return [...prev, {
                 jid: remoteJid,
-                name: pushName,
+                name: pushName || remoteJid.split('@')[0],
                 instanceName: instanceName,
                 instanceId: msg.instanceId,
                 instanceCor: '#25D366',
                 lastMessage: msg.body,
                 lastMessageTimestamp: msg.timestamp,
                 unreadCount: (!isSelectedChat && !msg.from_me) ? 1 : 0,
-              }];
+                profilePicUrl: null,
+                has_client: false,
+              } as Chat];
             }
           });
         }
@@ -282,18 +285,8 @@ const WhatsAppUnified: React.FC = () => {
     };
   }, []);
 
-  const extractMessageBody = (msg: any): string => {
-    if (msg.message?.conversation) return msg.message.conversation;
-    if (msg.message?.extendedTextMessage?.text) return msg.message.extendedTextMessage.text;
-    if (msg.message?.imageMessage?.caption) return msg.message.imageMessage.caption;
-    if (msg.message?.videoMessage?.caption) return msg.message.videoMessage.caption;
-    if (msg.message?.documentMessage) return msg.message.documentMessage.fileName || 'Documento';
-    if (msg.message?.stickerMessage) return 'Sticker';
-    if (msg.message?.contactMessage) return 'Contato';
-    if (msg.message?.locationMessage) return 'Localização';
-    if (msg.message?.audioMessage) return 'Áudio';
-    return '';
-  };
+  // extractMessageBody removido - não utilizado
+  // extractNumberFromJid removido - não utilizado
 
   const loadMessages = useCallback(async (chat: Chat) => {
     setMessagesLoading(true);
@@ -586,11 +579,7 @@ const WhatsAppUnified: React.FC = () => {
     return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   };
 
-  const extractNumberFromJid = (jid: string): string => {
-    const atIndex = jid.indexOf('@');
-    return atIndex !== -1 ? jid.substring(0, atIndex) : jid;
-  };
-
+  // extractNumberFromJid removido - usar split('@')[0] diretamente
   const formatLastMessageTime = (timestamp: number) => {
     if (!timestamp) return '';
     // timestamp já está em milissegundos
@@ -604,10 +593,7 @@ const WhatsAppUnified: React.FC = () => {
     return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   };
 
-  const handleReply = (msg: Message) => {
-    setReplyTo(msg);
-    inputRef.current?.focus();
-  };
+  // handleReply removido - não utilizado
 
   return (
     <div className="flex h-[90vh] bg-gray-50">
@@ -735,9 +721,12 @@ const WhatsAppUnified: React.FC = () => {
                   />
                 </div>
               </div>
-              {selectedChat?.has_client && (
+              {selectedChat?.has_client && selectedChat?.cliente_id && (
                 <button
-                  onClick={() => setShowNovoPedidoModal(true)}
+                  onClick={() => {
+                    setSelectedChatClienteId(selectedChat.cliente_id!.toString());
+                    setShowNovoPedidoModal(true);
+                  }}
                   className="ml-2 px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
                 >
                   + Pedido
@@ -801,7 +790,7 @@ const WhatsAppUnified: React.FC = () => {
                           <div className="flex-1 min-w-0">
                             <div className="text-sm truncate">{msg.fileName || msg.body || 'Documento'}</div>
                             <button
-                              onClick={(e) => downloadFile(msg?.media_url, msg.fileName)}
+                              onClick={() => downloadFile(msg?.media_url || '', msg.fileName || 'documento')}
                               className={`text-xs underline ${msg.from_me ? 'text-blue-200' : 'text-blue-600'}`}
                             >
                               Baixar
@@ -928,74 +917,24 @@ const WhatsAppUnified: React.FC = () => {
 
         {/* Create Client Modal */}
         {showCreateClientModal && creatingClientFromChat && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-              <h3 className="text-lg font-semibold mb-4">Criar Cliente</h3>
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                const form = e.target as HTMLFormElement;
-                const formData = new FormData(form);
-                const nome = formData.get('nome') as string;
-                const telefone = formData.get('telefone') as string;
-                const jid = creatingClientFromChat.jid;
-
-                try {
-                  await api.post('/clientes/', { nome, telefone, jid });
-                  setShowCreateClientModal(false);
-                  setCreatingClientFromChat(null);
-                  // Atualiza has_client localmente
-                  setChats(prev => prev.map(c =>
-                    c.jid === jid ? { ...c, has_client: true } : c
-                  ));
-                  addAlert('Cliente criado com sucesso!', 'success');
-                } catch (error: any) {
-                  addAlert('Erro ao criar cliente: ' + (error.response?.data?.detail || error.message), 'error');
-                }
-              }}>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-                    <input
-                      name="nome"
-                      type="text"
-                      defaultValue={creatingClientFromChat.name || extractNumberFromJid(creatingClientFromChat.jid)}
-                      required
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
-                    <input
-                      name="telefone"
-                      type="text"
-                      defaultValue={extractNumberFromJid(creatingClientFromChat.jid)}
-                      required
-                      className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-                    />
-                  </div>
-                  <input type="hidden" name="jid" value={creatingClientFromChat.jid} />
-                </div>
-                <div className="flex gap-3 mt-6">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowCreateClientModal(false);
-                      setCreatingClientFromChat(null);
-                    }}
-                    className="flex-1 p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Criar
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
+          <CreateClientModal
+            chat={creatingClientFromChat}
+            onClose={() => {
+              setShowCreateClientModal(false);
+              setCreatingClientFromChat(null);
+            }}
+            onSuccess={(clienteId) => {
+              setShowCreateClientModal(false);
+              setCreatingClientFromChat(null);
+              // Atualiza has_client e cliente_id localmente
+              setChats(prev => prev.map(c =>
+                c.jid === creatingClientFromChat.jid
+                  ? { ...c, has_client: true, cliente_id: clienteId, cliente_nome: c.name }
+                  : c
+              ));
+              addAlert('Cliente vinculado com sucesso!', 'success');
+            }}
+          />
         )}
         {showNovoPedidoModal && (
           <ModalNovoDTF
