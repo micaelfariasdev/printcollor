@@ -11,24 +11,60 @@ from django.apps import apps
 logger = logging.getLogger(__name__)
 
 # Ordem de modelos para backup (pais antes dos filhos)
+# Nomes em minúsculas para compatibilidade com backup
+# Auth models primeiro (grupos e permissões)
 MODELOS_BACKUP = [
-    'Empresa',
-    'Cliente',
-    'Produto',
-    'Usuario',
-    'Orcamento',
-    'ItemOrcamento',
-    'PedidoFabrica',
-    'DTFVendor',
-    'DTFConfig',
-    'WhatsAppInstance',
-    'SolicitacaoOrcamento',
-    'PricingConfig',
+    'permission',  # auth_permission (primeiro, sem dependências)
+    'group',  # auth_group (depende de permission via M2M)
+    'empresa',  # api_empresa
+    'cliente',  # api_cliente
+    'produto',  # api_produto
+    'usuario',  # api_usuario (depende de Group e Permission)
+    'orcamento',  # api_orcamento (depende de Cliente, Usuario, Empresa)
+    'itemorcamento',  # api_itemorcamento (depende de Orcamento, Produto)
+    'pedidofabrica',  # api_pedidofabrica (depende de Cliente, Produto)
+    'dtfvendor',  # api_dtfvendor
+    'dtfconfig',  # api_dtfconfig
+    'whatsappinstance',  # api_whatsappinstance (depende de Usuario)
+    'whatsappmessage',  # api_whatsappmessage (depende de WhatsAppInstance, Cliente)
 ]
+
+# Mapeamento de nomes de modelos para objetos Django
+# Necessário porque os nomes no backup podem estar em minúsculas
+MODELO_MAP = {
+    'group': ('auth', 'Group'),
+    'permission': ('auth', 'Permission'),
+    'empresa': ('api', 'Empresa'),
+    'cliente': ('api', 'Cliente'),
+    'produto': ('api', 'Produto'),
+    'usuario': ('api', 'Usuario'),
+    'orcamento': ('api', 'Orcamento'),
+    'itemorcamento': ('api', 'ItemOrcamento'),
+    'pedidofabrica': ('api', 'PedidoFabrica'),
+    'dtfvendor': ('api', 'DTFVendor'),
+    'dtfconfig': ('api', 'DTFConfig'),
+    'whatsappinstance': ('api', 'WhatsAppInstance'),
+    'whatsappmessage': ('api', 'WhatsAppMessage'),
+}
 
 
 class BackupService:
     """Serviço para backup e restauração segura"""
+
+    @staticmethod
+    def create_backup(filename):
+        """Cria um arquivo de backup ZIP"""
+        try:
+            buffer = BackupService.export_backup()
+            backup_dir = Path(settings.BASE_DIR) / 'backups'
+            backup_dir.mkdir(parents=True, exist_ok=True)
+            backup_path = backup_dir / f"{filename}.zip"
+            with open(backup_path, 'wb') as f:
+                f.write(buffer.getvalue())
+            return str(backup_path)
+        except Exception as e:
+            logger.error(f"Erro ao criar backup: {e}")
+            raise
 
     @staticmethod
     def export_backup():
@@ -37,17 +73,21 @@ class BackupService:
         buffer = BytesIO()
         with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
             # 1. Backup do Banco de Dados (modelo por modelo, ordem correta)
-            api_app = apps.get_app_config('api')
             all_data = []
             for model_name in MODELOS_BACKUP:
                 try:
-                    model = api_app.get_model(model_name)
+                    if model_name not in MODELO_MAP:
+                        logger.warning(f"Modelo {model_name} não está no MODELO_MAP")
+                        continue
+                    app_label, model_class_name = MODELO_MAP[model_name]
+                    model = apps.get_model(app_label, model_class_name)
                     data = serializers.serialize('json', model.objects.all())
                     all_data.append({
-                        'model': f'api.{model_name.lower()}',
+                        'model': f'{app_label}.{model_name}',
                         'data': json.loads(data)
                     })
                 except LookupError:
+                    logger.warning(f"Modelo {model_name} não encontrado")
                     continue
 
             zip_file.writestr('db_backup.json', json.dumps(all_data, indent=2))
@@ -99,23 +139,27 @@ class BackupService:
 
                     for model_name in reversed(MODELOS_BACKUP):
                         try:
-                            model = api_app.get_model(model_name)
+                            if model_name not in MODELO_MAP:
+                                logger.warning(f"Modelo {model_name} não está no MODELO_MAP")
+                                continue
+                            app_label, model_class_name = MODELO_MAP[model_name]
+                            model = apps.get_model(app_label, model_class_name)
                             table_name = model._meta.db_table
                             if table_name not in existing_tables:
                                 logger.info(f"Tabela {table_name} não existe, pulando limpeza")
                                 continue
                             model.objects.all().delete()
                         except LookupError:
-                            logger.warning(f"Modelo {model_name} não encontrado no app api")
+                            logger.warning(f"Modelo {model_name} não encontrado")
                             continue
                         except Exception as e:
                             logger.warning(f"Não foi possível limpar {model_name}: {e}")
                             continue
 
-                    # Restaura na ordem correta
-                    # backup_json pode ser:
-                    # 1. Novo formato: [{'model': 'api.xxx', 'data': [...]}, ...]
-                    # 2. Antigo formato: [{'model': 'api.xxx', 'pk': ..., 'fields': {...}}, ...]
+                    # Restaura na ordem correta usando MODELOS_BACKUP
+                    # Organiza os dados por modelo (chave: 'app_label.model_name')
+                    model_data_dict = {}
+
                     for item in backup_json:
                         try:
                             # Detecta formato
@@ -131,12 +175,97 @@ class BackupService:
                             if not model_data:
                                 continue
 
-                            # Reconstrói o JSON para o Django
-                            json_str = json.dumps(model_data)
-                            for obj in serializers.deserialize('json', io.StringIO(json_str)):
-                                obj.save()
+                            # Determina o nome completo do modelo (app_label.model_name)
+                            if isinstance(model_data[0], dict) and 'model' in model_data[0]:
+                                full_model_name = model_data[0]['model']  # ex: 'api.empresa'
+                            else:
+                                continue
+
+                            if full_model_name not in model_data_dict:
+                                model_data_dict[full_model_name] = []
+                            model_data_dict[full_model_name].extend(model_data)
+
                         except Exception as e:
-                            logger.warning(f"Erro ao restaurar item de backup: {e}")
+                            logger.warning(f"Erro ao processar item de backup: {e}")
+                            continue
+
+                    # Mapeia nomes completos para nomes simples usados em MODELOS_BACKUP
+                    full_name_to_simple = {}
+                    for simple_name in MODELOS_BACKUP:
+                        if simple_name in MODELO_MAP:
+                            app_label, model_class_name = MODELO_MAP[simple_name]
+                            full_name = f"{app_label}.{simple_name}"
+                            full_name_to_simple[full_name] = simple_name
+
+                    # Restaura seguindo a ordem de MODELOS_BACKUP
+                    for model_name in MODELOS_BACKUP:
+                        if model_name not in MODELO_MAP:
+                            logger.warning(f"Modelo {model_name} não está no MODELO_MAP")
+                            continue
+
+                        app_label, model_class_name = MODELO_MAP[model_name]
+                        full_model_name = f"{app_label}.{model_name}"
+
+                        if full_model_name not in model_data_dict:
+                            continue
+
+                        try:
+                            model = apps.get_model(app_label, model_class_name)
+                            model_data = model_data_dict[full_model_name]
+
+                            # Processa cada registro para tratar M2M
+                            for record in model_data:
+                                if not isinstance(record, dict) or 'fields' not in record:
+                                    continue
+
+                                # Separa campos M2M dos normais
+                                fields = record['fields']
+                                m2m_fields = {}
+                                normal_fields = {}
+
+                                for key, value in fields.items():
+                                    if isinstance(value, list):
+                                        m2m_fields[key] = value
+                                    else:
+                                        normal_fields[key] = value
+
+                                # Cria/atualiza o objeto sem os campos M2M
+                                record_without_m2m = {
+                                    'model': record.get('model', full_model_name),
+                                    'pk': record.get('pk'),
+                                    'fields': normal_fields
+                                }
+
+                                json_str = json.dumps([record_without_m2m])
+                                for obj in serializers.deserialize('json', io.StringIO(json_str)):
+                                    obj.save()
+
+                                    # Agora adiciona os campos M2M
+                                    instance = obj.object
+                                    for m2m_field_name, m2m_values in m2m_fields.items():
+                                        if not m2m_values:
+                                            continue
+                                        try:
+                                            m2m_manager = getattr(instance, m2m_field_name)
+                                            # Limpa relações existentes
+                                            m2m_manager.clear()
+                                            # Adiciona novas relações - aceita tanto IDs quanto objetos
+                                            for value in m2m_values:
+                                                if isinstance(value, int):
+                                                    # É um ID direto
+                                                    m2m_manager.add(value)
+                                                elif isinstance(value, dict) and 'pk' in value:
+                                                    # É um objeto serializado
+                                                    m2m_manager.add(value['pk'])
+                                                elif hasattr(value, 'pk'):
+                                                    # É um objeto Django
+                                                    m2m_manager.add(value.pk)
+                                        except Exception as e:
+                                            logger.warning(f"Erro ao restaurar M2M {m2m_field_name}: {e}")
+
+                            logger.info(f"Restaurado {full_model_name} com sucesso")
+                        except Exception as e:
+                            logger.warning(f"Erro ao restaurar {full_model_name}: {e}")
                             continue
 
                 # 2. Restaurar Mídia (apenas para MEDIA_ROOT)
@@ -153,8 +282,13 @@ class BackupService:
                         target_dir = target_path.parent
                         if not target_dir.exists():
                             target_dir.mkdir(parents=True, exist_ok=True)
-                        with zip_ref.open(file_info) as source, open(target_path, 'wb') as target:
+                        source = zip_ref.open(file_info)
+                        target = open(target_path, 'wb')
+                        try:
                             target.write(source.read())
+                        finally:
+                            target.close()
+                            source.close()
 
             return True, "Sistema restaurado com sucesso!"
         except Exception as e:
