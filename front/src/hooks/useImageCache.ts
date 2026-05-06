@@ -118,7 +118,7 @@ export function useImageCache() {
       try {
         const response = await fetch(apiUrl);
         const data = await response.json();
-        if (data.base64) {
+        if (data.base64 && typeof data.base64 === 'string') {
           const dataUrl = `data:${data.mime_type || 'image/jpeg'};base64,${data.base64}`;
           await cacheImage(cacheKey, dataUrl);
           return dataUrl;

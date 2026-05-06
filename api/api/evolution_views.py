@@ -420,7 +420,7 @@ class WhatsAppInstanceViewSet(viewsets.ModelViewSet):
                 message_id,
                 timeout=30
             )
-            if not base64_data:
+            if not base64_data or not isinstance(base64_data, str):
                 return Response({'error': 'Mídia não encontrada ou vazia'}, status=404)
 
             # Detecta tipo MIME pelo base64 (header dos primeiros chars)
