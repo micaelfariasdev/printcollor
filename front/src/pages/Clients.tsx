@@ -12,6 +12,8 @@ export interface Client {
   id: number;
   nome: string;
   telefone: string;
+  numero: string | null;
+  jid: string | null;
 }
 
 const Clients: React.FC = () => {
@@ -83,7 +85,10 @@ const Clients: React.FC = () => {
                   E-mail
                 </th>
                 <th className="p-4 font-black text-slate-600 uppercase text-xs">
-                  Número
+                  Número (WhatsApp)
+                </th>
+                <th className="p-4 font-black text-slate-600 uppercase text-xs">
+                  JID
                 </th>
                 <th className="p-4 font-black text-slate-600 uppercase text-xs text-center">
                   Ações
@@ -104,7 +109,12 @@ const Clients: React.FC = () => {
                     </div>
                   </td>
                   <td className="p-4 text-slate-600 text-sm">{orc.email}</td>
-                  <td className="p-4 text-slate-600 text-sm">{orc.telefone}</td>
+                  <td className="p-4 text-slate-600 text-sm">
+                    {orc.numero || orc.telefone || '-'}
+                  </td>
+                  <td className="p-4 text-slate-600 text-xs font-mono">
+                    {orc.jid || '-'}
+                  </td>
                   <td className="p-4">
                     <div className="flex items-center justify-center gap-2">
                       <button
@@ -122,10 +132,10 @@ const Clients: React.FC = () => {
               {filtrados.length === 0 && (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="p-12 text-center text-slate-400 font-medium italic"
                   >
-                    Nenhum orçamento encontrado.
+                    Nenhum cliente encontrado.
                   </td>
                 </tr>
               )}

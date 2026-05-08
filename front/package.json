@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "up":"npm run build && scp -i ~/chave.key -r dist ubuntu@164.152.62.129:~/printcollor/ ",
     "preview": "vite preview"
   },
   "dependencies": {

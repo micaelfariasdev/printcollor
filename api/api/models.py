@@ -69,7 +69,8 @@ class Cliente(models.Model):
     cnpj = models.CharField(max_length=18, unique=False, null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
     telefone = models.CharField(max_length=15, null=True, blank=True)
-    jid = models.CharField(max_length=53, null=True, blank=True, unique=True)
+    numero = models.CharField(max_length=20, null=True, blank=True)  # Apenas números (ex: 5511999999999)
+    jid = models.CharField(max_length=53, null=True, blank=True, unique=True)  # JID completo do WhatsApp (ex: 5511999999999@s.whatsapp.net)
 
     def __str__(self):
         return self.nome

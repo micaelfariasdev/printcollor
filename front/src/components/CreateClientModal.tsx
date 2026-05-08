@@ -50,7 +50,13 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({ chat, onClose, on
     if (!selectedClient) return;
     setLoading(true);
     try {
-      await api.patch(`clientes/${selectedClient.id}/`, { jid: chat.jid });
+      // Extrai apenas números do JID
+      const numero = chat.jid ? chat.jid.split('@')[0] : '';
+      await api.patch(`clientes/${selectedClient.id}/`, {
+        jid: chat.jid,  // JID completo
+        numero: numero,  // apenas números
+        telefone: selectedClient.telefone || numero  // atualiza telefone se vazio
+      });
       addAlert(`Cliente "${selectedClient.nome}" vinculado com sucesso!`, 'success');
       onSuccess(selectedClient.id);
     } catch (error: any) {
@@ -65,10 +71,13 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({ chat, onClose, on
     if (!nome.trim()) return;
     setLoading(true);
     try {
+      // Extrai apenas números do JID para o campo 'numero'
+      const numero = chat.jid ? chat.jid.split('@')[0] : '';
       const { data } = await api.post('clientes/', {
         nome,
-        telefone,
-        jid: chat.jid,
+        telefone: telefone || numero,  // usa telefone se preenchido, senão o número do JID
+        numero: numero,  // apenas números
+        jid: chat.jid,  // JID completo (ex: 551199999@s.whatsapp.net)
       });
       addAlert('Cliente criado com sucesso!', 'success');
       onSuccess(data.id);

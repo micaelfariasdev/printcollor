@@ -8,6 +8,7 @@ import { useAlert } from '../contexts/AlertContext';
 interface Chat {
   jid: string;
   name: string;
+  idEvo: string;
   lastMessage: string;
   profilePicUrl: string | null;
   lastMessageTimestamp: number;
@@ -88,40 +89,61 @@ const WhatsAppUnified: React.FC = () => {
     }
   }, [selectedChat?.jid]);
 
-  const downloadFile = (base64String: string, fileName: string) => {
+  const downloadFile = async (mediaUrl: string, fileName: string, instanceId?: number) => {
+    console.log('[DOWNLOAD] Iniciando download:', { mediaUrl: mediaUrl?.substring(0, 50), fileName, instanceId });
     try {
-      const cleanBase64 = base64String.includes(',')
-        ? base64String.split(',')[1]
-        : base64String;
-
-      const byteCharacters = atob(cleanBase64);
-      const byteNumbers = new Array(byteCharacters.length);
-
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      // Caso 1: msg_id:xxx → busca na API do backend
+      if (mediaUrl.startsWith('msg_id:') && instanceId) {
+        const messageId = mediaUrl.replace('msg_id:', '');
+        console.log('[DOWNLOAD] Buscando mídia para message_id:', messageId);
+        const apiUrl = import.meta.env.VITE_API_URL || '';
+        const token = localStorage.getItem('access_token') || '';
+        const res = await fetch(
+          `${apiUrl}whatsapp-instances/${instanceId}/media/?message_id=${encodeURIComponent(messageId)}`,
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        if (!res.ok) throw new Error('Erro ao baixar mídia');
+        const data = await res.json();
+        const base64Data = data.base64 || '';
+        const mimeType = data.mime_type || 'application/octet-stream';
+        triggerDownload(base64Data, fileName, mimeType);
+        return;
       }
 
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = fileName || "arquivo.pdf";
-
-      document.body.appendChild(link);
-      link.click();
-
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      // Caso 2: data:URL ou base64 puro
+      const cleanBase64 = mediaUrl.includes(',') ? mediaUrl.split(',')[1] : mediaUrl;
+      const mimeType = mediaUrl.startsWith('data:')
+        ? mediaUrl.split(',')[0].split(':')[1].split(';')[0]
+        : 'application/pdf';
+      triggerDownload(cleanBase64, fileName, mimeType);
     } catch (error) {
       console.error("Erro ao processar download:", error);
+      addAlert('Erro ao baixar arquivo', 'error');
     }
+  };
+
+  const triggerDownload = (base64String: string, fileName: string, mimeType: string) => {
+    const byteCharacters = atob(base64String);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName || "arquivo";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const loadInstances = useCallback(async () => {
     try {
-      const res = await api.get('/whatsapp-instances/');
+      const res = await api.get('whatsapp-instances/');
       setInstances(res.data || []);
     } catch (error) {
       console.error('[loadInstances] Erro:', error);
@@ -130,9 +152,9 @@ const WhatsAppUnified: React.FC = () => {
 
   const loadChats = useCallback(async () => {
     try {
-      const res = await api.get('/whatsapp/unificado/');
+      const res = await api.get('whatsapp/unificado/');
       const chatsData: Chat[] = res.data.chats || [];
-      const instancesRes = await api.get('/whatsapp-instances/');
+      const instancesRes = await api.get('whatsapp-instances/');
       const insts = instancesRes.data || [];
       const enriched = chatsData.map((chat: Chat) => {
         const inst = insts.find((i: any) => i.nome === chat.instanceName);
@@ -148,7 +170,7 @@ const WhatsAppUnified: React.FC = () => {
         addAlert('Sessão expirada. Faça login novamente.', 'error');
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
+        window.location.href = 'login';
         return;
       }
     } finally {
@@ -162,9 +184,18 @@ const WhatsAppUnified: React.FC = () => {
   }, [loadInstances, loadChats]);
 
   useEffect(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // Usa a mesma URL do API (VITE_API_URL) para o WebSocket
+    const apiUrl = import.meta.env.VITE_API_URL || '';
+    let wsBase = apiUrl;
+    if (!wsBase) {
+      // Fallback: usa o host atual da página
+      wsBase = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
+    } else {
+      // Converte http(s):// para ws(s)://
+      wsBase = wsBase.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:').replace('api/', '');
+    }
     const token = localStorage.getItem('access_token') || '';
-    const wsUrl = `${protocol}//${window.location.hostname}/ws/whatsapp/?token=${encodeURIComponent(token)}`;
+    const wsUrl = `${wsBase}ws/whatsapp/?token=${encodeURIComponent(token)}`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
@@ -236,23 +267,23 @@ const WhatsAppUnified: React.FC = () => {
               selectedChat.instanceName === instanceName;
 
             if (existing) {
-              // Atualiza a última mensagem do chat existente
-              return prev.map(c =>
-                (c.jid === remoteJid && c.instanceName === instanceName)
-                  ? {
-                      ...c,
-                      name: pushName || c.name,
-                      lastMessage: msg.body,
-                      lastMessageTimestamp: msg.timestamp,
-                      unreadCount: (!isSelectedChat && !msg.from_me)
-                        ? (c.unreadCount || 0) + 1
-                        : (isSelectedChat ? 0 : c.unreadCount)
-                    } as Chat
-                  : c
-              ) as Chat[];
+              // Atualiza e move o chat para o topo
+              const updatedChat = {
+                ...existing,
+                name: pushName || existing.name,
+                lastMessage: msg.body,
+                lastMessageTimestamp: msg.timestamp,
+                unreadCount: (!isSelectedChat && !msg.from_me)
+                  ? (existing.unreadCount || 0) + 1
+                  : (isSelectedChat ? 0 : existing.unreadCount)
+              } as Chat;
+              // Remove da posição atual e adiciona no topo
+              return [updatedChat, ...prev.filter(c =>
+                !(c.jid === remoteJid && c.instanceName === instanceName)
+              )];
             } else {
-              // Adiciona novo chat na lista
-              return [...prev, {
+              // Adiciona novo chat no topo da lista
+              return [{
                 jid: remoteJid,
                 name: pushName || remoteJid.split('@')[0],
                 instanceName: instanceName,
@@ -263,7 +294,7 @@ const WhatsAppUnified: React.FC = () => {
                 unreadCount: (!isSelectedChat && !msg.from_me) ? 1 : 0,
                 profilePicUrl: null,
                 has_client: false,
-              } as Chat];
+              } as Chat, ...prev];
             }
           });
         }
@@ -291,30 +322,36 @@ const WhatsAppUnified: React.FC = () => {
   const loadMessages = useCallback(async (chat: Chat) => {
     setMessagesLoading(true);
     try {
-      const instanceRes = await api.get('/whatsapp-instances/');
+      const instanceRes = await api.get('whatsapp-instances/');
       const instance = instanceRes.data.find((i: any) => i.nome === chat.instanceName);
       if (!instance) {
         setMessages([]);
         return;
       }
 
-      const numero = chat.jid;
-      const res = await api.post(`/whatsapp-instances/${instance.id}/mensagens/`, {
-        numero,
-         limite: 50
+      // Envia o JID completo (ex: 551199999@s.whatsapp.net)
+      const jid = chat.idEvo;
+      console.log('[MSGS] Carregando mensagens para JID:', jid, 'Instância ID:', instance.id);
+
+      const res = await api.post(`whatsapp-instances/${instance.id}/mensagens/`, {
+        numero: jid,  // JID completo
+        limite: 50
       });
 
       let msgs: any[] = [];
       if (Array.isArray(res.data)) {
         msgs = res.data;
+      } else if (res.data?.messages && Array.isArray(res.data.messages)) {
+        // Estrutura: { messages: [...] } - RETORNO DO BACKEND
+        msgs = res.data.messages;
       } else if (res.data?.messages?.records && Array.isArray(res.data.messages.records)) {
         // Estrutura: { messages: { records: [...] } }
         msgs = res.data.messages.records;
       } else if (res.data?.records && Array.isArray(res.data.records)) {
+        // Estrutura: { records: [...] }
         msgs = res.data.records;
-      } else if (res.data?.messages && Array.isArray(res.data.messages)) {
-        msgs = res.data.messages;
       }
+      console.log('[MSGS] Mensagens extraídas:', msgs.length);
 
       setMessages(msgs.map((m: any) => {
         // Histórico já vem processado no formato plano (flat)
@@ -790,7 +827,7 @@ const WhatsAppUnified: React.FC = () => {
                           <div className="flex-1 min-w-0">
                             <div className="text-sm truncate">{msg.fileName || msg.body || 'Documento'}</div>
                             <button
-                              onClick={() => downloadFile(msg?.media_url || '', msg.fileName || 'documento')}
+                              onClick={() => downloadFile(msg?.media_url || '', msg.fileName || 'documento', msg.instanceId)}
                               className={`text-xs underline ${msg.from_me ? 'text-blue-200' : 'text-blue-600'}`}
                             >
                               Baixar
@@ -801,7 +838,7 @@ const WhatsAppUnified: React.FC = () => {
                         <div>
                           <video
                             src={msg.media_url.startsWith('msg_id:')
-                              ? `${import.meta.env.VITE_API_URL}/whatsapp-instances/${msg.instanceId}/media/?message_id=${msg.media_url.replace('msg_id:', '')}`
+                              ? `${import.meta.env.VITE_API_URL}whatsapp-instances/${msg.instanceId}/media/?message_id=${msg.media_url.replace('msg_id:', '')}`
                               : msg.media_url}
                             controls
                             className="max-w-full rounded mb-1"
@@ -815,7 +852,7 @@ const WhatsAppUnified: React.FC = () => {
                         <div>
                           <audio
                             src={msg.media_url?.startsWith('msg_id:')
-                              ? `${import.meta.env.VITE_API_URL}/whatsapp-instances/${msg.instanceId}/media/?message_id=${msg.media_url.replace('msg_id:', '')}`
+                              ? `${import.meta.env.VITE_API_URL}whatsapp-instances/${msg.instanceId}/media/?message_id=${msg.media_url.replace('msg_id:', '')}`
                               : msg.media_url}
                             controls
                             className="max-w-full"

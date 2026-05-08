@@ -25,6 +25,7 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
   const { addAlert } = useAlert();
 
   const [clienteId, setClienteId] = useState('');
+  const [clienteNome, setClienteNome] = useState('');
   const [tipoProduto, setTipoProduto] = useState('dtf_textil');
   const [tamanhoCm, setTamanhoCm] = useState<number>(0);
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -41,10 +42,16 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
         const found = resCfg.data.find((c: any) => c.tipo_produto === 'dtf_textil');
         setConfig(found);
         setClientes(resCli.data);
+
+        // Preenche o nome do cliente se vier via prop
+        if (propClienteId) {
+          const cliente = resCli.data.find((c: any) => c.id === propClienteId);
+          if (cliente) {
+            setClienteId(String(cliente.id));
+            setClienteNome(cliente.nome);
+          }
+        }
       });
-      if (propClienteId) {
-        setClienteId(String(propClienteId));
-      }
     }
   }, [isOpen, propClienteId]);
 
@@ -105,6 +112,7 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
       onSuccess();
       onClose();
       setClienteId('');
+      setClienteNome('');
       setTipoProduto('dtf_textil');
       setTamanhoCm(0);
       setArquivo(null);
@@ -160,11 +168,17 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
             <input
               list="clientes-list"
               placeholder="Digite para buscar cliente..."
+              value={clienteNome}
               className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700 transition-all"
               disabled={!!propClienteId}
               onChange={(e) => {
+                setClienteNome(e.target.value);
                 const cliente = clientes.find((c) => c.nome === e.target.value);
-                if (cliente) setClienteId(cliente.id);
+                if (cliente) {
+                  setClienteId(cliente.id);
+                } else {
+                  setClienteId('');
+                }
               }}
             />
             <datalist id="clientes-list">

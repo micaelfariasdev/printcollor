@@ -379,6 +379,7 @@ class WhatsAppInstanceViewSet(viewsets.ModelViewSet):
 
                         all_chats.append({
                             'jid': jid,
+                            'idEvo': chat.get('remoteJid', ''),
                             'name': display_name,
                             'lastMessage': text_content,
                             'lastMessageTimestamp': last_msg.get('messageTimestamp', 0),
@@ -415,8 +416,9 @@ class WhatsAppInstanceViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
 
         try:
+            # Usa instance_id (identificador da Evolution API), não instance.nome
             base64_data = EvolutionService.baixar_midia_base64(
-                instance.nome,
+                instance.instance_id,
                 message_id,
                 timeout=30
             )

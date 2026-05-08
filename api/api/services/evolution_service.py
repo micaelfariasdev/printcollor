@@ -139,7 +139,10 @@ class EvolutionService:
         url = f"{EvolutionService.get_api_url()}/chat/findMessages/{instance_id}"
         payload: dict = {'limit': limite}
         if numero:
-            payload['where'] = {'key': {'remoteJid': f"{numero}"}}
+            # Aceita JID com ou sem sufixo (@s.whatsapp.net ou @jid)
+            remote_jid = numero if '@' in numero else f"{numero}@s.whatsapp.net"
+            logger.info(f"[EVOLUTION] Buscando mensagens para JID: {remote_jid}")
+            payload['where'] = {'key': {'remoteJid': remote_jid}}
 
         try:
             logger.info(f"[EVOLUTION] Buscando mensagens da instância '{instance_id}'")
@@ -147,7 +150,15 @@ class EvolutionService:
             response.raise_for_status()
             data = response.json()
             # Evolution API retorna { total, pages, currentPage, records: [...] }
-            messages = data.get('messages', []) if isinstance(data, dict) else data
+            # ou { messages: { records: [...] } } dependendo da versão
+            messages = []
+            if isinstance(data, dict):
+                if 'records' in data and isinstance(data['records'], list):
+                    messages = data['records']
+                elif 'messages' in data and isinstance(data['messages'], dict):
+                    messages = data['messages'].get('records', [])
+                elif 'messages' in data and isinstance(data['messages'], list):
+                    messages = data['messages']
             logger.info(f"[EVOLUTION] {len(messages)} mensagens obtidas")
 
             # # Filtra mensagens com mídia e converte para base64
@@ -240,7 +251,8 @@ class EvolutionService:
         payload = {
             "message": {
                 "key": {
-                    "id": message_id
+                    "id": message_id,
+                    "remoteJid": ""  # Opcional, mas algumas versões precisam
                 }
             },
             "convertToMp4": False
