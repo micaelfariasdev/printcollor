@@ -115,7 +115,24 @@ class WhatsAppWebhookView(View):
             # Determina remetente/destinatário
             from_me = key.get('fromMe', False)
             remote_jid = key.get('remoteJid', '')
-            from_number = remote_jid.partition('@')[0] if remote_jid else ''
+
+            # Normaliza remoteJid: se for @lid, tenta usar remoteJidAlt/participantAlt
+            remote_jid_alt = key.get('remoteJidAlt', '') or key.get('participantAlt', '')
+            if remote_jid.endswith('@lid') and remote_jid_alt:
+                remote_jid = remote_jid_alt
+
+            # Para grupos, usa participant se disponível
+            if remote_jid.endswith('@g.us'):
+                participant = key.get('participant', '')
+                participant_alt = key.get('participantAlt', '')
+                if participant:
+                    if participant.endswith('@lid') and participant_alt:
+                        remote_jid = participant_alt
+                    else:
+                        remote_jid = participant
+
+            # Extrai número limpo (sem @s.whatsapp.net, @lid, etc) para from_number
+            from_number = remote_jid.split('@')[0] if remote_jid else ''
 
             # Envia para o WebSocket em tempo real
             channel_layer = get_channel_layer()

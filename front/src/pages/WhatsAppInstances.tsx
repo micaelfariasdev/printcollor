@@ -147,16 +147,23 @@ const WhatsAppInstances: React.FC = () => {
       const res = await api.get(`/whatsapp-instances/${instance.id}/status/`);
       const status = res.data?.instance?.state || res.data?.state || 'unknown';
 
-      // Se tá conectada (open/connected), atualiza o banco
+      // Mapeia o status da Evolution API para o status do nosso backend
+      let backendStatus = 'disconnected';
       if (status === 'open' || status === 'connected') {
-        await api.patch(`/whatsapp-instances/${instance.id}/`, { status: 'connected' });
-        setInstances(prev => prev.map(i =>
-          i.id === instance.id ? { ...i, status: 'connected' } : i
-        ));
-        setStatusMessage(`Instância "${instance.nome}": conectada!`);
-      } else {
-        setStatusMessage(`Instância "${instance.nome}": ${status}`);
+        backendStatus = 'connected';
+      } else if (status === 'qrcode') {
+        backendStatus = 'qrcode';
+      } else if (status === 'connecting') {
+        backendStatus = 'connecting';
       }
+
+      // Sempre atualiza o status no backend e no estado local
+      await api.patch(`/whatsapp-instances/${instance.id}/`, { status: backendStatus });
+      setInstances(prev => prev.map(i =>
+        i.id === instance.id ? { ...i, status: backendStatus } : i
+      ));
+
+      setStatusMessage(`Instância "${instance.nome}": ${backendStatus === 'connected' ? 'Conectada' : backendStatus === 'qrcode' ? 'Aguardando QR Code' : backendStatus === 'connecting' ? 'Conectando' : 'Desconectada'}`);
       setShowStatusModal(true);
     } catch (error: any) {
       setStatusMessage(`Erro ao verificar status: ${error.response?.data?.error || error.message}`);

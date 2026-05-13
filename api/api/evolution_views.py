@@ -18,6 +18,19 @@ class WhatsAppInstanceSerializer(serializers.ModelSerializer):
 
 logger = logging.getLogger(__name__)
 
+def normalize_jid(jid, remoteJidAlt='', participantAlt=''):
+    """Normaliza JID: converte @lid para @s.whatsapp.net quando possível."""
+    if jid.endswith('@lid') and remoteJidAlt:
+        return remoteJidAlt
+    if jid.endswith('@lid') and participantAlt:
+        return participantAlt
+    if jid.endswith('@lid'):
+        # Fallback: tenta construir com @s.whatsapp.net
+        number = jid.split('@')[0] if '@' in jid else jid
+        return f"{number}@s.whatsapp.net"
+    return jid
+
+
 def normalize_message(m, instance_nome='', instance_id=0):
     """
     Normaliza uma mensagem da Evolution API (formato aninhado)
@@ -33,20 +46,23 @@ def normalize_message(m, instance_nome='', instance_id=0):
     participant = key.get('participant', '')
     participant_alt = key.get('participantAlt', '')
 
-    # Prioriza remoteJidAlt se o remoteJid for @lid
-    if remote_jid.endswith('@lid') and remote_jid_alt:
-        actual_jid = remote_jid_alt
-    else:
-        actual_jid = remote_jid
+    # Normaliza remoteJid
+    actual_jid = normalize_jid(remote_jid, remote_jid_alt, participant_alt)
 
     # Para grupos, o participant pode ter o JID real
-    if remote_jid.endswith('@g.us') and participant:
+    if actual_jid.endswith('@g.us') and participant:
         if participant.endswith('@lid') and participant_alt:
             actual_jid = participant_alt
         else:
             actual_jid = participant
 
-    from_number = actual_jid.replace('@s.whatsapp.net', '').replace('@g.us', '').replace('@lid', '')
+    jid_number = actual_jid.split('@')[0] if '@' in actual_jid else actual_jid
+    from_number = jid_number
+
+    # Extrai o corpo da mensagem
+    body = ''
+    msg_type = 'text'
+    media_url = ''
 
     # Extrai o corpo da mensagem
     body = ''
@@ -109,7 +125,7 @@ def normalize_message(m, instance_nome='', instance_id=0):
         'from_me': from_me,
         'instanceId': instance_id,
         'instance_nome': instance_nome,
-        'numero': from_number if not from_me else actual_jid.replace('@s.whatsapp.net', '').replace('@lid', ''),
+        'numero': jid_number,
         'jid': actual_jid,
         'timestamp': timestamp,
         'messageType': msg_type,
@@ -349,9 +365,11 @@ class WhatsAppInstanceViewSet(viewsets.ModelViewSet):
                             if alt_jid:
                                 jid = alt_jid
 
-                        if jid in seen_jids:
+                        # Chave de deduplicação: instância + jid
+                        dedup_key = (instance.nome, jid)
+                        if dedup_key in seen_jids:
                             continue
-                        seen_jids.add(jid)
+                        seen_jids.add(dedup_key)
 
                         # Extração de nome
                         last_msg = chat.get('lastMessage') or {}
@@ -377,6 +395,18 @@ class WhatsAppInstanceViewSet(viewsets.ModelViewSet):
                             last_msg_message.get('extendedTextMessage', {}).get('text', '')
                         )
 
+                        # Verifica se tem cliente cadastrado (comparação com JID normalizado)
+                        jid_base = jid.split('@')[0] if '@' in jid else jid
+                        tem_cliente = False
+                        nome_cliente = ''
+                        id_cliente = None
+                        for cj in cliente_jids:
+                            if cj.split('@')[0] == jid_base:
+                                tem_cliente = True
+                                id_cliente = cliente_por_jid[cj]['id']
+                                nome_cliente = cliente_por_jid[cj]['nome']
+                                break
+
                         all_chats.append({
                             'jid': jid,
                             'idEvo': chat.get('remoteJid', ''),
@@ -388,9 +418,9 @@ class WhatsAppInstanceViewSet(viewsets.ModelViewSet):
                             'profilePicUrl': chat.get('profilePicUrl', ''),
                             'unreadCount': chat.get('unreadCount', 0),
                             'fromMe': from_me,
-                            'has_client': jid in cliente_jids,
-                            'cliente_nome': cliente_por_jid.get(jid, {}).get('nome', '') if jid in cliente_jids else '',
-                            'cliente_id': cliente_por_jid.get(jid, {}).get('id') if jid in cliente_jids else None,
+                            'has_client': tem_cliente,
+                            'cliente_nome': nome_cliente,
+                            'cliente_id': id_cliente,
                         })
                 except Exception as e:
                     logger.warning(f"Erro ao buscar chats da instância {instance.nome}: {e}")

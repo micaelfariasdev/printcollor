@@ -59,6 +59,12 @@ const WhatsAppUnified: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const selectedChatRef = useRef<Chat | null>(null);
+
+  // Mantém selectedChat sincronizado com o ref para uso no WS handler
+  useEffect(() => {
+    selectedChatRef.current = selectedChat;
+  }, [selectedChat]);
 
   const scrollToBottom = () => {
     requestAnimationFrame(() => {
@@ -238,11 +244,23 @@ const WhatsAppUnified: React.FC = () => {
           read: data.read || false,
         };
 
+        // Normaliza JID para comparação (remove @s.whatsapp.net, @lid -> @s.whatsapp.net)
+        const normalizeJid = (jid: string) => {
+          if (!jid) return jid;
+          const parts = jid.split('@');
+          if (parts[1] === 'lid') {
+            return `${parts[0]}@s.whatsapp.net`;
+          }
+          return jid;
+        };
+        const normalizedRemoteJid = normalizeJid(remoteJid);
+
         // Atualiza mensagens se for do chat selecionado (match por jid + instance)
-        if (selectedChat && remoteJid && instanceName) {
+        const currentSelectedChat = selectedChatRef.current;
+        if (currentSelectedChat && remoteJid && instanceName) {
           const isFromSelectedChat =
-            remoteJid === selectedChat.jid &&
-            instanceName === selectedChat.instanceName;
+            normalizedRemoteJid === normalizeJid(currentSelectedChat.jid) &&
+            instanceName === currentSelectedChat.instanceName;
 
           if (isFromSelectedChat) {
             setMessages(prev => {
@@ -257,14 +275,14 @@ const WhatsAppUnified: React.FC = () => {
         if (remoteJid && instanceName) {
           setChats(prev => {
             const existing = prev.find(c =>
-              c.jid === remoteJid &&
+              c.jid === normalizedRemoteJid &&
               c.instanceName === instanceName
             );
 
             // Verifica se é o chat selecionado
-            const isSelectedChat = selectedChat &&
-              selectedChat.jid === remoteJid &&
-              selectedChat.instanceName === instanceName;
+            const isSelectedChat = currentSelectedChat &&
+              normalizedRemoteJid === normalizeJid(currentSelectedChat.jid) &&
+              currentSelectedChat.instanceName === instanceName;
 
             if (existing) {
               // Atualiza e move o chat para o topo

@@ -239,11 +239,11 @@ const VisualizarPedidoPage = () => {
             </div>
             <div style={{ fontSize: '11px', color: '#64748b' }}>
               Emissão:{' '}
-              {new Date(pedido.data_criacao).toLocaleDateString('pt-BR')} |{' '}
-              <strong>
-                ENTREGA:{' '}
+              {new Date(pedido.data_criacao).toLocaleDateString('pt-BR')} 
+             {pedido.data_entrega &&  <strong>
+              {' '}| ENTREGA:{' '}
                 {new Date(pedido.data_entrega).toLocaleDateString('pt-BR')}
-              </strong>
+              </strong>}
             </div>
           </div>
         </div>
