@@ -101,7 +101,17 @@ export const DTFTable = () => {
 
   const handleCopiarMensagem = (item: any) => {
     const saudacao = 'Olá! Seguem os detalhes do seu pedido:';
-    const detalhes = `\n\n📌 *Pedido #* ${item.id}\n📏 *Tamanho:* ${item.tamanho_cm}cm\n💰 *Valor:* ${formatarReal(item.valor_total)}`;
+
+    // Formatar tamanho/área baseado no tipo de produto
+    let tamanhoTexto = '';
+    if (item.tipo_produto === 'sublimacao') {
+      const areaM2 = (item.tamanho_cm / 10000).toFixed(2);
+      tamanhoTexto = `📏 *Área:* ${areaM2} m²`;
+    } else {
+      tamanhoTexto = `📏 *Tamanho:* ${item.tamanho_cm}cm`;
+    }
+
+    const detalhes = `\n\n📌 *Pedido #* ${item.id}\n${tamanhoTexto}\n💰 *Valor:* ${formatarReal(item.valor_total)}`;
     let statusMensagem = '';
 
     if (item.esta_pago && item.foi_impresso !== 'impresso') {
@@ -273,12 +283,23 @@ export const DTFTable = () => {
             key={item.id}
             className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 hover:shadow-xl transition-all flex flex-col justify-between border-b-4 border-b-slate-200 text-left"
           >
-            <div className="flex justify-between items-start mb-6">
+            {/* Preview do Layout */}
+            {item.layout_arquivo && (
+              <div className="mb-4 rounded-2xl overflow-hidden border border-slate-100 bg-slate-50">
+                <img
+                  src={item.layout_arquivo}
+                  alt="Layout"
+                  className="w-full h-32 object-contain"
+                />
+              </div>
+            )}
+
+            <div className="flex justify-between items-start mb-2">
               <div>
                 <h4 className="font-black text-slate-800 text-xl italic uppercase leading-none">
                   {item.nome_cliente}
                 </h4>
-                <p className="text-[10px] text-slate-400 font-bold uppercase mt-2 italic">
+                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 italic">
                   OS #{item.id} • {formatarDataHora(item.data_criacao)}
                 </p>
               </div>
@@ -298,10 +319,12 @@ export const DTFTable = () => {
             <div className="grid grid-cols-2 gap-3 mb-6">
               <div className="bg-slate-50 p-3 rounded-2xl border border-transparent">
                 <p className="text-[9px] font-black text-slate-400 uppercase">
-                  Tamanho
+                  {item.tipo_produto === 'sublimacao' ? 'Área' : 'Tamanho'}
                 </p>
                 <p className="text-sm font-black text-slate-700">
-                  {item.tamanho_cm} cm
+                  {item.tipo_produto === 'sublimacao'
+                    ? `${(item.tamanho_cm / 10000).toFixed(2)} m²`
+                    : `${item.tamanho_cm} cm`}
                 </p>
               </div>
 
@@ -332,14 +355,14 @@ export const DTFTable = () => {
               </button>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-              <div className="flex gap-2">
-                {/* AÇÃO: IMPRESSÃO */}
+            <div className="space-y-3 pt-4 border-t border-slate-50">
+              {/* Primeira linha: Botões de status e ação */}
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() =>
                     handleToggleImpressao(item.id, item.foi_impresso)
                   }
-                  className={`text-[10px] font-black px-3 py-1.5 rounded-lg transition-all active:scale-95 ${
+                  className={`flex-1 min-w-[100px] text-[10px] font-black px-3 py-2 rounded-xl transition-all active:scale-95 ${
                     item.foi_impresso === 'impresso'
                       ? 'bg-blue-600 text-white shadow-md'
                       : 'bg-amber-100 text-amber-600 hover:bg-amber-200'
@@ -348,7 +371,6 @@ export const DTFTable = () => {
                   {item.foi_impresso === 'impresso' ? '✓ IMPRESSO' : '⚡ FILA'}
                 </button>
 
-                {/* AÇÃO: ENTREGA (Agora ao lado da Impressão) */}
                 <button
                   onClick={() =>
                     handleToggleBooleanStatus(
@@ -357,7 +379,7 @@ export const DTFTable = () => {
                       item.foi_entregue
                     )
                   }
-                  className={`text-[10px] font-black px-3 py-1.5 rounded-lg transition-all active:scale-95 ${
+                  className={`flex-1 min-w-[100px] text-[10px] font-black px-3 py-2 rounded-xl transition-all active:scale-95 ${
                     item.foi_entregue
                       ? 'bg-green-600 text-white shadow-md'
                       : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
@@ -367,32 +389,41 @@ export const DTFTable = () => {
                 </button>
               </div>
 
-              <div className="flex gap-1">
+              {/* Segunda linha: Botões secundários */}
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => handleCopiarMensagem(item)}
-                  className="p-2 text-slate-400 hover:text-green-600 transition-colors"
+                  className="flex-1 min-w-[80px] bg-green-50 hover:bg-green-100 text-green-600 p-2 rounded-xl transition-all flex items-center justify-center gap-1"
+                  title="Copiar mensagem WhatsApp"
                 >
-                  <MessageCircle size={18} />
+                  <MessageCircle size={16} />
+                  <span className="text-xs font-bold">WhatsApp</span>
                 </button>
                 <button
                   onClick={() =>
                     window.open(`/dtf/${item.id}/visualizar`, '_blank')
                   }
-                  className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                  className="flex-1 min-w-[80px] bg-slate-50 hover:bg-slate-100 text-slate-600 p-2 rounded-xl transition-all flex items-center justify-center gap-1"
+                  title="Visualizar"
                 >
-                  <Eye size={18} />
+                  <Eye size={16} />
+                  <span className="text-xs font-bold">Ver</span>
                 </button>
                 <button
                   onClick={() => handleEdit(item.id)}
-                  className="p-2 text-slate-400 hover:text-slate-900 transition-colors"
+                  className="flex-1 min-w-[80px] bg-slate-50 hover:bg-slate-100 text-slate-600 p-2 rounded-xl transition-all flex items-center justify-center gap-1"
+                  title="Editar"
                 >
-                  <Edit3 size={18} />
+                  <Edit3 size={16} />
+                  <span className="text-xs font-bold">Editar</span>
                 </button>
                 <button
                   onClick={() => handleDelete(item.id, item.nome_cliente)}
-                  className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                  className="flex-1 min-w-[80px] bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-xl transition-all flex items-center justify-center gap-1"
+                  title="Excluir"
                 >
-                  <Trash2 size={18} />
+                  <Trash2 size={16} />
+                  <span className="text-xs font-bold">Excluir</span>
                 </button>
               </div>
             </div>

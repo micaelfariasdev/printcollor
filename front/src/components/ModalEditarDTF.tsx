@@ -35,8 +35,11 @@ const ModalEditarDTF: React.FC<Props> = ({
   // Estados do Formulário
   const [clienteId, setClienteId] = useState<number | null>(null);
   const [clienteNome, setClienteNome] = useState('');
-  const [tamanho, setTamanho] = useState('');
+  const [tipoProduto, setTipoProduto] = useState('dtf_textil');
   const [tipoProdutoDisplay, setTipoProdutoDisplay] = useState('');
+  const [tamanhoCm, setTamanhoCm] = useState('');
+  const [largura, setLargura] = useState('');
+  const [comprimento, setComprimento] = useState('');
   const [foiImpresso, setFoiImpresso] = useState('pendente');
   const [estaPago, setEstaPago] = useState(false);
   const [foiEntregue, setFoiEntregue] = useState(false);
@@ -56,11 +59,25 @@ const ModalEditarDTF: React.FC<Props> = ({
           setClienteId(d.cliente);
           const cli = resCli.data.find((c: any) => c.id === d.cliente);
           setClienteNome(cli ? cli.nome : '');
-          setTamanho(d.tamanho_cm);
+          setTipoProduto(d.tipo_produto || 'dtf_textil');
+          setTipoProdutoDisplay(d.tipo_produto_display || '');
           setFoiImpresso(d.foi_impresso);
           setEstaPago(d.esta_pago);
           setFoiEntregue(d.foi_entregue);
-          setTipoProdutoDisplay(d.tipo_produto_display || '');
+
+          // Para sublimação, extrair largura e comprimento do tamanho_cm (que é área em cm²)
+          if (d.tipo_produto === 'sublimacao') {
+            // Como não temos os valores originais de largura/comprimento,
+            // vamos deixar os campos em branco para o usuário preencher
+            setLargura('');
+            setComprimento('');
+            setTamanhoCm(d.tamanho_cm.toString()); // guardamos a área original
+          } else {
+            setTamanhoCm(d.tamanho_cm.toString());
+            setLargura('');
+            setComprimento('');
+          }
+
           setUrlsAtuais({
             layout: d.layout_arquivo,
             comprovante: d.comprovante_pagamento,
@@ -112,9 +129,31 @@ const ModalEditarDTF: React.FC<Props> = ({
     e.preventDefault();
     setLoading(true);
 
+    // Validação específica por tipo de produto
+    if (tipoProduto === 'sublimacao') {
+      if (!largura || !comprimento || Number(largura) <= 0 || Number(comprimento) <= 0) {
+        addAlert('Informe a largura e comprimento para sublimação.', 'error');
+        return;
+      }
+      // Para sublimação, calculamos área em cm²
+      const areaCm2 = Number(largura) * Number(comprimento);
+      setTamanhoCm(areaCm2.toString());
+    } else {
+      if (!tamanhoCm || Number(tamanhoCm) <= 0) {
+        addAlert('Informe a metragem linear.', 'error');
+        return;
+      }
+    }
+
+    if (!clienteId) {
+      addAlert('Selecione um cliente.', 'error');
+      return;
+    }
+
     const formData = new FormData();
     formData.append('cliente', String(clienteId));
-    formData.append('tamanho_cm', tamanho);
+    formData.append('tamanho_cm', tipoProduto === 'sublimacao' ? (Number(largura) * Number(comprimento)).toString() : tamanhoCm);
+    formData.append('tipo_produto', tipoProduto);
     formData.append('foi_impresso', foiImpresso);
     formData.append('esta_pago', String(estaPago));
     formData.append('foi_entregue', String(foiEntregue));
@@ -170,49 +209,83 @@ const ModalEditarDTF: React.FC<Props> = ({
                 </div>
               </div>
 
-            {/* Cliente e Tamanho */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-xs font-black text-slate-500 uppercase ml-1">
-                  Cliente
-                </label>
-                <input
-                  list="edit-clientes-list"
-                  placeholder="Digite para buscar..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700"
-                  value={clienteNome}
-                  onChange={(e) => {
-                    const cli = clientes.find(
-                      (c) => c.nome === e.target.value
-                    );
-                    if (cli) {
-                      setClienteId(cli.id);
-                      setClienteNome(cli.nome);
-                    } else {
-                      setClienteNome(e.target.value);
-                    }
-                  }}
-                />
-                <datalist id="edit-clientes-list">
-                  {clientes.map((c) => (
-                    <option key={c.id} value={c.nome} />
-                  ))}
-                </datalist>
+            {/* Cliente */}
+            <div className="space-y-2">
+              <label className="text-xs font-black text-slate-500 uppercase ml-1">
+                Cliente
+              </label>
+              <input
+                list="edit-clientes-list"
+                placeholder="Digite para buscar..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700"
+                value={clienteNome}
+                onChange={(e) => {
+                  const cli = clientes.find(
+                    (c) => c.nome === e.target.value
+                  );
+                  if (cli) {
+                    setClienteId(cli.id);
+                    setClienteNome(cli.nome);
+                  } else {
+                    setClienteNome(e.target.value);
+                  }
+                }}
+              />
+              <datalist id="edit-clientes-list">
+                {clientes.map((c) => (
+                  <option key={c.id} value={c.nome} />
+                ))}
+              </datalist>
+            </div>
+
+            {/* Tamanho - DTF ou Sublimação */}
+            {tipoProduto === 'sublimacao' ? (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
+                    <DollarSign size={14} /> Largura (cm)
+                  </label>
+                  <input
+                    required
+                    type="number"
+                    step="0.01"
+                    placeholder="Ex: 30"
+                    value={largura}
+                    onChange={(e) => setLargura(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
+                    <DollarSign size={14} /> Comprimento (cm)
+                  </label>
+                  <input
+                    required
+                    type="number"
+                    step="0.01"
+                    placeholder="Ex: 40"
+                    value={comprimento}
+                    onChange={(e) => setComprimento(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                  />
+                </div>
               </div>
+            ) : (
               <div className="space-y-2">
                 <label className="text-xs font-black text-slate-500 uppercase ml-1 flex items-center gap-2">
-                  <DollarSign size={14} /> Tamanho (cm)
+                  <DollarSign size={14} /> Tamanho Linear (cm)
                 </label>
                 <input
                   required
                   type="number"
                   step="0.01"
-                  defaultValue={tamanho}
-                  onChange={(e) => setTamanho(e.target.value)}
+                  placeholder="Ex: 150"
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                  value={tamanhoCm}
+                  onChange={(e) => setTamanhoCm(e.target.value)}
                 />
               </div>
-            </div>
+            )}
 
             {/* Status Toggles */}
             <div className="grid grid-cols-3 gap-4">

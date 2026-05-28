@@ -28,6 +28,8 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
   const [clienteNome, setClienteNome] = useState('');
   const [tipoProduto, setTipoProduto] = useState('dtf_textil');
   const [tamanhoCm, setTamanhoCm] = useState<number>(0);
+  const [largura, setLargura] = useState<string>('');
+  const [comprimento, setComprimento] = useState<string>('');
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [configs, setConfigs] = useState<any[]>([]);
   const [config, setConfig] = useState<any>(null);
@@ -64,6 +66,20 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
     if (!config) return 0;
     const precoPorMetro = Number(config.valor_metro);
     const precoMinimo = Number(config.preco_minimo);
+
+    // Para sublimação, calcular área em m²
+    if (tipoProduto === 'sublimacao') {
+      if (!largura || !comprimento || Number(largura) <= 0 || Number(comprimento) <= 0) {
+        return 0;
+      }
+      const areaCm2 = Number(largura) * Number(comprimento);
+      const areaM2 = areaCm2 / 10000;
+      const valorCalculado = areaM2 * precoPorMetro;
+      return valorCalculado < precoMinimo ? precoMinimo : valorCalculado;
+    }
+
+    // Para DTF Têxtil/UV, calcular em metros lineares
+    if (!tamanhoCm || tamanhoCm <= 0) return 0;
     const valorCalculado = (tamanhoCm / 100) * precoPorMetro;
     return valorCalculado < precoMinimo ? precoMinimo : valorCalculado;
   };
@@ -88,10 +104,20 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
       addAlert('O arquivo de layout (PDF/Imagem) é obrigatório.', 'error');
       return;
     }
-    if (tamanhoCm <= 0) {
-      addAlert('Informe a metragem.', 'error');
-      return;
+
+    // Validação específica por tipo de produto
+    if (tipoProduto === 'sublimacao') {
+      if (!largura || !comprimento || Number(largura) <= 0 || Number(comprimento) <= 0) {
+        addAlert('Informe a largura e comprimento para sublimação.', 'error');
+        return;
+      }
+    } else {
+      if (!tamanhoCm || tamanhoCm <= 0) {
+        addAlert('Informe a metragem linear.', 'error');
+        return;
+      }
     }
+
     if (!clienteId) {
       addAlert('Selecione um cliente.', 'error');
       return;
@@ -100,7 +126,15 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
     setLoading(true);
     const formData = new FormData();
     formData.append('cliente', clienteId);
-    formData.append('tamanho_cm', tamanhoCm.toString());
+
+    // Se for sublimação, calculamos área em cm²
+    if (tipoProduto === 'sublimacao') {
+      const areaCm2 = Number(largura) * Number(comprimento);
+      formData.append('tamanho_cm', areaCm2.toString());
+    } else {
+      formData.append('tamanho_cm', tamanhoCm.toString());
+    }
+
     formData.append('tipo_produto', tipoProduto);
     formData.append('layout_arquivo', arquivo);
 
@@ -115,6 +149,8 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
       setClienteNome('');
       setTipoProduto('dtf_textil');
       setTamanhoCm(0);
+      setLargura('');
+      setComprimento('');
       setArquivo(null);
     } catch (err: any) {
       addAlert(err?.response?.data?.detail || 'Erro ao criar pedido.', 'error');
@@ -204,30 +240,78 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
             </select>
           </div>
 
-          {/* Tamanho e Valor */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
-                <Ruler size={14} /> Tamanho (cm)
-              </label>
-              <input
-                required
-                type="number"
-                step="0.01"
-                placeholder="Ex: 150"
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
-                onChange={(e) => setTamanhoCm(Number(e.target.value))}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-black text-slate-500 uppercase">
-                Valor Estimado
-              </label>
-              <div className="bg-blue-50 text-blue-700 rounded-2xl p-4 font-black text-lg">
-                {formatarReal(calcularTotal())}
+          {/* Tamanho - DTF ou Sublimação */}
+          {tipoProduto === 'sublimacao' ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
+                  <Ruler size={14} /> Largura (cm)
+                </label>
+                <input
+                  required
+                  type="number"
+                  step="0.01"
+                  placeholder="Ex: 30"
+                  value={largura}
+                  onChange={(e) => setLargura(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
+                  <Ruler size={14} /> Comprimento (cm)
+                </label>
+                <input
+                  required
+                  type="number"
+                  step="0.01"
+                  placeholder="Ex: 40"
+                  value={comprimento}
+                  onChange={(e) => setComprimento(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                />
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
+                  <Ruler size={14} /> Tamanho Linear (cm)
+                </label>
+                <input
+                  required
+                  type="number"
+                  step="0.01"
+                  placeholder="Ex: 150"
+                  className="w-full bg-slate-50 border border-solate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                  onChange={(e) => setTamanhoCm(Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-500 uppercase">
+                  Valor Estimado
+                </label>
+                <div className="bg-blue-50 text-blue-700 rounded-2xl p-4 font-black text-lg">
+                  {formatarReal(calcularTotal())}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mostrar valor estimado apenas para sublimação quando tiver as dimensões */}
+          {tipoProduto === 'sublimacao' && largura && comprimento && (
+            <div className="bg-green-50 border border-green-200 rounded-2xl p-4">
+              <div className="text-xs font-black text-green-600 uppercase mb-1">
+                Área e Valor Estimado
+              </div>
+              <div className="text-green-700 font-black text-lg">
+                {formatarReal(calcularTotal())}
+                <span className="text-sm font-normal ml-2 text-green-600">
+                  (Área: {(Number(largura) * Number(comprimento) / 10000).toFixed(2)} m²)
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Upload de Arquivo */}
           <div className="space-y-2">

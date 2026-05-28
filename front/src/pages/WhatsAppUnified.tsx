@@ -57,7 +57,7 @@ const WhatsAppUnified: React.FC = () => {
   const [selectedChatClienteId, setSelectedChatClienteId] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const selectedChatRef = useRef<Chat | null>(null);
 
@@ -531,6 +531,11 @@ const WhatsAppUnified: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.type.startsWith('image/')) {
+      const maxSize = 5 * 1024 * 1024; // 5 MB
+      if (file.size > maxSize) {
+        addAlert('Imagem muito grande. O tamanho máximo permitido é 5MB.', 'error');
+        return;
+      }
       sendImage(file);
     } else {
       sendDocument(file);
@@ -802,7 +807,7 @@ const WhatsAppUnified: React.FC = () => {
                     className={`flex ${msg.from_me ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[75%] p-3 rounded-lg shadow-sm ${msg.from_me
+                      className={`max-w-[75%] p-3 rounded-lg shadow-sm overflow-hidden ${msg.from_me
                         ? 'bg-blue-600 text-white rounded-br-sm'
                         : 'bg-white text-gray-900 rounded-bl-sm'
                         }`}
@@ -830,7 +835,7 @@ const WhatsAppUnified: React.FC = () => {
                           />
 
                           {msg.body && !['[Imagem]', 'imageMessage'].includes(msg.body) && (
-                            <div className="text-sm mt-2 leading-relaxed break-words px-1 whitespace-pre-wrap overflow-wrap-anywhere">
+                            <div className="text-sm mt-2 leading-relaxed px-1 whitespace-pre-wrap max-w-full" style={{ wordBreak: 'break-all' }}>
                               {msg.body}
                             </div>
                           )}
@@ -877,7 +882,7 @@ const WhatsAppUnified: React.FC = () => {
                           />
                         </div>
                       ) : (
-                        <div className="text-sm">{msg.body}</div>
+                        <div className="text-sm whitespace-pre-wrap mt-2 leading-relaxed px-1 max-w-full" style={{ wordBreak: 'break-all' }}>{msg.body}</div>
                       )}
 
                       <div className={`text-right text-xs mt-1 ${msg.from_me ? 'text-blue-200' : 'text-gray-500'}`}>
@@ -946,14 +951,14 @@ const WhatsAppUnified: React.FC = () => {
                 onChange={handleFileSelect}
               />
 
-              <input
+              <textarea
                 ref={inputRef}
-                type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
                 placeholder="Digite uma mensagem..."
-                className="flex-1 p-3 rounded-lg border border-gray-300 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                className="flex-1 p-3 rounded-lg border border-gray-300 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 resize-none h-12 overflow-hidden"
+                rows={1}
               />
               <button
                 onClick={sendMessage}
