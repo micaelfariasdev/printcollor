@@ -55,6 +55,10 @@ const WhatsAppUnified: React.FC = () => {
   const [creatingClientFromChat, setCreatingClientFromChat] = useState<Chat | null>(null);
   const [showNovoPedidoModal, setShowNovoPedidoModal] = useState(false);
   const [selectedChatClienteId, setSelectedChatClienteId] = useState('');
+  const [showPedidosModal, setShowPedidosModal] = useState(false);
+  const [showQuickReplies, setShowQuickReplies] = useState(false);
+  const [pedidosCliente, setPedidosCliente] = useState<any[]>([]);
+  const [loadingPedidos, setLoadingPedidos] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -162,10 +166,22 @@ const WhatsAppUnified: React.FC = () => {
       const chatsData: Chat[] = res.data.chats || [];
       const instancesRes = await api.get('whatsapp-instances/');
       const insts = instancesRes.data || [];
+
+      // Função para normalizar JID
+      const normalizeJid = (jid: string) => {
+        if (!jid) return jid;
+        const parts = jid.split('@');
+        if (parts[1] === 'lid') {
+          return `${parts[0]}@s.whatsapp.net`;
+        }
+        return jid;
+      };
+
       const enriched = chatsData.map((chat: Chat) => {
         const inst = insts.find((i: any) => i.nome === chat.instanceName);
         return {
           ...chat,
+          jid: normalizeJid(chat.jid), // Normaliza JID
           instanceId: inst?.id,
           instanceCor: inst?.cor || '#25D366',
         };
@@ -420,7 +436,7 @@ const WhatsAppUnified: React.FC = () => {
           const url = m.media_url.startsWith('data:')
             ? m.media_url
             : `data:image/jpeg;base64,${m.media_url}`;
-          mediaCache.set(m.id, url).catch(() => {});
+          mediaCache.set(m.id, url).catch(() => { });
         }
       });
     } catch (error) {
@@ -557,45 +573,32 @@ const WhatsAppUnified: React.FC = () => {
     const numero = selectedChat.jid;
     const payload = replyTo
       ? {
-          type: 'reply_message',
-          instance_id: instance.instance_id,
-          numero,
-          mensagem: inputText,
-          reply_to: replyTo.id,
-          timestamp: Date.now(),
-        }
+        type: 'reply_message',
+        instance_id: instance.instance_id,
+        numero,
+        mensagem: inputText,
+        reply_to: replyTo.id,
+        timestamp: Date.now(),
+      }
       : {
-          type: 'send_message',
-          instance_id: instance.instance_id,
-          numero,
-          mensagem: inputText,
-          timestamp: Date.now(),
-        };
+        type: 'send_message',
+        instance_id: instance.instance_id,
+        numero,
+        mensagem: inputText,
+        timestamp: Date.now(),
+      };
 
     try {
       wsRef.current.send(JSON.stringify(payload));
       console.log('[WS] Message sent:', payload);
+      // Limpa input imediatamente (otimista)
+      setInputText('');
+      setReplyTo(null);
+      inputRef.current?.focus();
     } catch (e) {
       console.error('[WS] Send error:', e);
       addAlert('Erro ao enviar mensagem via WebSocket', 'error');
     }
-
-    const newMsg: Message = {
-      id: `temp_${Date.now()}`,
-      body: inputText,
-      from_me: true,
-      instanceId: instance.id,
-      instance_nome: instance.nome,
-      numero,
-      timestamp: Date.now(),
-      messageType: 'text',
-      pushName: 'Você',
-      read: false,
-    };
-    setMessages(prev => [...prev, newMsg]);
-    setInputText('');
-    setReplyTo(null);
-    inputRef.current?.focus();
   };
 
   const normalizeMessageType = (type: string): string => {
@@ -782,15 +785,35 @@ const WhatsAppUnified: React.FC = () => {
                 </div>
               </div>
               {selectedChat?.has_client && selectedChat?.cliente_id && (
-                <button
-                  onClick={() => {
-                    setSelectedChatClienteId(selectedChat.cliente_id!.toString());
-                    setShowNovoPedidoModal(true);
-                  }}
-                  className="ml-2 px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
-                >
-                  + Pedido
-                </button>
+                <>
+                  <button
+                    onClick={() => {
+                      setSelectedChatClienteId(selectedChat.cliente_id!.toString());
+                      setShowNovoPedidoModal(true);
+                    }}
+                    className="ml-2 px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+                  >
+                    + Pedido
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!selectedChat.cliente_id) return;
+                      setLoadingPedidos(true);
+                      setShowPedidosModal(true);
+                      try {
+                        const res = await api.get(`dtf/?cliente=${selectedChat.cliente_id}`);
+                        setPedidosCliente(res.data);
+                      } catch (err) {
+                        addAlert('Erro ao carregar pedidos', 'error');
+                      } finally {
+                        setLoadingPedidos(false);
+                      }
+                    }}
+                    className="ml-2 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                  >
+                    Ver Pedidos
+                  </button>
+                </>
               )}
             </div>
 
@@ -944,6 +967,76 @@ const WhatsAppUnified: React.FC = () => {
                 +
               </button>
 
+              {/* Botão de Mensagens Pré-definidas */}
+              <div className="relative">
+
+
+                {/* Menu de Mensagens Pré-definidas */}
+                {showQuickReplies && (
+                  <div className="absolute bottom-full right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 py-3 z-50 w-72">
+                    <div className="px-4 py-2 text-xs font-bold text-gray-500 uppercase border-b">
+                      Mensagens Rápidas
+                    </div>
+                    <button
+                      onClick={() => {
+                        const texto = "Olá! Seu pedido está pronto para retirada. 🎉";
+                        setInputText(texto);
+                        setShowQuickReplies(false);
+                      }}
+                      className="w-full px-4 py-3 text-left hover:bg-blue-50 text-sm text-gray-800 flex items-center gap-2"
+                    >
+                      <span>📦</span> Pedido Pronto
+                    </button>
+                    <button
+                      onClick={() => {
+                        const texto = "Aguardando pagamento para liberação do pedido. 💳";
+                        setInputText(texto);
+                        setShowQuickReplies(false);
+                      }}
+                      className="w-full px-4 py-3 text-left hover:bg-blue-50 text-sm text-gray-800 flex items-center gap-2"
+                    >
+                      <span>💰</span> Falta Pagamento
+                    </button>
+                    <button
+                      onClick={() => {
+                        const texto = "Seu pedido foi entregue! Obrigado pela preferência. 🙏";
+                        setInputText(texto);
+                        setShowQuickReplies(false);
+                      }}
+                      className="w-full px-4 py-3 text-left hover:bg-blue-50 text-sm text-gray-800 flex items-center gap-2"
+                    >
+                      <span>✅</span> Pedido Entregue
+                    </button>
+                    <button
+                      onClick={() => {
+                        const texto = "Estamos preparando seu pedido com carinho! Em breve enviaremos a confirmação. 🧵";
+                        setInputText(texto);
+                        setShowQuickReplies(false);
+                      }}
+                      className="w-full px-4 py-3 text-left hover:bg-blue-50 text-sm text-gray-800 flex items-center gap-2"
+                    >
+                      <span>🔨</span> Em Produção
+                    </button>
+                    <button
+                      onClick={() => {
+                        const texto = "Segue o orçamento solicitado. Aproveite nossas condições! 📊";
+                        setInputText(texto);
+                        setShowQuickReplies(false);
+                      }}
+                      className="w-full px-4 py-3 text-left hover:bg-blue-50 text-sm text-gray-800 flex items-center gap-2"
+                    >
+                      <span>📄</span> Orçamento
+                    </button>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setShowQuickReplies(!showQuickReplies)}
+                className="p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Mensagens rápidas"
+              >
+                ⚡
+              </button>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -954,11 +1047,22 @@ const WhatsAppUnified: React.FC = () => {
               <textarea
                 ref={inputRef}
                 value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                onChange={(e) => {
+                  setInputText(e.target.value);
+                  // Auto-resize
+                  const textarea = e.target as HTMLTextAreaElement;
+                  textarea.style.height = 'auto';
+                  textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
                 placeholder="Digite uma mensagem..."
-                className="flex-1 p-3 rounded-lg border border-gray-300 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 resize-none h-12 overflow-hidden"
-                rows={1}
+                className="flex-1 p-3 rounded-lg border border-gray-300 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 resize-none overflow-y-auto"
+                style={{ minHeight: '48px', maxHeight: '150px' }}
               />
               <button
                 onClick={sendMessage}
@@ -1006,6 +1110,110 @@ const WhatsAppUnified: React.FC = () => {
             }}
             clienteId={selectedChatClienteId ? Number(selectedChatClienteId) : undefined}
           />
+        )}
+
+        {/* Modal de Pedidos do Cliente */}
+        {showPedidosModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden">
+              <div className="p-6 border-b flex justify-between items-center bg-gray-900 text-white">
+                <h3 className="text-xl font-bold">Pedidos do Cliente</h3>
+                <button
+                  onClick={() => setShowPedidosModal(false)}
+                  className="text-white hover:text-gray-300"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="p-6 max-h-96 overflow-y-auto">
+                {loadingPedidos ? (
+                  <div className="text-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="mt-2 text-gray-500">Carregando pedidos...</p>
+                  </div>
+                ) : pedidosCliente.length === 0 ? (
+                  <div className="text-center p-8 text-gray-500">
+                    Nenhum pedido encontrado para este cliente.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {pedidosCliente.map((pedido) => (
+                      <div
+                        key={pedido.id}
+                        className="border border-gray-200 rounded-xl p-4 hover:border-blue-300 transition-all"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <span className="font-bold text-lg">#{pedido.id}</span>
+                            <span className="ml-2 text-sm text-gray-500">
+                              {new Date(pedido.data_criacao).toLocaleDateString('pt-BR')}
+                            </span>
+                          </div>
+                          <span className={`px-2 py-1 text-xs font-bold rounded ${pedido.foi_entregue
+                              ? 'bg-green-100 text-green-700'
+                              : pedido.foi_impresso === 'impresso'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-yellow-100 text-yellow-700'
+                            }`}>
+                            {pedido.foi_entregue
+                              ? 'ENTREGUE'
+                              : pedido.foi_impresso === 'impresso'
+                                ? 'IMPRESSO'
+                                : 'PENDENTE'}
+                          </span>
+                        </div>
+
+                        <div className="text-sm text-gray-600 mb-3">
+                          <div><strong>Tipo:</strong> {pedido.tipo_produto_display || pedido.tipo_produto}</div>
+                          <div>
+                            <strong>{pedido.tipo_produto === 'sublimacao' ? 'Área' : 'Tamanho'}:</strong>{' '}
+                            {pedido.tipo_produto === 'sublimacao'
+                              ? `${(Number(pedido.tamanho_cm) / 10000).toFixed(2)} m²`
+                              : `${pedido.tamanho_cm} cm`}
+                          </div>
+                          <div><strong>Valor:</strong> {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(pedido.valor_total)}</div>
+                        </div>
+
+                        <div className="flex gap-2 mt-3">
+                          <button
+                            onClick={() => {
+                              const areaOuTamanho = pedido.tipo_produto === 'sublimacao'
+                                ? `Área: ${(Number(pedido.tamanho_cm) / 10000).toFixed(2)} m²`
+                                : `Tamanho: ${pedido.tamanho_cm} cm`;
+                              const texto = `📋 *Pedido #${pedido.id}*\n📦 *Produto:* ${pedido.tipo_produto_display || pedido.tipo_produto}\n${areaOuTamanho}\n💰 *Valor:* R$ ${Number(pedido.valor_total).toFixed(2).replace('.', ',')}\n📊 *Status:* ${pedido.foi_impresso === 'impresso' ? 'Impresso' : 'Pendente'} - ${pedido.foi_entregue ? 'Entregue' : 'Não entregue'}`;
+                              navigator.clipboard.writeText(texto);
+                              addAlert('Detalhes copiados para WhatsApp!', 'success');
+                            }}
+                            className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-sm font-bold transition-all"
+                          >
+                            📋 Copiar Detalhes
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              const areaOuTamanho = pedido.tipo_produto === 'sublimacao'
+                                ? `Área: ${(Number(pedido.tamanho_cm) / 10000).toFixed(2)} m²`
+                                : `Tamanho: ${pedido.tamanho_cm} cm`;
+                              const texto = `✅ *Atualização do Pedido #${pedido.id}*\n\nOlá! Informamos que seu pedido foi processado.\n\n📦 *Produto:* ${pedido.tipo_produto_display || pedido.tipo_produto}\n${areaOuTamanho}\n💰 *Valor:* R$ ${Number(pedido.valor_total).toFixed(2).replace('.', ',')}\n\nAguardamos seu retorno! 🧵`;
+                              setInputText(texto);
+                              setShowPedidosModal(false);
+                              if (selectedChat) {
+                                setShowMobileChat(true);
+                              }
+                            }}
+                            className="flex-1 bg-green-50 hover:bg-green-100 text-green-700 px-3 py-2 rounded-lg text-sm font-bold transition-all"
+                          >
+                            📤 Enviar no Chat
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

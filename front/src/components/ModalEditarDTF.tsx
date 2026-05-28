@@ -129,20 +129,32 @@ const ModalEditarDTF: React.FC<Props> = ({
     e.preventDefault();
     setLoading(true);
 
+    let tamanhoCmFinal = null;
+
     // Validação específica por tipo de produto
     if (tipoProduto === 'sublimacao') {
-      if (!largura || !comprimento || Number(largura) <= 0 || Number(comprimento) <= 0) {
-        addAlert('Informe a largura e comprimento para sublimação.', 'error');
+      // Se o usuário preencheu largura ou comprimento, ambos são obrigatórios
+      if ((largura && !comprimento) || (!largura && comprimento)) {
+        addAlert('Informe tanto a largura quanto o comprimento para sublimação.', 'error');
+        setLoading(false);
         return;
       }
-      // Para sublimação, calculamos área em cm²
-      const areaCm2 = Number(largura) * Number(comprimento);
-      setTamanhoCm(areaCm2.toString());
+      // Se ambos estão preenchidos, recalcular a área
+      if (largura && comprimento && Number(largura) > 0 && Number(comprimento) > 0) {
+        const areaCm2 = Number(largura) * Number(comprimento);
+        tamanhoCmFinal = areaCm2.toString();
+      } else {
+        // Se ambos estão vazios, mantém o valor atual (não envia tamanho_cm)
+        // O backend vai manter o valor existente
+        tamanhoCmFinal = null;
+      }
     } else {
+      // Para DTF, tamanhoCm é obrigatório
       if (!tamanhoCm || Number(tamanhoCm) <= 0) {
         addAlert('Informe a metragem linear.', 'error');
         return;
       }
+      tamanhoCmFinal = tamanhoCm;
     }
 
     if (!clienteId) {
@@ -152,7 +164,9 @@ const ModalEditarDTF: React.FC<Props> = ({
 
     const formData = new FormData();
     formData.append('cliente', String(clienteId));
-    formData.append('tamanho_cm', tipoProduto === 'sublimacao' ? (Number(largura) * Number(comprimento)).toString() : tamanhoCm);
+    if (tamanhoCmFinal !== null) {
+      formData.append('tamanho_cm', tamanhoCmFinal);
+    }
     formData.append('tipo_produto', tipoProduto);
     formData.append('foi_impresso', foiImpresso);
     formData.append('esta_pago', String(estaPago));
@@ -246,7 +260,6 @@ const ModalEditarDTF: React.FC<Props> = ({
                     <DollarSign size={14} /> Largura (cm)
                   </label>
                   <input
-                    required
                     type="number"
                     step="0.01"
                     placeholder="Ex: 30"
@@ -260,7 +273,6 @@ const ModalEditarDTF: React.FC<Props> = ({
                     <DollarSign size={14} /> Comprimento (cm)
                   </label>
                   <input
-                    required
                     type="number"
                     step="0.01"
                     placeholder="Ex: 40"
@@ -276,7 +288,6 @@ const ModalEditarDTF: React.FC<Props> = ({
                   <DollarSign size={14} /> Tamanho Linear (cm)
                 </label>
                 <input
-                  required
                   type="number"
                   step="0.01"
                   placeholder="Ex: 150"
