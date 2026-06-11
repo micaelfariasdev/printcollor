@@ -38,13 +38,27 @@ export default function ModalEditarPedidoFabrica({
   });
   const [novaChave, setNovaChave] = useState('');
 
-  // Carregar dados do pedido ao abrir o modal
+  // Limpar tudo ao abrir e carregar dados do pedido
   useEffect(() => {
     if (isOpen && pedidoId) {
+      // Limpa todos os states antes de carregar
+      setFormData({
+        nome_descricao: '',
+        status: 'pendente',
+        material: '',
+        aplicacao_arte: '',
+        descricao: '',
+        cliente: '',
+        detalhes_tamanho: {},
+      });
+      setNovaChave('');
+      setArquivo(null);
+      setIsDragging(false);
+      setLoading(false);
+
       api.get(`pedidos/${pedidoId}/`).then((res) => {
         setFormData(res.data);
       });
-      setArquivo(null); // Reset do arquivo ao trocar de pedido
     }
   }, [isOpen, pedidoId]);
 

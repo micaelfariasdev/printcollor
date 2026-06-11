@@ -106,7 +106,7 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
     serializer_class = DTFVendorSerializer
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['cliente', 'foi_impresso', 'esta_pago', 'foi_entregue']
+    filterset_fields = ['cliente', 'foi_impresso', 'esta_pago', 'foi_entregue', 'status']
     search_fields = ['cliente__nome', 'layout_arquivo']
 
     def get_permissions(self):

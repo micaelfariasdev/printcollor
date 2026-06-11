@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { api } from '../auth/useAuth';
 import { useAlert } from '../contexts/AlertContext';
 import {
@@ -13,10 +13,53 @@ import {
 
 export const PedidosCarrosselMobile = () => {
   const [pedidos, setPedidos] = useState<any[]>([]);
+  const [dtfs, setDtfs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false); // Estado para animação do botão
+  const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'pedidos' | 'dtf'>('pedidos');
   const { addAlert } = useAlert();
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // --- LÓGICA DE ORDENAÇÃO DE TAMANHOS (mesma do VisualizarPedidoPage) ---
+  const ordemTamanhos: { [key: string]: number } = {
+    'pp': 1, 'p': 2, 'm': 3, 'g': 4, 'gg': 5, 'xgg': 6, 'xxgg': 7,
+    'bl pp': 10, 'bl p': 11, 'bl m': 12, 'bl g': 13, 'bl gg': 14, 'bl xgg': 15, 'bl xxgg': 16,
+    '02': 20, '04': 21, '06': 22, '08': 23, '10': 24, '12': 25, '14': 26, '16': 27,
+    '2a': 20, '4a': 21, '6a': 22, '8a': 23, '10a': 24, '12a': 25, '14a': 26, '16a': 27
+  };
+
+  const ordenarGrade = (a: [string, any], b: [string, any]) => {
+    const pesoA = ordemTamanhos[a[0].toLowerCase()] || 99;
+    const pesoB = ordemTamanhos[b[0].toLowerCase()] || 99;
+    return pesoA - pesoB;
+  };
+
+  const getGradeData = (detalhes: any) => {
+    const tamanhos = Object.entries(detalhes || {});
+
+    const gradeBL = tamanhos
+      .filter(([tam]) => tam.toLowerCase().startsWith('bl'))
+      .sort(ordenarGrade);
+
+    const gradeInfantil = tamanhos
+      .filter(([tam]) => {
+        const n = parseInt(tam);
+        return !isNaN(n) && n <= 16 && !tam.toLowerCase().startsWith('bl');
+      })
+      .sort(ordenarGrade);
+
+    const gradeAdulto = tamanhos
+      .filter(([tam]) => {
+        const isBL = tam.toLowerCase().startsWith('bl');
+        const n = parseInt(tam);
+        const isInfantil = !isNaN(n) && n <= 16;
+        const isGeneric = tam.toLowerCase() === 'quantidade';
+        return !isBL && !isInfantil && !isGeneric;
+      })
+      .sort(ordenarGrade);
+
+    return { gradeBL, gradeInfantil, gradeAdulto };
+  };
 
   const carregarDados = async () => {
     setRefreshing(true);
@@ -35,13 +78,41 @@ export const PedidosCarrosselMobile = () => {
   };
 
   useEffect(() => {
-    carregarDados();
-    // Atualização automática programada para 10 minutos (600.000ms)
-    const interval = setInterval(carregarDados, 600000);
+    carregarPedidos();
+    carregarDTFs();
+    const interval = setInterval(() => { carregarPedidos(); carregarDTFs(); }, 600000);
     return () => clearInterval(interval);
   }, []);
 
-  const handleTrocarStatusRapido = async (id: number, statusAtual: string) => {
+  const carregarPedidos = async () => {
+    setRefreshing(true);
+    try {
+      const response = await api.get('pedidos/');
+      const lista = Object.values(response.data)
+        .filter((p: any) => p.status !== 'finalizado')
+        .sort((a: any, b: any) => b.id - a.id);
+      setPedidos(lista);
+    } catch (error) {
+      addAlert('Erro ao atualizar lista.', 'error');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const carregarDTFs = async () => {
+    try {
+      const response = await api.get('dtf/');
+      const lista = Object.values(response.data)
+        .filter((p: any) => p.status !== 'finalizado')
+        .sort((a: any, b: any) => b.id - a.id);
+      setDtfs(lista);
+    } catch (error) {
+      addAlert('Erro ao atualizar DTFs.', 'error');
+    }
+  };
+
+  const handleTrocarStatusRapido = async (id: number, statusAtual: string, tipo: 'pedido' | 'dtf') => {
     const proximosStatus: { [key: string]: string } = {
       pendente: 'em_producao',
       em_producao: 'finalizado',
@@ -50,10 +121,11 @@ export const PedidosCarrosselMobile = () => {
     if (!novoStatus) return;
 
     try {
-      await api.patch(`pedidos/${id}/`, { status: novoStatus });
-      addAlert(`Pedido #${id} atualizado!`, 'success');
+      const endpoint = tipo === 'pedido' ? `pedidos/${id}/` : `dtf/${id}/`;
+      await api.patch(endpoint, { status: novoStatus });
+      addAlert(`${tipo === 'pedido' ? 'Pedido' : 'DTF'} #${id} atualizado!`, 'success');
       if (navigator.vibrate) navigator.vibrate(50);
-      carregarDados();
+      tipo === 'pedido' ? carregarPedidos() : carregarDTFs();
     } catch (error) {
       addAlert('Erro ao mudar status.', 'error');
     }
@@ -99,13 +171,31 @@ export const PedidosCarrosselMobile = () => {
               PRINT COLLOR
             </span>
             <div className="h-4 w-px bg-slate-700 mx-1" />
-            <span className="text-[9px] text-slate-400 font-bold uppercase italic">
-              {pedidos.length} Pedidos Ativos
-            </span>
+            {/* TABS */}
+            <div className="flex gap-1 bg-slate-800 rounded-lg p-0.5">
+              <button
+                onClick={() => setActiveTab('pedidos')}
+                className={`px-3 py-1.5 text-[9px] font-bold uppercase rounded-md transition-all ${activeTab === 'pedidos'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                  }`}
+              >
+                Pedidos ({pedidos.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('dtf')}
+                className={`px-3 py-1.5 text-[9px] font-bold uppercase rounded-md transition-all ${activeTab === 'dtf'
+                    ? 'bg-purple-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                  }`}
+              >
+                DTF ({dtfs.length})
+              </button>
+            </div>
 
             {/* BOTÃO ATUALIZAR MANUALMENTE */}
             <button
-              onClick={carregarDados}
+              onClick={activeTab === 'pedidos' ? carregarPedidos : carregarDTFs}
               className={`ml-2 text-slate-500 hover:text-blue-400 transition-all ${refreshing ? 'animate-spin text-blue-500' : ''}`}
             >
               <RefreshCw size={14} />
@@ -132,27 +222,29 @@ export const PedidosCarrosselMobile = () => {
           ref={scrollRef}
           className="flex-1 overflow-x-auto snap-x snap-mandatory flex scroll-smooth no-scrollbar"
         >
-          {pedidos.map((item) => {
-            const tamanhos = Object.entries(item.detalhes_tamanho || {});
-            const gradeBL = tamanhos.filter(([tam]) =>
-              tam.toLowerCase().startsWith('bl')
-            );
-            const gradeInfantil = tamanhos.filter(([tam]) => {
-              const n = parseInt(tam);
-              return (
-                !isNaN(n) && n <= 16 && !tam.toLowerCase().startsWith('bl')
-              );
-            });
-            const gradeAdulto = tamanhos.filter(([tam]) => {
-              const isBL = tam.toLowerCase().startsWith('bl');
-              const n = parseInt(tam);
-              return (
-                (!isBL &&
-                  !isNaN(n) === false &&
-                  tam.toLowerCase() !== 'quantidade') ||
-                (!isNaN(n) && n > 16)
-              );
-            });
+          {(activeTab === 'pedidos' ? pedidos : dtfs).map((item) => {
+            const isDTF = activeTab === 'dtf';
+
+            // Para DTF, usar dados diferentes
+            let gradeAdulto: [string, any][] = [];
+            let gradeBL: [string, any][] = [];
+            let gradeInfantil: [string, any][] = [];
+            let totalPecas = 0;
+
+            if (!isDTF) {
+              const tamanhos = Object.entries(item.detalhes_tamanho || {});
+              const { gradeBL: bl, gradeInfantil: inf, gradeAdulto: ad } = getGradeData(item.detalhes_tamanho);
+              gradeBL = bl;
+              gradeInfantil = inf;
+              gradeAdulto = ad;
+              totalPecas = item.total_pecas || 0;
+            } else {
+              // DTF: mostrar tipo, tamanho e unidade
+              gradeAdulto = [[`${item.tipo_produto === 'sublimacao' ? '🔥 SUBL' : item.tipo_produto === 'dtf_uv' ? '🔷 UV' : '🖨️ TXT'}`, '']] as [string, any][];
+              gradeBL = [[`${item.tamanho_cm} ${item.unidade === 'm2' ? 'm²' : 'cm'}`, '']] as [string, any][];
+              gradeInfantil = [[item.status?.toUpperCase() || 'ORÇAMENTO', '']] as [string, any][];
+              totalPecas = 1;
+            }
 
             return (
               <div
@@ -177,26 +269,36 @@ export const PedidosCarrosselMobile = () => {
                       #{item.id}
                     </span>
                     <span className="text-blue-400 font-bold text-[9px] uppercase truncate max-w-[150px] block">
-                      {item.cliente_nome}
+                      {isDTF ? (item.cliente_nome || item.nome_cliente) : item.nome_descricao}
                     </span>
                   </div>
 
                   <button
                     onClick={() =>
-                      handleTrocarStatusRapido(item.id, item.status)
+                      handleTrocarStatusRapido(item.id, item.status || 'orcamento', isDTF ? 'dtf' : 'pedido')
                     }
-                    className={`absolute top-2 right-2 px-3 py-1 rounded-lg text-[10px] font-black uppercase shadow-lg transition-all active:scale-90 ${
-                      item.status === 'em_producao'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-amber-500 text-white'
-                    }`}
+                    className={`absolute top-2 right-2 px-3 py-1 rounded-lg text-[10px] font-black uppercase shadow-lg transition-all active:scale-90 ${isDTF
+                        ? item.status === 'finalizado'
+                          ? 'bg-green-600 text-white'
+                          : item.status === 'aprovado'
+                            ? 'bg-blue-600 text-white'
+                            : item.status === 'em_producao'
+                              ? 'bg-purple-600 text-white'
+                              : 'bg-amber-500 text-white'
+                        : item.status === 'em_producao'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-amber-500 text-white'
+                      }`}
                   >
-                    {item.status.replace('_', ' ')}
+                    {(item.status || 'orcamento').replace('_', ' ')}
                   </button>
 
                   <button
                     onClick={() =>
-                      window.open(`/pedido/${item.id}/visualizar`, '_blank')
+                      window.open(
+                        isDTF ? `/dtf/${item.id}/visualizar` : `/pedido/${item.id}/visualizar`,
+                        '_blank'
+                      )
                     }
                     className="absolute bottom-2 right-2 bg-blue-600 p-2 rounded-lg text-white shadow-lg active:scale-90 transition hover:bg-blue-500"
                   >
@@ -208,54 +310,152 @@ export const PedidosCarrosselMobile = () => {
                   <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 shrink-0 shadow-md">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-blue-500 font-black text-xs uppercase italic tracking-tighter truncate max-w-[70%]">
-                        {item.nome_descricao}
+                        {isDTF ? (item.cliente_nome || item.nome_cliente) : item.nome_descricao}
                       </span>
                       <span className="text-slate-400 font-bold text-[9px] flex items-center gap-1 shrink-0">
                         <Calendar size={10} />{' '}
-                        {new Date(item.data_entrega).toLocaleDateString(
-                          'pt-BR'
-                        )}
+                        {item.data_entrega
+                          ? new Date(item.data_entrega).toLocaleDateString('pt-BR')
+                          : 'Sem data'}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 mt-1 pt-1 border-t border-slate-800">
-                      {/* Observação - Agora usando grid para controlar melhor o espaço */}
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-[7px] text-slate-500 font-black uppercase leading-none mb-1">
-                          Observação:
-                        </span>
-                        <p className="text-white text-[9px] font-bold uppercase leading-tight line-clamp-4 break-all">
-                          {item.descricao || 'N/A'} 
-                        </p>
-                      </div>
+                    {isDTF ? (
+                      <>
+                        {/* DTF Info Grid */}
+                        <div className="grid grid-cols-2 gap-2 mt-1 pt-1 border-t border-slate-800">
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[7px] text-slate-500 font-black uppercase leading-none mb-1">
+                              Tipo:
+                            </span>
+                            <span className="text-white text-[9px] font-bold uppercase truncate">
+                              {item.tipo_produto === 'sublimacao' ? '🔥 SUBLIMAÇÃO' : item.tipo_produto === 'dtf_uv' ? '🔷 DTF UV' : '🖨️ DTF TÊXTIL'}
+                            </span>
+                          </div>
+                          <div className="flex flex-col border-l border-slate-700 pl-2 min-w-0">
+                            <span className="text-[7px] text-slate-500 font-black uppercase leading-none mb-1">
+                              Tamanho:
+                            </span>
+                            <span className="text-white text-[9px] font-bold uppercase truncate">
+                              {item.tamanho_cm} {item.unidade === 'm2' ? 'm²' : 'cm'}
+                            </span>
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[7px] text-slate-500 font-black uppercase leading-none mb-1">
+                              Valor:
+                            </span>
+                            <span className="text-green-400 text-[9px] font-bold uppercase truncate">
+                              {typeof item.valor_total === 'number'
+                                ? item.valor_total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                                : item.valor_total || 'R$ 0,00'}
+                            </span>
+                          </div>
+                          <div className="flex flex-col border-l border-slate-700 pl-2 min-w-0">
+                            <span className="text-[7px] text-slate-500 font-black uppercase leading-none mb-1">
+                              Status:
+                            </span>
+                            <span className="text-blue-400 text-[9px] font-bold uppercase truncate">
+                              {item.status?.toUpperCase() || 'ORÇAMENTO'}
+                            </span>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Pedido Info Grid */}
+                        <div className="grid grid-cols-3 gap-2 mt-1 pt-1 border-t border-slate-800">
+                          {/* Observação - Agora usando grid para controlar melhor o espaço */}
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[7px] text-slate-500 font-black uppercase leading-none mb-1">
+                              Observação:
+                            </span>
+                            <p className="text-white text-[9px] font-bold uppercase leading-tight line-clamp-4 break-all">
+                              {item.descricao || 'N/A'}
+                            </p>
+                          </div>
 
-                      {/* Material */}
-                      <div className="flex flex-col border-l border-slate-700 pl-2 min-w-0">
-                        <span className="text-[7px] text-slate-500 font-black uppercase leading-none mb-1">
-                          Material:
-                        </span>
-                        <p className="text-white text-[9px] font-bold uppercase truncate">
-                          {item.material}
-                        </p>
-                      </div>
+                          {/* Material */}
+                          <div className="flex flex-col border-l border-slate-700 pl-2 min-w-0">
+                            <span className="text-[7px] text-slate-500 font-black uppercase leading-none mb-1">
+                              Material:
+                            </span>
+                            <p className="text-white text-[9px] font-bold uppercase truncate">
+                              {item.material}
+                            </p>
+                          </div>
 
-                      {/* Aplicação */}
-                      <div className="flex flex-col border-l border-slate-700 pl-2 min-w-0">
-                        <span className="text-[7px] text-slate-500 font-black uppercase leading-none mb-1">
-                          Aplicação:
-                        </span>
-                        <p className="text-blue-400 text-[9px] font-bold uppercase truncate">
-                          {item.aplicacao_arte}
-                        </p>
-                      </div>
-                    </div>
+                          {/* Aplicação */}
+                          <div className="flex flex-col border-l border-slate-700 pl-2 min-w-0">
+                            <span className="text-[7px] text-slate-500 font-black uppercase leading-none mb-1">
+                              Aplicação:
+                            </span>
+                            <p className="text-blue-400 text-[9px] font-bold uppercase truncate">
+                              {item.aplicacao_arte}
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <div className="bg-white rounded-xl p-3 flex-1 flex flex-col min-h-0 shadow-md">
                     <span className="text-[10px] font-black text-slate-400 uppercase mb-2 shrink-0 tracking-widest">
-                      Grade
+                      {isDTF ? 'Detalhes' : 'Grade'}
                     </span>
                     <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                      {isDTF ? (
+                        <>
+                          {gradeAdulto.length > 0 && (
+                            <div className="bg-blue-50 border border-blue-100 rounded p-3">
+                              <span className="block text-[8px] font-black text-blue-600 uppercase mb-1">
+                                Tipo de Produto
+                              </span>
+                              <span className="text-lg font-black text-blue-800 leading-none">
+                                {gradeAdulto[0][0]}
+                              </span>
+                            </div>
+                          )}
+                          {gradeBL.length > 0 && (
+                            <div className="bg-purple-50 border border-purple-100 rounded p-3">
+                              <span className="block text-[8px] font-black text-purple-600 uppercase mb-1">
+                                Tamanho / Unidade
+                              </span>
+                              <span className="text-lg font-black text-purple-800 leading-none">
+                                {gradeBL[0][0]}
+                              </span>
+                            </div>
+                          )}
+                          {gradeInfantil.length > 0 && (
+                            <div className="bg-amber-50 border border-amber-100 rounded p-3">
+                              <span className="block text-[8px] font-black text-amber-600 uppercase mb-1">
+                                Status
+                              </span>
+                              <span className="text-lg font-black text-amber-800 leading-none">
+                                {gradeInfantil[0][0]}
+                              </span>
+                            </div>
+                          )}
+                          <div className="bg-green-50 border border-green-100 rounded p-3">
+                            <span className="block text-[8px] font-black text-green-600 uppercase mb-1">
+                              Cliente
+                            </span>
+                            <span className="text-lg font-black text-green-800 leading-none truncate block">
+                              {item.cliente_nome || item.nome_cliente}
+                            </span>
+                          </div>
+                          {item.descricao && (
+                            <div className="bg-slate-50 border border-slate-100 rounded p-3">
+                              <span className="block text-[8px] font-black text-slate-600 uppercase mb-1">
+                                Observação
+                              </span>
+                              <span className="text-sm font-bold text-slate-800 leading-tight block break-all">
+                                {item.descricao}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
                       {gradeAdulto.length > 0 && (
                         <div className="flex flex-wrap gap-1 pb-1 border-b border-slate-50">
                           {gradeAdulto.map(([tam, qtd]) => (
@@ -309,21 +509,17 @@ export const PedidosCarrosselMobile = () => {
                           ))}
                         </div>
                       )}
+                        </>
+                      )}
 
-                      {gradeAdulto.length === 0 &&
-                        gradeBL.length === 0 &&
-                        gradeInfantil.length === 0 && (
-                          <div className="bg-blue-50 border border-blue-100 rounded p-2 text-center w-full my-auto">
-                            <span className="block text-[10px] font-black text-blue-400 uppercase">
-                              Quantidade Única
-                            </span>
-                            <span className="text-3xl font-black text-blue-600 leading-none">
-                              {String(item.total_pecas).padStart(2, '0')}
-                            </span>
-                          </div>
-                        )}
-                    </div>
+                    {(isDTF && !item.descricao) || (!isDTF && gradeAdulto.length === 0 && gradeBL.length === 0 && gradeInfantil.length === 0) && (
+                      <div className="flex-1 items-center justify-center text-slate-300 text-[10px] font-bold uppercase italic">
+                        {isDTF ? 'Sem observações' : 'Sem grade definida'}
+                      </div>
+                    )}
+                  </div>
 
+                  {!isDTF && (
                     <div className="mt-auto pt-2 border-t border-slate-100 flex justify-between items-center shrink-0">
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                         Total:
@@ -335,19 +531,20 @@ export const PedidosCarrosselMobile = () => {
                         </small>
                       </span>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
-            );
+              </div>
+        );
           })}
-        </div>
+      </div>
 
-        <div className="h-4 bg-slate-900 border-t border-slate-800 flex items-center justify-center shrink-0">
-          <span className="text-[7px] text-slate-600 font-bold uppercase tracking-[0.2em]">
-            PrintCollor Mobile Factory Interface
-          </span>
-        </div>
+      <div className="h-4 bg-slate-900 border-t border-slate-800 flex items-center justify-center shrink-0">
+        <span className="text-[7px] text-slate-600 font-bold uppercase tracking-[0.2em]">
+          PrintCollor Mobile Factory Interface
+        </span>
       </div>
     </div>
+    </div >
   );
 };

@@ -147,6 +147,13 @@ class DTFVendor(models.Model):
         ('impresso', 'Impresso'),
     )
 
+    STATUS_ORCAMENTO = (
+        ('orcamento', 'Orçamento'),
+        ('aprovado', 'Aprovado'),
+        ('em_producao', 'Em Produção'),
+        ('finalizado', 'Finalizado'),
+    )
+
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     layout_arquivo = models.FileField(upload_to=path_layout_dtf)
     tamanho_cm = models.DecimalField(
@@ -158,6 +165,8 @@ class DTFVendor(models.Model):
     data_criacao = models.DateTimeField(auto_now_add=True)
     data_entrega = models.DateTimeField(null=True, blank=True)
 
+    status = models.CharField(
+        max_length=20, choices=STATUS_ORCAMENTO, default='orcamento')
     foi_impresso = models.CharField(
         max_length=15, choices=STATUS_IMPRESSAO, default='pendente')
     esta_pago = models.BooleanField(default=False)

@@ -126,17 +126,22 @@ class DTFVendorSerializer(serializers.ModelSerializer):
     nome_cliente = serializers.ReadOnlyField(source='cliente.nome')
     tipo_produto = serializers.CharField(default='dtf_textil')
     tipo_produto_display = serializers.SerializerMethodField()
+    status_display = serializers.SerializerMethodField()
 
     class Meta:
         model = DTFVendor
         fields = [
             'id', 'cliente', 'nome_cliente', 'layout_arquivo', 'tamanho_cm',
             'data_criacao', 'foi_impresso', 'esta_pago', 'foi_entregue',
-            'comprovante_pagamento', 'valor_total', 'tipo_produto', 'tipo_produto_display', 'unidade'
+            'comprovante_pagamento', 'valor_total', 'tipo_produto', 'tipo_produto_display', 'unidade',
+            'status', 'status_display'
         ]
 
     def get_tipo_produto_display(self, obj):
         return dict(obj.TIPOS_PRODUTO).get(obj.tipo_produto, 'DTF Têxtil')
+
+    def get_status_display(self, obj):
+        return dict(obj.STATUS_ORCAMENTO).get(obj.status, 'Orçamento')
 
 
 class DTFConfigSerializer(serializers.ModelSerializer):

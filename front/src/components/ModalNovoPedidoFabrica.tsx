@@ -32,8 +32,24 @@ export default function ModalNovoPedidoFabrica({
     detalhes_tamanho: {},
   });
 
+  // Limpar tudo ao abrir o modal
   useEffect(() => {
-    if (isOpen) api.get('clientes/').then((res) => setClientes(res.data));
+    if (isOpen) {
+      setFormData({
+        cliente: '',
+        nome_descricao: '',
+        material: '',
+        aplicacao_arte: '',
+        descricao: '',
+        data_entrega: '',
+        status: 'pendente',
+        detalhes_tamanho: {},
+      });
+      setArquivo(null);
+      setIsDragging(false);
+      setLoading(false);
+      api.get('clientes/').then((res) => setClientes(res.data));
+    }
   }, [isOpen]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {

@@ -56,19 +56,47 @@ export const DTFTable = () => {
     carregarDados();
   }, []);
 
+  // Lógica automática de status: atualiza status baseado nos toggles
+  const calcularStatusAuto = (foiEntregue: boolean, estaPago: boolean, foiImpresso: string) => {
+    if (foiEntregue) return 'finalizado';
+    if (foiImpresso === 'impresso') return 'finalizado'; // Impresso = Finalizado
+    if (estaPago) return 'aprovado'; // Aprovado = apenas Pago
+    return 'orcamento';
+  };
+
+  // Lógica inversa: atualiza toggles baseado no status
+  const calcularTogglesDoStatus = (status: string) => {
+    if (status === 'finalizado') return { foiEntregue: true, estaPago: true, foiImpresso: 'impresso' };
+    if (status === 'aprovado') return { foiEntregue: false, estaPago: true, foiImpresso: 'pendente' }; // Aprovado = Pago, não impresso
+    if (status === 'em_producao') return { foiEntregue: false, estaPago: true, foiImpresso: 'pendente' };
+    return { foiEntregue: false, estaPago: false, foiImpresso: 'pendente' };
+  };
+
   const handleToggleBooleanStatus = async (
     id: number,
     campo: string,
-    valorAtual: boolean
+    valorAtual: boolean,
+    item: any
   ) => {
     try {
-      await api.patch(`dtf/${id}/`, { [campo]: !valorAtual });
+      const novoValor = !valorAtual;
+
+      // Calcular novo status automático
+      const novosToggles = {
+        foiEntregue: campo === 'foi_entregue' ? novoValor : item.foi_entregue,
+        estaPago: campo === 'esta_pago' ? novoValor : item.esta_pago,
+        foiImpresso: campo === 'foi_impresso' ? (novoValor ? 'impresso' : 'pendente') : item.foi_impresso,
+      };
+      const novoStatus = calcularStatusAuto(novosToggles.foiEntregue, novosToggles.estaPago, novosToggles.foiImpresso);
+
+      await api.patch(`dtf/${id}/`, { [campo]: novoValor, status: novoStatus });
+
       const msg =
         campo === 'esta_pago'
-          ? !valorAtual
+          ? novoValor
             ? 'Pagamento confirmado!'
             : 'Status revertido para Pendente.'
-          : !valorAtual
+          : novoValor
             ? 'Pedido entregue ao cliente!'
             : 'Retornado para expedição.';
       addAlert(msg, 'success');
@@ -78,14 +106,37 @@ export const DTFTable = () => {
     }
   };
 
-  const handleToggleImpressao = async (id: number, statusAtual: string) => {
-    const novoStatus = statusAtual === 'impresso' ? 'pendente' : 'impresso';
+  const handleToggleImpressao = async (id: number, statusAtual: string, item: any) => {
+    const novoStatusImpressao = statusAtual === 'impresso' ? 'pendente' : 'impresso';
     try {
-      await api.patch(`dtf/${id}/`, { foi_impresso: novoStatus });
-      addAlert(`DTF #${id} marcado como ${novoStatus.toUpperCase()}`, 'info');
+      // Calcular novo status automático
+      const novoStatus = calcularStatusAuto(item.foi_entregue, item.esta_pago, novoStatusImpressao);
+
+      await api.patch(`dtf/${id}/`, { foi_impresso: novoStatusImpressao, status: novoStatus });
+      addAlert(`DTF #${id} marcado como ${novoStatusImpressao.toUpperCase()}`, 'info');
       carregarDados();
     } catch (error) {
       addAlert('Erro ao atualizar impressão.', 'error');
+    }
+  };
+
+  const handleUpdateStatus = async (id: number, campo: string, novoValor: string, item: any) => {
+    try {
+      let payload: any = { [campo]: novoValor };
+
+      // Se mudou o status manual, atualiza os toggles também
+      if (campo === 'status') {
+        const toggles = calcularTogglesDoStatus(novoValor);
+        payload.foi_entregue = toggles.foiEntregue;
+        payload.esta_pago = toggles.estaPago;
+        payload.foi_impresso = toggles.foiImpresso;
+      }
+
+      await api.patch(`dtf/${id}/`, payload);
+      addAlert('Status atualizado!', 'success');
+      carregarDados();
+    } catch (error) {
+      addAlert('Erro ao atualizar status.', 'error');
     }
   };
 
@@ -281,7 +332,13 @@ export const DTFTable = () => {
         {filtrados.map((item) => (
           <div
             key={item.id}
-            className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 hover:shadow-xl transition-all flex flex-col justify-between border-b-4 border-b-slate-200 text-left"
+            className={`bg-white rounded-3xl shadow-sm border border-slate-100 p-6 hover:shadow-xl transition-all flex flex-col justify-between border-b-4 text-left ${
+ item.tipo_produto === 'sublimacao'
+ ? 'border-b-purple-400'
+ : item.tipo_produto === 'dtf_uv'
+ ? 'border-b-cyan-400'
+ : 'border-b-blue-400'
+ }`}
           >
             {/* Preview do Layout */}
             {item.layout_arquivo && (
@@ -295,13 +352,28 @@ export const DTFTable = () => {
             )}
 
             <div className="flex justify-between items-start mb-2">
-              <div>
-                <h4 className="font-black text-slate-800 text-xl italic uppercase leading-none">
+              <div className="min-w-0">
+                <h4 className="font-black text-slate-800 text-xl italic uppercase leading-none truncate">
                   {item.nome_cliente}
                 </h4>
                 <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 italic">
                   OS #{item.id} • {formatarDataHora(item.data_criacao)}
                 </p>
+                <span
+                  className={`inline-block mt-1.5 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-lg ${
+                    item.tipo_produto === 'sublimacao'
+                      ? 'bg-purple-100 text-purple-700'
+                      : item.tipo_produto === 'dtf_uv'
+                      ? 'bg-cyan-100 text-cyan-700'
+                      : 'bg-blue-100 text-blue-700'
+                  }`}
+                >
+                  {item.tipo_produto === 'sublimacao'
+                    ? '🔥 Sublimação'
+                    : item.tipo_produto === 'dtf_uv'
+                    ? '🔷 DTF UV'
+                    : '🖨️ DTF Têxtil'}
+                </span>
               </div>
 
               {/* INDICADOR VISUAL SUPERIOR (Apenas leitura) */}
@@ -334,7 +406,8 @@ export const DTFTable = () => {
                   handleToggleBooleanStatus(
                     item.id,
                     'esta_pago',
-                    item.esta_pago
+                    item.esta_pago,
+                    item
                   )
                 }
                 className="bg-slate-50 p-3 rounded-2xl text-left hover:bg-slate-100 transition-colors border border-transparent hover:border-blue-100 group"
@@ -356,11 +429,33 @@ export const DTFTable = () => {
             </div>
 
             <div className="space-y-3 pt-4 border-t border-slate-50">
+              {/* Status do Orçamento */}
+              <div className="flex flex-wrap gap-2">
+                <select
+                  value={item.status || 'orcamento'}
+                  onChange={(e) => handleUpdateStatus(item.id, 'status', e.target.value, item)}
+                  className="flex-1 min-w-[100px] text-[10px] font-black px-3 py-2 rounded-xl border transition-all ${
+                    item.status === 'orcamento'
+                      ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                      : item.status === 'aprovado'
+                      ? 'bg-blue-50 text-blue-700 border-blue-200'
+                      : item.status === 'em_producao'
+                      ? 'bg-purple-50 text-purple-700 border-purple-200'
+                      : 'bg-green-50 text-green-700 border-green-200'
+                  }"
+                >
+                  <option value="orcamento">💰 Orçamento</option>
+                  <option value="aprovado">✅ Aprovado</option>
+                  <option value="em_producao">⚙️ Em Produção</option>
+                  <option value="finalizado">🏁 Finalizado</option>
+                </select>
+              </div>
+
               {/* Primeira linha: Botões de status e ação */}
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() =>
-                    handleToggleImpressao(item.id, item.foi_impresso)
+                    handleToggleImpressao(item.id, item.foi_impresso, item)
                   }
                   className={`flex-1 min-w-[100px] text-[10px] font-black px-3 py-2 rounded-xl transition-all active:scale-95 ${
                     item.foi_impresso === 'impresso'
@@ -376,7 +471,8 @@ export const DTFTable = () => {
                     handleToggleBooleanStatus(
                       item.id,
                       'foi_entregue',
-                      item.foi_entregue
+                      item.foi_entregue,
+                      item
                     )
                   }
                   className={`flex-1 min-w-[100px] text-[10px] font-black px-3 py-2 rounded-xl transition-all active:scale-95 ${
@@ -450,6 +546,6 @@ export const DTFTable = () => {
         itemId={selectedItem.id}
         itemName={selectedItem.nome}
       />
-    </div>
+    </div >
   );
 };

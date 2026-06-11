@@ -43,20 +43,42 @@ const ModalEditarDTF: React.FC<Props> = ({
   const [foiImpresso, setFoiImpresso] = useState('pendente');
   const [estaPago, setEstaPago] = useState(false);
   const [foiEntregue, setFoiEntregue] = useState(false);
+  const [status, setStatus] = useState<'orcamento' | 'aprovado' | 'em_producao' | 'finalizado'>('orcamento');
 
   // Arquivos
   const [novoLayout, setNovoLayout] = useState<File | null>(null);
   const [novoComprovante, setNovoComprovante] = useState<File | null>(null);
   const [urlsAtuais, setUrlsAtuais] = useState({ layout: '', comprovante: '' });
 
+  // Limpar tudo ao abrir e carregar dados do DTF
   useEffect(() => {
     if (isOpen && dtfId) {
+      // Limpa todos os states antes de carregar
+      setClienteId(null);
+      setClienteNome('');
+      setTipoProduto('dtf_textil');
+      setTipoProdutoDisplay('');
+      setTamanhoCm('');
+      setLargura('');
+      setComprimento('');
+      setFoiImpresso('pendente');
+      setEstaPago(false);
+      setFoiEntregue(false);
+      setStatus('orcamento');
+      setNovoLayout(null);
+      setNovoComprovante(null);
+      setUrlsAtuais({ layout: '', comprovante: '' });
+      setIsDraggingLayout(false);
+      setIsDraggingComprovante(false);
+      setLoading(false);
+
       setLoading(true);
       Promise.all([api.get('clientes/'), api.get(`dtf/${dtfId}/`)])
         .then(([resCli, resDtf]) => {
           setClientes(resCli.data);
           const d = resDtf.data;
           setClienteId(d.cliente);
+          setStatus(d.status || 'orcamento');
           const cli = resCli.data.find((c: any) => c.id === d.cliente);
           setClienteNome(cli ? cli.nome : '');
           setTipoProduto(d.tipo_produto || 'dtf_textil');
@@ -105,6 +127,19 @@ const ModalEditarDTF: React.FC<Props> = ({
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
   }, [isOpen]);
+
+  // Lógica automática de status
+  const atualizarStatusAuto = () => {
+    if (foiEntregue) {
+      setStatus('finalizado');
+    } else if (foiImpresso === 'impresso') {
+      setStatus('finalizado'); // Impresso = Finalizado
+    } else if (estaPago) {
+      setStatus('aprovado'); // Aprovado = apenas Pago
+    } else if (!estaPago) {
+      setStatus('orcamento');
+    }
+  };
 
   // Handlers genéricos para Drag and Drop
   const onDragOver = (e: React.DragEvent, setter: (val: boolean) => void) => {
@@ -171,6 +206,7 @@ const ModalEditarDTF: React.FC<Props> = ({
     formData.append('foi_impresso', foiImpresso);
     formData.append('esta_pago', String(estaPago));
     formData.append('foi_entregue', String(foiEntregue));
+    formData.append('status', status);
     if (novoLayout) formData.append('layout_arquivo', novoLayout);
     if (novoComprovante)
       formData.append('comprovante_pagamento', novoComprovante);
@@ -303,23 +339,67 @@ const ModalEditarDTF: React.FC<Props> = ({
               <StatusToggle
                 label="Impresso"
                 checked={foiImpresso === 'impresso'}
-                onChange={(e) =>
-                  setFoiImpresso(e.target.checked ? 'impresso' : 'pendente')
-                }
+                onChange={(e) => {
+                  setFoiImpresso(e.target.checked ? 'impresso' : 'pendente');
+                  // Atualizar status automaticamente
+                  setTimeout(() => atualizarStatusAuto(), 0);
+                }}
                 icon={<CheckCircle2 size={18} />}
               />
               <StatusToggle
                 label="Pago"
                 checked={estaPago}
-                onChange={(e) => setEstaPago(e.target.checked)}
+                onChange={(e) => {
+                  setEstaPago(e.target.checked);
+                  // Atualizar status automaticamente
+                  setTimeout(() => atualizarStatusAuto(), 0);
+                }}
                 icon={<DollarSign size={18} />}
               />
               <StatusToggle
                 label="Entregue"
                 checked={foiEntregue}
-                onChange={(e) => setFoiEntregue(e.target.checked)}
+                onChange={(e) => {
+                  setFoiEntregue(e.target.checked);
+                  // Atualizar status automaticamente
+                  setTimeout(() => atualizarStatusAuto(), 0);
+                }}
                 icon={<CheckCircle2 size={18} />}
               />
+            </div>
+
+            {/* Status do Orçamento */}
+            <div className="space-y-2">
+              <label className="text-xs font-black text-slate-500 uppercase ml-1">
+                Status
+              </label>
+              <select
+                value={status}
+                onChange={(e) => {
+                  const novoStatus = e.target.value;
+                  setStatus(novoStatus);
+                  // Lógica inversa: ao mudar status manual, atualiza toggles
+                  if (novoStatus === 'finalizado') {
+                    setFoiEntregue(true);
+                    setEstaPago(true);
+                    setFoiImpresso('impresso');
+                  } else if (novoStatus === 'aprovado') {
+                    setEstaPago(true);
+                    setFoiImpresso('pendente'); // Aprovado = Pago, não impresso
+                  } else if (novoStatus === 'em_producao') {
+                    setEstaPago(true);
+                    setFoiImpresso('pendente');
+                  } else if (novoStatus === 'orcamento') {
+                    setEstaPago(false);
+                  }
+                }}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700"
+              >
+                <option value="orcamento">💰 Orçamento</option>
+                <option value="aprovado">✅ Aprovado</option>
+                <option value="em_producao">⚙️ Em Produção</option>
+                <option value="finalizado">🏁 Finalizado</option>
+              </select>
             </div>
 
             {/* Uploads */}

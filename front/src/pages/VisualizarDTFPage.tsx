@@ -176,9 +176,9 @@ const VisualizarDTFPage = () => {
           </div>
         </div>
 
-        {/* Info Grid - Shrink-0 */}
+        {/* Info Grid - 2 colunas x 2 linhas: Nome, Tamanho, Valor, Tipo */}
         <div className="grid grid-cols-2 gap-3 mb-4 flex-shrink-0">
-          <div className="col-span-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
             <span className="text-[9px] font-black text-slate-400 uppercase block leading-none mb-1">Cliente</span>
             <span className="text-lg font-bold text-slate-900 uppercase leading-none">{dtf.nome_cliente}</span>
           </div>
@@ -200,39 +200,10 @@ const VisualizarDTFPage = () => {
           </div>
 
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-            <span className="text-[9px] font-black text-slate-400 uppercase block leading-none mb-1">Pagamento</span>
-            <span className={`text-md font-bold uppercase leading-none ${dtf.esta_pago ? 'text-green-600' : 'text-red-600'}`}>
-              {dtf.esta_pago ? '✓ PAGO' : '⚠ PENDENTE'}
-            </span>
+            <span className="text-[9px] font-black text-slate-400 uppercase block leading-none mb-1">Tipo</span>
+            <span className="text-md font-bold text-slate-900 leading-none">{dtf.tipo_produto_display || (dtf.tipo_produto === 'sublimacao' ? 'Sublimação' : dtf.tipo_produto === 'dtf_uv' ? 'DTF UV' : 'DTF Têxtil')}</span>
           </div>
-
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-            <span className="text-[9px] font-black text-slate-400 uppercase block leading-none mb-1">Produção</span>
-            <span className="text-md font-bold text-slate-900 uppercase leading-none">{dtf.foi_impresso}</span>
-          </div>
-
-          {dtf.tipo_produto_display && (
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-              <span className="text-[9px] font-black text-slate-400 uppercase block leading-none mb-1">Tipo</span>
-              <span className="text-md font-bold text-slate-900 leading-none">{dtf.tipo_produto_display}</span>
-            </div>
-          )}
         </div>
-
-        {/* Alerta de PIX - Shrink-0 */}
-        {!dtf.esta_pago && (
-          <div className="mb-4 bg-blue-50 border-2 border-blue-600 rounded-xl p-3 flex justify-between items-center flex-shrink-0">
-            <div>
-              <span className="text-blue-600 font-black text-[10px] uppercase block leading-none mb-1">Pagamento PIX</span>
-              <span className="text-xl font-black text-blue-900 block leading-none">CNPJ: 04.811.720/0001-98</span>
-              <p className="text-[10px] font-bold text-blue-700 mt-1 uppercase italic leading-none">Favorecido: D. R. OS SANTOS NETO | Banco do Brasil</p>
-            </div>
-            <div className="bg-blue-600 text-white px-4 py-2 rounded-lg text-center shadow-md">
-                <span className="block text-[8px] font-black opacity-80 uppercase">Total</span>
-                <span className="text-lg font-black leading-none">{formatarReal(dtf.valor_total)}</span>
-            </div>
-          </div>
-        )}
 
         {/* Visualização de Arquivos - FLEX-1 e MIN-H-0 para limitar o crescimento */}
         <div className="grid grid-cols-2 gap-4 flex-1 min-h-0 mb-4">
@@ -259,8 +230,26 @@ const VisualizarDTFPage = () => {
           </div>
         </div>
 
+        {/* Área Destacada - Nome, ID, Tipo */}
+        <div className="mt-auto pt-3 border-t-4 border-slate-900 bg-slate-50 rounded-xl p-4 flex-shrink-0">
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="col-span-1 bg-white rounded-lg p-3 border border-slate-200">
+              <span className="text-[9px] font-black text-slate-400 uppercase block leading-none mb-1">Nome</span>
+              <span className="text-lg font-black text-slate-900 uppercase leading-none">{dtf.nome_cliente}</span>
+            </div>
+            <div className="col-span-1 bg-white rounded-lg p-3 border border-slate-200">
+              <span className="text-[9px] font-black text-slate-400 uppercase block leading-none mb-1">ID</span>
+              <span className="text-lg font-black text-slate-900 leading-none">#{dtf.id}</span>
+            </div>
+            <div className="col-span-1 bg-white rounded-lg p-3 border border-slate-200">
+              <span className="text-[9px] font-black text-slate-400 uppercase block leading-none mb-1">Tipo</span>
+              <span className="text-md font-black text-slate-900 leading-none">{dtf.tipo_produto_display || (dtf.tipo_produto === 'sublimacao' ? 'Sublimação' : dtf.tipo_produto === 'dtf_uv' ? 'DTF UV' : 'DTF Têxtil')}</span>
+            </div>
+          </div>
+        </div>
+
         {/* Footer - Shrink-0 */}
-        <div className="mt-auto pt-3 border-t border-slate-100 text-center flex-shrink-0">
+        <div className="mt-3 pt-3 border-t border-slate-100 text-center flex-shrink-0">
           <p className="text-[9px] text-slate-400 leading-tight font-bold uppercase tracking-widest">
             Comprovante interno PrintCollor. Conferência de responsabilidade da emissora.
           </p>

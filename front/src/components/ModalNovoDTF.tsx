@@ -30,12 +30,24 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
   const [tamanhoCm, setTamanhoCm] = useState<number>(0);
   const [largura, setLargura] = useState<string>('');
   const [comprimento, setComprimento] = useState<string>('');
+  const [status, setStatus] = useState<'orcamento' | 'aprovado' | 'em_producao' | 'finalizado'>('orcamento');
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [configs, setConfigs] = useState<any[]>([]);
   const [config, setConfig] = useState<any>(null);
 
+  // Limpar tudo ao abrir o modal
   useEffect(() => {
     if (isOpen) {
+      setClienteId('');
+      setClienteNome('');
+      setTipoProduto('dtf_textil');
+      setTamanhoCm(0);
+      setLargura('');
+      setComprimento('');
+      setArquivo(null);
+      setIsDragging(false);
+      setLoading(false);
+
       Promise.all([
         api.get('dtf-config/'),
         api.get('clientes/'),
@@ -137,6 +149,7 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
 
     formData.append('tipo_produto', tipoProduto);
     formData.append('layout_arquivo', arquivo);
+    formData.append('status', status);
 
     try {
       await api.post('dtf/', formData, {
@@ -237,6 +250,23 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
               {TIPOS.map((t) => (
                 <option key={t.value} value={t.value}>{t.label}</option>
               ))}
+            </select>
+          </div>
+
+          {/* Status do Orçamento */}
+          <div className="space-y-2">
+            <label className="text-xs font-black text-slate-500 uppercase ml-1">
+              Status
+            </label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700"
+            >
+              <option value="orcamento">💰 Orçamento</option>
+              <option value="aprovado">✅ Aprovado</option>
+              <option value="em_producao">⚙️ Em Produção</option>
+              <option value="finalizado">🏁 Finalizado</option>
             </select>
           </div>
 
