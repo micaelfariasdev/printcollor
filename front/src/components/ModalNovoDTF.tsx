@@ -260,7 +260,7 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
             </label>
             <select
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
+              onChange={(e) => setStatus(e.target.value as 'orcamento' | 'aprovado' | 'em_producao' | 'finalizado')}
               className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700"
             >
               <option value="orcamento">💰 Orçamento</option>

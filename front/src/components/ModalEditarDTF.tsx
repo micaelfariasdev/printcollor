@@ -376,7 +376,7 @@ const ModalEditarDTF: React.FC<Props> = ({
               <select
                 value={status}
                 onChange={(e) => {
-                  const novoStatus = e.target.value;
+                  const novoStatus = e.target.value as 'orcamento' | 'aprovado' | 'em_producao' | 'finalizado';
                   setStatus(novoStatus);
                   // Lógica inversa: ao mudar status manual, atualiza toggles
                   if (novoStatus === 'finalizado') {

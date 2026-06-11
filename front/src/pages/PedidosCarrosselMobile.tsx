@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { api } from '../auth/useAuth';
 import { useAlert } from '../contexts/AlertContext';
 import {
@@ -59,22 +59,6 @@ export const PedidosCarrosselMobile = () => {
       .sort(ordenarGrade);
 
     return { gradeBL, gradeInfantil, gradeAdulto };
-  };
-
-  const carregarDados = async () => {
-    setRefreshing(true);
-    try {
-      const response = await api.get('pedidos/');
-      const lista = Object.values(response.data)
-        .filter((p: any) => p.status !== 'finalizado')
-        .sort((a: any, b: any) => b.id - a.id);
-      setPedidos(lista);
-    } catch (error) {
-      addAlert('Erro ao atualizar lista.', 'error');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
   };
 
   useEffect(() => {
@@ -229,21 +213,16 @@ export const PedidosCarrosselMobile = () => {
             let gradeAdulto: [string, any][] = [];
             let gradeBL: [string, any][] = [];
             let gradeInfantil: [string, any][] = [];
-            let totalPecas = 0;
-
             if (!isDTF) {
-              const tamanhos = Object.entries(item.detalhes_tamanho || {});
               const { gradeBL: bl, gradeInfantil: inf, gradeAdulto: ad } = getGradeData(item.detalhes_tamanho);
               gradeBL = bl;
               gradeInfantil = inf;
               gradeAdulto = ad;
-              totalPecas = item.total_pecas || 0;
             } else {
               // DTF: mostrar tipo, tamanho e unidade
               gradeAdulto = [[`${item.tipo_produto === 'sublimacao' ? '🔥 SUBL' : item.tipo_produto === 'dtf_uv' ? '🔷 UV' : '🖨️ TXT'}`, '']] as [string, any][];
               gradeBL = [[`${item.tamanho_cm} ${item.unidade === 'm2' ? 'm²' : 'cm'}`, '']] as [string, any][];
               gradeInfantil = [[item.status?.toUpperCase() || 'ORÇAMENTO', '']] as [string, any][];
-              totalPecas = 1;
             }
 
             return (
@@ -258,7 +237,14 @@ export const PedidosCarrosselMobile = () => {
                       className="max-w-full max-h-full object-contain p-1"
                       alt="Layout"
                     />
-                  ) : (
+                  ) :  item.layout_arquivo ? (
+                    <img
+                      src={item.layout_arquivo}
+                      className="max-w-full max-h-full object-contain p-1"
+                      alt="Layout"
+                    />
+                  )
+                  : (
                     <div className="flex flex-col items-center text-slate-300 uppercase font-black text-xs">
                       <Layers size={40} className="mb-2" /> Sem Imagem
                     </div>

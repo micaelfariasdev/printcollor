@@ -120,7 +120,7 @@ export const DTFTable = () => {
     }
   };
 
-  const handleUpdateStatus = async (id: number, campo: string, novoValor: string, item: any) => {
+  const handleUpdateStatus = async (id: number, campo: string, novoValor: string) => {
     try {
       let payload: any = { [campo]: novoValor };
 
@@ -433,7 +433,7 @@ export const DTFTable = () => {
               <div className="flex flex-wrap gap-2">
                 <select
                   value={item.status || 'orcamento'}
-                  onChange={(e) => handleUpdateStatus(item.id, 'status', e.target.value, item)}
+                  onChange={(e) => handleUpdateStatus(item.id, 'status', e.target.value)}
                   className="flex-1 min-w-[100px] text-[10px] font-black px-3 py-2 rounded-xl border transition-all ${
                     item.status === 'orcamento'
                       ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
