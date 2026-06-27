@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, Save, Loader2, Ruler } from 'lucide-react';
+import { X, Upload, Save, Loader2, Ruler, DollarSign } from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
 import { formatarReal } from '../tools/formatReal';
@@ -16,6 +16,7 @@ const TIPOS = [
   { value: 'dtf_textil', label: 'DTF Têxtil', unit: 'ml' },
   { value: 'dtf_uv', label: 'DTF UV', unit: 'ml' },
   { value: 'sublimacao', label: 'Sublimação', unit: 'm2' },
+  { value: 'estampa', label: 'Estampa', unit: 'un' },
 ];
 
 const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: propClienteId }) => {
@@ -27,9 +28,12 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
   const [clienteId, setClienteId] = useState('');
   const [clienteNome, setClienteNome] = useState('');
   const [tipoProduto, setTipoProduto] = useState('dtf_textil');
-  const [tamanhoCm, setTamanhoCm] = useState<number>(0);
+  const [tamanhoCm, setTamanhoCm] = useState<string>('');
   const [largura, setLargura] = useState<string>('');
   const [comprimento, setComprimento] = useState<string>('');
+  const [quantidade, setQuantidade] = useState<number>(1);
+  const [usarPrecoCustom, setUsarPrecoCustom] = useState(false);
+  const [precoCustom, setPrecoCustom] = useState('');
   const [status, setStatus] = useState<'orcamento' | 'aprovado' | 'em_producao' | 'finalizado'>('orcamento');
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [configs, setConfigs] = useState<any[]>([]);
@@ -41,9 +45,12 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
       setClienteId('');
       setClienteNome('');
       setTipoProduto('dtf_textil');
-      setTamanhoCm(0);
+      setTamanhoCm('');
       setLargura('');
       setComprimento('');
+      setQuantidade(1);
+      setUsarPrecoCustom(false);
+      setPrecoCustom('');
       setArquivo(null);
       setIsDragging(false);
       setLoading(false);
@@ -75,6 +82,24 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
   }, [tipoProduto, configs]);
 
   const calcularTotal = () => {
+    // Override manual tem prioridade absoluta
+    if (usarPrecoCustom && precoCustom !== '' && Number(precoCustom) > 0) {
+      // Para o override, multiplicamos pela unidade escolhida
+      if (tipoProduto === 'sublimacao') {
+        if (!largura || !comprimento || Number(largura) <= 0 || Number(comprimento) <= 0) {
+          return Number(precoCustom); // mostra o valor, mas validação fica no submit
+        }
+        const areaM2 = (Number(largura) * Number(comprimento)) / 10000;
+        return areaM2 * Number(precoCustom);
+      }
+      if (tipoProduto === 'estampa') {
+        return Number(precoCustom) * (quantidade || 1);
+      }
+      // DTF Têxtil / UV: precoCustom = valor por metro
+      if (!tamanhoCm || Number(tamanhoCm) <= 0) return Number(precoCustom);
+      return (Number(tamanhoCm) / 100) * Number(precoCustom);
+    }
+
     if (!config) return 0;
     const precoPorMetro = Number(config.valor_metro);
     const precoMinimo = Number(config.preco_minimo);
@@ -90,9 +115,15 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
       return valorCalculado < precoMinimo ? precoMinimo : valorCalculado;
     }
 
+    // Para estampa: precoPorMetro aqui representa precoUnitário × quantidade
+    if (tipoProduto === 'estampa') {
+      const qtd = quantidade || 1;
+      return precoPorMetro * qtd;
+    }
+
     // Para DTF Têxtil/UV, calcular em metros lineares
-    if (!tamanhoCm || tamanhoCm <= 0) return 0;
-    const valorCalculado = (tamanhoCm / 100) * precoPorMetro;
+    if (!tamanhoCm || Number(tamanhoCm) <= 0) return 0;
+    const valorCalculado = (Number(tamanhoCm) / 100) * precoPorMetro;
     return valorCalculado < precoMinimo ? precoMinimo : valorCalculado;
   };
 
@@ -123,8 +154,13 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
         addAlert('Informe a largura e comprimento para sublimação.', 'error');
         return;
       }
+    } else if (tipoProduto === 'estampa') {
+      if (!quantidade || quantidade <= 0) {
+        addAlert('Informe a quantidade (>=1) de unidades da estampa.', 'error');
+        return;
+      }
     } else {
-      if (!tamanhoCm || tamanhoCm <= 0) {
+      if (!tamanhoCm || Number(tamanhoCm) <= 0) {
         addAlert('Informe a metragem linear.', 'error');
         return;
       }
@@ -139,17 +175,29 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
     const formData = new FormData();
     formData.append('cliente', clienteId);
 
-    // Se for sublimação, calculamos área em cm²
+    // Define tamanho_cm conforme tipo
     if (tipoProduto === 'sublimacao') {
       const areaCm2 = Number(largura) * Number(comprimento);
       formData.append('tamanho_cm', areaCm2.toString());
+    } else if (tipoProduto === 'estampa') {
+      // Estampa não usa tamanho_cm significativo — envia 0 para satisfazer o backend
+      formData.append('tamanho_cm', '0');
     } else {
       formData.append('tamanho_cm', tamanhoCm.toString());
     }
 
     formData.append('tipo_produto', tipoProduto);
+    formData.append('quantidade', String(quantidade));
     formData.append('layout_arquivo', arquivo);
     formData.append('status', status);
+
+    // Override de preço: envia valor convertido ou vazio ('') pra não persistir override
+    const precoOverrideNum = Number(precoCustom);
+    if (usarPrecoCustom && precoCustom !== '' && precoOverrideNum > 0) {
+      formData.append('preco_unit_override', precoCustom.replace(',', '.'));
+    } else if (!usarPrecoCustom) {
+      formData.append('preco_unit_override', '');
+    }
 
     try {
       await api.post('dtf/', formData, {
@@ -161,9 +209,12 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
       setClienteId('');
       setClienteNome('');
       setTipoProduto('dtf_textil');
-      setTamanhoCm(0);
+      setTamanhoCm('');
       setLargura('');
       setComprimento('');
+      setQuantidade(1);
+      setUsarPrecoCustom(false);
+      setPrecoCustom('');
       setArquivo(null);
     } catch (err: any) {
       addAlert(err?.response?.data?.detail || 'Erro ao criar pedido.', 'error');
@@ -198,7 +249,7 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-      <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100">
+      <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]">
         <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-white">
           <h2 className="text-2xl font-black text-slate-800 uppercase italic">
             Novo Pedido <span className={theme.colors.accentText}>DTF</span>
@@ -208,7 +259,7 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+        <form onSubmit={handleSubmit} className="p-8 space-y-6 overflow-y-auto flex-1 min-h-0">
           {/* Cliente */}
           <div className="space-y-2">
             <label className="text-xs font-black text-slate-500 uppercase ml-1">
@@ -270,7 +321,7 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
             </select>
           </div>
 
-          {/* Tamanho - DTF ou Sublimação */}
+          {/* Tamanho - DTF / Sublimação / Estampa */}
           {tipoProduto === 'sublimacao' ? (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -302,31 +353,79 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
                 />
               </div>
             </div>
+          ) : tipoProduto === 'estampa' ? (
+            <div className="space-y-2">
+              <label className="text-xs font-black text-slate-500 uppercase ml-1 flex items-center gap-2">
+                <DollarSign size={14} /> Quantidade de Unidades
+              </label>
+              <input
+                type="number"
+                min={1}
+                step="1"
+                placeholder="Ex: 12"
+                value={quantidade}
+                onChange={(e) => setQuantidade(Math.max(1, Number(e.target.value) || 1))}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
+              />
+            </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2">
-                  <Ruler size={14} /> Tamanho Linear (cm)
-                </label>
-                <input
-                  required
-                  type="number"
-                  step="0.01"
-                  placeholder="Ex: 150"
-                  className="w-full bg-slate-50 border border-solate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
-                  onChange={(e) => setTamanhoCm(Number(e.target.value))}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-black text-slate-500 uppercase">
-                  Valor Estimado
-                </label>
-                <div className="bg-blue-50 text-blue-700 rounded-2xl p-4 font-black text-lg">
-                  {formatarReal(calcularTotal())}
-                </div>
-              </div>
+            <div className="space-y-2">
+              <label className="text-xs font-black text-slate-500 uppercase ml-1 flex items-center gap-2">
+                <Ruler size={14} /> Tamanho Linear (cm)
+              </label>
+              <input
+                required
+                type="number"
+                step="0.01"
+                placeholder="Ex: 150"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+                value={tamanhoCm}
+                onChange={(e) => setTamanhoCm(e.target.value)}
+              />
             </div>
           )}
+
+          {/* Override de Preço Unitário (checkbox + input) */}
+          <div className="space-y-2 bg-amber-50/60 border border-amber-200 rounded-2xl p-4">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={usarPrecoCustom}
+                onChange={(e) => {
+                  setUsarPrecoCustom(e.target.checked);
+                  if (!e.target.checked) setPrecoCustom('');
+                }}
+                className="w-5 h-5 rounded accent-amber-500"
+              />
+              <div className="flex items-center gap-2 flex-1">
+                <DollarSign className="w-4 h-4 text-amber-600" />
+                <span className="text-sm font-bold text-slate-700">
+                  {tipoProduto === 'sublimacao'
+                    ? 'Customizar valor por m²'
+                    : tipoProduto === 'estampa'
+                    ? 'Customizar valor por unidade'
+                    : 'Customizar valor por metro'}
+                </span>
+              </div>
+            </label>
+            {usarPrecoCustom && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-500">R$</span>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  placeholder="0,00"
+                  value={precoCustom}
+                  onChange={(e) => setPrecoCustom(e.target.value)}
+                  className="flex-1 bg-white border border-amber-300 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-amber-500 font-bold text-base text-slate-800"
+                />
+                <span className="text-[10px] text-amber-700 font-bold whitespace-nowrap">
+                  (sobrescreve só este pedido)
+                </span>
+              </div>
+            )}
+          </div>
 
           {/* Mostrar valor estimado apenas para sublimação quando tiver as dimensões */}
           {tipoProduto === 'sublimacao' && largura && comprimento && (

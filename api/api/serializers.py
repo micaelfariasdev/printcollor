@@ -3,7 +3,7 @@ from django.core.files.base import ContentFile
 import io
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from .models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, Usuario, DTFVendor, PedidoFabrica, DTFConfig
+from .models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, Usuario, DTFVendor, PedidoFabrica, DTFConfig, ConfiguracaoLoja
 
 
 class EmpresaSerializer(serializers.ModelSerializer):
@@ -127,6 +127,10 @@ class DTFVendorSerializer(serializers.ModelSerializer):
     tipo_produto = serializers.CharField(default='dtf_textil')
     tipo_produto_display = serializers.SerializerMethodField()
     status_display = serializers.SerializerMethodField()
+    quantidade = serializers.IntegerField(required=False, default=1)
+    preco_unit_override = serializers.DecimalField(
+        max_digits=10, decimal_places=2, required=False, allow_null=True
+    )
 
     class Meta:
         model = DTFVendor
@@ -134,7 +138,7 @@ class DTFVendorSerializer(serializers.ModelSerializer):
             'id', 'cliente', 'nome_cliente', 'layout_arquivo', 'tamanho_cm',
             'data_criacao', 'foi_impresso', 'esta_pago', 'foi_entregue',
             'comprovante_pagamento', 'valor_total', 'tipo_produto', 'tipo_produto_display', 'unidade',
-            'status', 'status_display'
+            'status', 'status_display', 'quantidade', 'preco_unit_override'
         ]
 
     def get_tipo_produto_display(self, obj):
@@ -200,3 +204,47 @@ class PedidoFabricaSerializer(serializers.ModelSerializer):
     class Meta:
         model = PedidoFabrica
         fields = '__all__'
+
+
+def _normalize_pix_text(value: str) -> str:
+    """Remove acentos, colapsa espaços e converte para ASCII. Para BR Code."""
+    if not value:
+        return value
+    import unicodedata
+    nfkd = unicodedata.normalize('NFKD', value)
+    ascii_only = ''.join(c for c in nfkd if not unicodedata.combining(c))
+    replacements = {'Ç': 'C', 'Ã': 'A', 'Õ': 'O'}
+    for orig, sub in replacements.items():
+        ascii_only = ascii_only.replace(orig, sub)
+    return ' '.join(ascii_only.split()).upper()
+
+
+class ConfiguracaoLojaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConfiguracaoLoja
+        fields = '__all__'
+        read_only_fields = ['atualizado_em']
+
+    def validate_pix_chave_telefone(self, value):
+        """Aceita apenas dígitos, espaços, +, (, ) e -."""
+        if not value:
+            return value
+        allowed = set('0123456789+()- ')
+        invalidos = [c for c in value if c not in allowed]
+        if invalidos:
+            raise serializers.ValidationError(
+                f"Caracteres inválidos: {''.join(invalidos)}"
+            )
+        return value.strip()
+
+    def validate_pix_beneficiario(self, value):
+        normalized = _normalize_pix_text(value)
+        if len(normalized) > 25:
+            raise serializers.ValidationError("Beneficiário deve ter no máximo 25 caracteres.")
+        return normalized
+
+    def validate_pix_cidade(self, value):
+        normalized = _normalize_pix_text(value)
+        if len(normalized) > 15:
+            raise serializers.ValidationError("Cidade deve ter no máximo 15 caracteres.")
+        return normalized

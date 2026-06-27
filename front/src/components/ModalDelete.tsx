@@ -36,7 +36,7 @@ const ModalDelete: React.FC<Props> = ({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-      <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden border border-red-100">
+      <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl border border-red-100 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header de Alerta */}
         <div className="p-6 flex flex-col items-center text-center space-y-4 bg-red-50/50">
           <div className="p-4 bg-red-100 text-red-600 rounded-full">

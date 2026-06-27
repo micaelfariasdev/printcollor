@@ -8,6 +8,7 @@ const TIPOS_DTF = [
   { value: 'dtf_textil', label: 'DTF Têxtil' },
   { value: 'dtf_uv', label: 'DTF UV' },
   { value: 'sublimacao', label: 'Sublimação' },
+  { value: 'estampa', label: 'Estampa (por unidade)' },
 ];
 
 const Configuracoes: React.FC = () => {
@@ -29,7 +30,13 @@ const Configuracoes: React.FC = () => {
   });
 
   const [dtfConfigs, setDtfConfigs] = useState<any[]>([]);
-  const [dtfValues, setDtfValues] = useState<{ [key: string]: { valor_metro: string; preco_minimo: string } }>({});
+  const [dtfValues, setDtfValues] = useState<{ [key: string]: { valor_metro: string; preco_minimo: string; valor_unidade: string } }>({});
+  const [pixConfig, setPixConfig] = useState<{ id?: number; pix_chave_telefone?: string; pix_beneficiario?: string; pix_cidade?: string }>({});
+  const [pixForm, setPixForm] = useState({
+    pix_chave_telefone: '',
+    pix_beneficiario: '',
+    pix_cidade: '',
+  });
 
   useEffect(() => {
     api.get('/me/').then((res) => {
@@ -49,16 +56,29 @@ const Configuracoes: React.FC = () => {
         const vals: any = {};
         res.data.forEach((c: any) => {
           vals[c.tipo_produto] = {
-            valor_metro: String(c.valor_metro),
-            preco_minimo: String(c.preco_minimo),
+            valor_metro: String(c.valor_metro ?? '35.00'),
+            preco_minimo: String(c.preco_minimo ?? '20.00'),
+            valor_unidade: String(c.valor_unidade ?? '8.00'),
           };
         });
         setDtfValues(vals);
       });
+      api.get('configuracao-loja/').then((res) => {
+        setPixConfig(res.data || {});
+        setPixForm({
+          pix_chave_telefone: res.data?.pix_chave_telefone || '',
+          pix_beneficiario: res.data?.pix_beneficiario || '',
+          pix_cidade: res.data?.pix_cidade || '',
+        });
+      }).catch(() => { /* configuração ainda não criada — ok */ });
     }
   }, [activeTab]);
 
-  const handleDtfChange = (tipo: string, field: 'valor_metro' | 'preco_minimo', value: string) => {
+  const handleDtfChange = (
+    tipo: string,
+    field: 'valor_metro' | 'preco_minimo' | 'valor_unidade',
+    value: string
+  ) => {
     setDtfValues((prev) => ({
       ...prev,
       [tipo]: { ...prev[tipo], [field]: value },
@@ -70,19 +90,17 @@ const Configuracoes: React.FC = () => {
     if (!vals) return;
     setLoading(true);
     try {
+      const payload: any = {
+        tipo_produto: tipo,
+        valor_metro: vals.valor_metro,
+        preco_minimo: vals.preco_minimo,
+        valor_unidade: vals.valor_unidade,
+      };
       const existing = dtfConfigs.find((c) => c.tipo_produto === tipo);
       if (existing) {
-        await api.put(`dtf-config/${existing.id}/`, {
-          tipo_produto: tipo,
-          valor_metro: vals.valor_metro,
-          preco_minimo: vals.preco_minimo,
-        });
+        await api.put(`dtf-config/${existing.id}/`, payload);
       } else {
-        await api.post('dtf-config/', {
-          tipo_produto: tipo,
-          valor_metro: vals.valor_metro,
-          preco_minimo: vals.preco_minimo,
-        });
+        await api.post('dtf-config/', payload);
       }
       addAlert('Configuração salva!', 'success');
     } catch {
@@ -120,6 +138,29 @@ const Configuracoes: React.FC = () => {
       setPwdData({ current_password: '', new_password: '', confirm_password: '' });
     } catch (err: any) {
       addAlert(err.response?.data?.error || "Erro ao alterar senha.", 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePixSave = async () => {
+    setLoading(true);
+    try {
+      const configId = pixConfig.id || 1;
+      await api.put(`configuracao-loja/${configId}/`, pixForm);
+      const refreshed = await api.get('configuracao-loja/');
+      setPixForm({
+        pix_chave_telefone: refreshed.data.pix_chave_telefone || '',
+        pix_beneficiario: refreshed.data.pix_beneficiario || '',
+        pix_cidade: refreshed.data.pix_cidade || '',
+      });
+      setPixConfig(refreshed.data);
+      addAlert('Configuração PIX salva!', 'success');
+    } catch (err: any) {
+      const detail = err.response?.data
+        ? JSON.stringify(err.response.data)
+        : 'Erro ao salvar.';
+      addAlert(detail, 'error');
     } finally {
       setLoading(false);
     }
@@ -209,47 +250,123 @@ const Configuracoes: React.FC = () => {
               <h2 className="text-xl font-black text-slate-800 uppercase italic flex items-center gap-3">
                 <Printer className="text-blue-500" /> Configurações DTF
               </h2>
-              {TIPOS_DTF.map((tipo) => (
-                <div key={tipo.value} className="border border-slate-200 rounded-2xl p-6 space-y-4">
-                  <h3 className="font-black text-slate-700 uppercase text-sm">{tipo.label}</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
-                        Valor por Metro (R$)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        placeholder="35.00"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                        value={dtfValues[tipo.value]?.valor_metro || ''}
-                        onChange={(e) => handleDtfChange(tipo.value, 'valor_metro', e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
-                        Preço Mínimo (R$)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        placeholder="20.00"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                        value={dtfValues[tipo.value]?.preco_minimo || ''}
-                        onChange={(e) => handleDtfChange(tipo.value, 'preco_minimo', e.target.value)}
-                      />
-                    </div>
+              {TIPOS_DTF.map((tipo) => {
+                const isEstampa = tipo.value === 'estampa';
+                return (
+                  <div key={tipo.value} className="border border-slate-200 rounded-2xl p-6 space-y-4">
+                    <h3 className="font-black text-slate-700 uppercase text-sm">{tipo.label}</h3>
+                    {isEstampa ? (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
+                          Valor por Unidade (R$)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="8.00"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+                          value={dtfValues[tipo.value]?.valor_unidade || ''}
+                          onChange={(e) => handleDtfChange(tipo.value, 'valor_unidade', e.target.value)}
+                        />
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
+                            Valor por Metro (R$)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="35.00"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                            value={dtfValues[tipo.value]?.valor_metro || ''}
+                            onChange={(e) => handleDtfChange(tipo.value, 'valor_metro', e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
+                            Preço Mínimo (R$)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="20.00"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                            value={dtfValues[tipo.value]?.preco_minimo || ''}
+                            onChange={(e) => handleDtfChange(tipo.value, 'preco_minimo', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() => handleDtfSave(tipo.value)}
+                      className="bg-slate-900 text-white w-full py-3 rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg hover:bg-black transition-all disabled:opacity-50"
+                    >
+                      {loading ? <Loader2 className="animate-spin mx-auto" size={18} /> : `Salvar ${tipo.label}`}
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() => handleDtfSave(tipo.value)}
-                    className="bg-slate-900 text-white w-full py-3 rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg hover:bg-black transition-all disabled:opacity-50"
-                  >
-                    {loading ? <Loader2 className="animate-spin mx-auto" size={18} /> : `Salvar ${tipo.label}`}
-                  </button>
+                );
+              })}
+
+              {/* Bloco PIX — chave telefônica + dados para o BR Code dinâmico */}
+              <div className="border border-emerald-300 bg-emerald-50/40 rounded-2xl p-6 space-y-4">
+                <h3 className="font-black text-emerald-700 uppercase text-sm flex items-center gap-2">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                  Pagamento via PIX (QR Code dinâmico)
+                </h3>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
+                    Chave PIX (telefone)
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="tel"
+                    placeholder="+55 (85) 99999-9999"
+                    className="w-full bg-white border border-slate-200 rounded-2xl p-3.5 font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+                    value={pixForm.pix_chave_telefone}
+                    onChange={(e) => setPixForm({ ...pixForm, pix_chave_telefone: e.target.value })}
+                  />
                 </div>
-              ))}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
+                      Favorecido (sem acentos, máx 25)
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={25}
+                      placeholder="LOJA LTDA"
+                      className="w-full bg-white border border-slate-200 rounded-2xl p-3.5 font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+                      value={pixForm.pix_beneficiario}
+                      onChange={(e) => setPixForm({ ...pixForm, pix_beneficiario: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
+                      Cidade (sem acentos, máx 15)
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={15}
+                      placeholder="SAO PAULO"
+                      className="w-full bg-white border border-slate-200 rounded-2xl p-3.5 font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+                      value={pixForm.pix_cidade}
+                      onChange={(e) => setPixForm({ ...pixForm, pix_cidade: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={handlePixSave}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white w-full py-3 rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg transition-all disabled:opacity-50"
+                >
+                  {loading ? <Loader2 className="animate-spin mx-auto" size={18} /> : "Salvar Configuração PIX"}
+                </button>
+              </div>
             </div>
           )}
         </div>

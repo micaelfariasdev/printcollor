@@ -136,10 +136,12 @@ class DTFVendor(models.Model):
         ('dtf_textil', 'DTF Têxtil'),
         ('dtf_uv', 'DTF UV'),
         ('sublimacao', 'Sublimação'),
+        ('estampa', 'Estampa (por unidade)'),
     )
     UNIDADES = (
         ('ml', 'Metro Linear'),
         ('m2', 'Metro Quadrado'),
+        ('un', 'Unidade'),
     )
 
     STATUS_IMPRESSAO = (
@@ -161,6 +163,14 @@ class DTFVendor(models.Model):
     tipo_produto = models.CharField(
         max_length=20, choices=TIPOS_PRODUTO, default='dtf_textil')
     unidade = models.CharField(max_length=2, choices=UNIDADES, default='ml')
+    quantidade = models.PositiveIntegerField(
+        null=True, blank=True, default=1,
+        help_text="Quantidade de unidades (somente para tipo_produto='estampa')")
+    preco_unit_override = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        null=True, blank=True,
+        help_text="Sobrescreve o preço base do pedido (unidade para estampa, m² para sublimação, metro linear para DTF têxtil/UV). Nulo = usa config padrão."
+    )
 
     data_criacao = models.DateTimeField(auto_now_add=True)
     data_entrega = models.DateTimeField(null=True, blank=True)
@@ -178,8 +188,12 @@ class DTFVendor(models.Model):
     def save(self, *args, **kwargs):
         if self.tipo_produto in ('dtf_textil', 'dtf_uv'):
             self.unidade = 'ml'
-        else:
+        elif self.tipo_produto == 'sublimacao':
             self.unidade = 'm2'
+        elif self.tipo_produto == 'estampa':
+            self.unidade = 'un'
+            if not self.quantidade:
+                self.quantidade = 1
         super().save(*args, **kwargs)
 
     def valor_total(self):
@@ -192,6 +206,22 @@ class DTFVendor(models.Model):
         except DTFConfig.DoesNotExist:
             preco_por_metro = Decimal('35.00')
             preco_minimo = Decimal('20.00')
+
+        # Aplicar override por pedido: se preenchido, sobrescreve o preço base
+        # para todos os tipos (estampa = valor por unidade, demais = valor por metro)
+        if self.preco_unit_override is not None:
+            preco_por_metro = self.preco_unit_override
+
+        if self.tipo_produto == 'estampa':
+            # Estampa: usa preco_unit_override (se houver) como valor por unidade,
+            # senão usa o valor_unidade da config
+            if self.preco_unit_override is not None:
+                return self.preco_unit_override * (self.quantidade or 1)
+            try:
+                valor_un = config.valor_unidade
+            except AttributeError:
+                valor_un = Decimal('0.00')
+            return valor_un * (self.quantidade or 1)
 
         if self.unidade == 'm2':
             # Sublimação: tamanho_cm é tratado como cm², converter para m²
@@ -216,11 +246,15 @@ class DTFConfig(models.Model):
         ('dtf_textil', 'DTF Têxtil'),
         ('dtf_uv', 'DTF UV'),
         ('sublimacao', 'Sublimação'),
+        ('estampa', 'Estampa (por unidade)'),
     )
 
     tipo_produto = models.CharField(max_length=20, choices=TIPOS_PRODUTO, unique=True)
     valor_metro = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('35.00'))
     preco_minimo = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('20.00'))
+    valor_unidade = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal('8.00'),
+        help_text="Valor por unidade (usado apenas para tipo_produto='estampa')")
 
     class Meta:
         verbose_name = 'Configuração DTF'
@@ -228,6 +262,33 @@ class DTFConfig(models.Model):
 
     def __str__(self):
         return f"{self.get_tipo_produto_display()}: R$ {self.valor_metro}/m"
+
+
+class ConfiguracaoLoja(models.Model):
+    """
+    Configurações globais da loja (singleton de fato - sempre id=1).
+    Usado para armazenar dados fixos como chave PIX e dados do favorecido.
+    """
+    pix_chave_telefone = models.CharField(
+        max_length=20, null=True, blank=True,
+        help_text="Chave PIX tipo telefone (formato: +5585999999999)"
+    )
+    pix_beneficiario = models.CharField(
+        max_length=25, default='Loja',
+        help_text="Nome do favorecido (máx 25 chars, sem acentos)"
+    )
+    pix_cidade = models.CharField(
+        max_length=15, default='Sao Paulo',
+        help_text="Cidade do beneficiário (máx 15 chars, sem acentos)"
+    )
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Configuração da Loja'
+        verbose_name_plural = 'Configurações da Loja'
+
+    def __str__(self):
+        return f"Configuração da Loja (atualizado em {self.atualizado_em.strftime('%d/%m/%Y %H:%M')})"
 
 
 class PedidoFabrica(models.Model):

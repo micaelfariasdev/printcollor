@@ -39,7 +39,7 @@ const ModalEditarUsuario = ({ isOpen, onClose, onSuccess, userId }: any) => {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-      <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl p-8">
+      <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl p-8 flex flex-col max-h-[90vh] overflow-hidden">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-black text-slate-800 uppercase italic">
             Editar <span className="text-blue-600">Cargo</span>
@@ -49,7 +49,7 @@ const ModalEditarUsuario = ({ isOpen, onClose, onSuccess, userId }: any) => {
           </button>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 overflow-y-auto flex-1 min-h-0">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase">
               Nível de Acesso

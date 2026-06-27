@@ -185,11 +185,13 @@ const VisualizarDTFPage = () => {
 
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
             <span className="text-[9px] font-black text-slate-400 uppercase block leading-none mb-1">
-              {dtf.tipo_produto === 'sublimacao' ? 'Área' : 'Tamanho'}
+              {dtf.tipo_produto === 'sublimacao' ? 'Área' : dtf.tipo_produto === 'estampa' ? 'Quantidade' : 'Tamanho'}
             </span>
             <span className="text-md font-bold text-slate-900 leading-none">
               {dtf.tipo_produto === 'sublimacao'
                 ? `${(dtf.tamanho_cm / 10000).toFixed(2)} m²`
+                : dtf.tipo_produto === 'estampa'
+                ? `${dtf.quantidade ?? '-'} un`
                 : `${dtf.tamanho_cm} cm`}
             </span>
           </div>
@@ -201,7 +203,7 @@ const VisualizarDTFPage = () => {
 
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
             <span className="text-[9px] font-black text-slate-400 uppercase block leading-none mb-1">Tipo</span>
-            <span className="text-md font-bold text-slate-900 leading-none">{dtf.tipo_produto_display || (dtf.tipo_produto === 'sublimacao' ? 'Sublimação' : dtf.tipo_produto === 'dtf_uv' ? 'DTF UV' : 'DTF Têxtil')}</span>
+            <span className="text-md font-bold text-slate-900 leading-none">{dtf.tipo_produto_display || (dtf.tipo_produto === 'sublimacao' ? 'Sublimação' : dtf.tipo_produto === 'dtf_uv' ? 'DTF UV' : dtf.tipo_produto === 'estampa' ? 'Estampa (por unidade)' : 'DTF Têxtil')}</span>
           </div>
         </div>
 

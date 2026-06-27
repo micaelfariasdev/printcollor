@@ -19,6 +19,14 @@ import ModalEditarDTF from '../components/ModalEditarDTF';
 import ModalDelete from '../components/ModalDelete';
 import { TriStateFilter } from '../components/TriStateFilter';
 import { useAlert } from '../contexts/AlertContext'; // Importando o sistema de alertas
+import { buildPixBRCode } from '../utils/pix';
+
+// Endereço da loja (constante — mover para Configuracoes quando virar configurável)
+const LOJA_ENDERECO = {
+  nome: 'Print Collor - Teresina',
+  rua: 'Rua Coelho de Resende, 540 - Centro/SUL',
+  mapsUrl: 'https://maps.app.goo.gl/bu6RJpJroQmui9j97',
+};
 
 export const DTFTable = () => {
   const [busca, setBusca] = useState('');
@@ -45,11 +53,18 @@ export const DTFTable = () => {
   const [filtroEntregue, setFiltroEntregue] = useState<'todos' | 'sim' | 'nao'>(
     'todos'
   );
+  const [pixConfig, setPixConfig] = useState<{
+    pix_chave_telefone?: string;
+    pix_beneficiario?: string;
+    pix_cidade?: string;
+  }>({});
+  const [copiando, setCopiando] = useState<number | null>(null);
 
   const carregarDados = () => {
     api.get('dtf/').then((response) => {
       setData(response.data);
     });
+    api.get('configuracao-loja/').then((r) => setPixConfig(r.data || {})).catch(() => {});
   };
 
   useEffect(() => {
@@ -150,33 +165,106 @@ export const DTFTable = () => {
     setIsDeleteOpen(true);
   };
 
-  const handleCopiarMensagem = (item: any) => {
-    const saudacao = 'Olá! Seguem os detalhes do seu pedido:';
+  /** Monta o texto-base do pedido com base no status (modelo padrão). */
+  const montarMensagem = (item: any): string => {
+    const clienteNome = item.cliente_nome || item.cliente?.nome || 'cliente';
+    const saudacao = `Olá! Seguem os detalhes do seu pedido:`;
 
-    // Formatar tamanho/área baseado no tipo de produto
-    let tamanhoTexto = '';
-    if (item.tipo_produto === 'sublimacao') {
-      const areaM2 = (item.tamanho_cm / 10000).toFixed(2);
-      tamanhoTexto = `📏 *Área:* ${areaM2} m²`;
-    } else {
-      tamanhoTexto = `📏 *Tamanho:* ${item.tamanho_cm}cm`;
-    }
+    const tamanhoTexto =
+      item.tipo_produto === 'estampa'
+        ? `🎨 Quantidade: ${item.quantidade || 1} un.`
+        : item.tipo_produto === 'sublimacao'
+        ? `📏 Área: ${(item.tamanho_cm / 10000).toFixed(2)} m²`
+        : `📏 Tamanho: ${item.tamanho_cm}cm`;
 
-    const detalhes = `\n\n📌 *Pedido #* ${item.id}\n${tamanhoTexto}\n💰 *Valor:* ${formatarReal(item.valor_total)}`;
-    let statusMensagem = '';
+    const detalhes =
+      `\n\n📌 Pedido #${item.id}` +
+      `\n${tamanhoTexto}` +
+      `\n💰 Valor: ${formatarReal(item.valor_total)}`;
 
+    // Endereço da loja — sempre aparece em todos os status
+    const enderecoTexto =
+      `\n\n📍 Nosso Endereço: ${LOJA_ENDERECO.nome}` +
+      `\n${LOJA_ENDERECO.rua}` +
+      `\nComo chegar (Google Maps): ${LOJA_ENDERECO.mapsUrl}`;
+
+    // Status
+    let statusTexto = '';
     if (item.esta_pago && item.foi_impresso !== 'impresso') {
-      statusMensagem = `\n\n⏳ *PEDIDO EM PRODUÇÃO*\nEstamos cuidando do seu pedido!`;
+      statusTexto = `\n\n⚡ EM PRODUÇÃO\nEstamos cuidando do seu pedido!`;
     } else if (item.foi_impresso === 'impresso' && !item.foi_entregue) {
-      statusMensagem = `\n\n🚚 *PEDIDO IMPRESSO*\nPronto para retirada!`;
+      statusTexto = `\n\n🚚 PRONTO PARA RETIRADA`;
     } else if (item.foi_entregue) {
-      statusMensagem = `\n\n✅ *PEDIDO ENTREGUE*\nAgradecemos a preferência!`;
+      statusTexto = `\n\n✅ ENTREGUE\nAgradecemos a preferência!`;
     } else if (!item.esta_pago) {
-      statusMensagem = `\n\n⚠️ *PAGAMENTO PENDENTE*\nPIX: 04.811.720/0001-98\nFavorecido: D. R. OS SANTOS NETO`;
+      const chave = pixConfig.pix_chave_telefone || '86999749492';
+      const bene = pixConfig.pix_beneficiario || 'D. R. DOS SANTOS NETO';
+      // Gera o PIX copia-e-cola aqui também (string BR Code vai direto na msg)
+      let brCodeTexto = '';
+      try {
+        const txid = String(item.id).padStart(4, '0').slice(-25);
+        brCodeTexto = buildPixBRCode({
+          chave,
+          valor: Number(item.valor_total) || 0,
+          txid,
+          beneficiario: bene,
+          cidade: pixConfig.pix_cidade || 'TERESINA',
+        });
+      } catch {
+        brCodeTexto = '';
+      }
+      statusTexto =
+        `\n\nSeguem os nossos dados para pagamento e o endereço.` +
+        `\n\n💳 Pagamento via PIX` +
+        `\nChave (Celular): ${chave}` +
+        `\nTitular: ${bene}` +
+        (brCodeTexto ? `\n\nCopie seu código abaixo no app do seu banco (PIX Copia-Cola):\n\n\`\`\`\n${brCodeTexto}\n\`\`\`` : '') +
+        `\n\nImportante: O seu material entra na nossa fila de impressão logo após o envio do comprovante por aqui.`;
     }
+    const assinaturaFinal = `\n\nQualquer dúvida, estamos à disposição!`;
+    return saudacao + detalhes + statusTexto + enderecoTexto + assinaturaFinal;
+  };
 
-    navigator.clipboard.writeText(saudacao + detalhes + statusMensagem);
-    addAlert('Mensagem de WhatsApp copiada!', 'success');
+  const handleCopiarMensagem = async (item: any) => {
+    setCopiando(item.id);
+    try {
+      const texto = montarMensagem(item);
+      await navigator.clipboard.writeText(texto);
+      addAlert('Mensagem de WhatsApp copiada!', 'success');
+    } catch (err) {
+      addAlert('Não foi possível acessar a área de transferência.', 'error');
+    } finally {
+      setCopiando(null);
+    }
+  };
+
+  const handleCopiarPix = async (item: any) => {
+    if (!pixConfig.pix_chave_telefone) {
+      addAlert('Configure a chave PIX nas Configurações da Loja.', 'error');
+      return;
+    }
+    setCopiando(item.id);
+    try {
+      const txid = String(item.id).padStart(4, '0').slice(-25); // 25 chars max EMV
+      const brCode = buildPixBRCode({
+        chave: pixConfig.pix_chave_telefone,
+        valor: Number(item.valor_total) || 0,
+        txid,
+        beneficiario: pixConfig.pix_beneficiario || 'LOJA',
+        cidade: pixConfig.pix_cidade || 'TERESINA',
+      });
+      await navigator.clipboard.writeText(brCode);
+      addAlert('PIX Copia-Cola copiado! Cole no app do banco do cliente.', 'success');
+    } catch (err: any) {
+      console.error('[PIX]', err);
+      const msg =
+        err?.message ||
+        err?.response?.data?.detail ||
+        'Falha ao gerar PIX copia-e-cola.';
+      addAlert(`Falha PIX: ${msg}`, 'error');
+    } finally {
+      setCopiando(null);
+    }
   };
 
   const filtrados = mockData
@@ -337,6 +425,8 @@ export const DTFTable = () => {
  ? 'border-b-purple-400'
  : item.tipo_produto === 'dtf_uv'
  ? 'border-b-cyan-400'
+ : item.tipo_produto === 'estampa'
+ ? 'border-b-emerald-400'
  : 'border-b-blue-400'
  }`}
           >
@@ -372,6 +462,8 @@ export const DTFTable = () => {
                     ? '🔥 Sublimação'
                     : item.tipo_produto === 'dtf_uv'
                     ? '🔷 DTF UV'
+                    : item.tipo_produto === 'estampa'
+                    ? '🎨 Estampa'
                     : '🖨️ DTF Têxtil'}
                 </span>
               </div>
@@ -391,10 +483,12 @@ export const DTFTable = () => {
             <div className="grid grid-cols-2 gap-3 mb-6">
               <div className="bg-slate-50 p-3 rounded-2xl border border-transparent">
                 <p className="text-[9px] font-black text-slate-400 uppercase">
-                  {item.tipo_produto === 'sublimacao' ? 'Área' : 'Tamanho'}
+                  {item.tipo_produto === 'estampa' ? 'Quantidade' : item.tipo_produto === 'sublimacao' ? 'Área' : 'Tamanho'}
                 </p>
                 <p className="text-sm font-black text-slate-700">
-                  {item.tipo_produto === 'sublimacao'
+                  {item.tipo_produto === 'estampa'
+                    ? `${item.quantidade || 1} un.`
+                    : item.tipo_produto === 'sublimacao'
                     ? `${(item.tamanho_cm / 10000).toFixed(2)} m²`
                     : `${item.tamanho_cm} cm`}
                 </p>
@@ -489,12 +583,24 @@ export const DTFTable = () => {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => handleCopiarMensagem(item)}
-                  className="flex-1 min-w-[80px] bg-green-50 hover:bg-green-100 text-green-600 p-2 rounded-xl transition-all flex items-center justify-center gap-1"
+                  disabled={copiando === item.id}
+                  className="flex-1 min-w-[80px] bg-green-50 hover:bg-green-100 text-green-600 p-2 rounded-xl transition-all flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-wait"
                   title="Copiar mensagem WhatsApp"
                 >
                   <MessageCircle size={16} />
-                  <span className="text-xs font-bold">WhatsApp</span>
+                  <span className="text-xs font-bold">{copiando === item.id ? 'Copiando…' : 'WhatsApp'}</span>
                 </button>
+                {!item.esta_pago && pixConfig.pix_chave_telefone && (
+                  <button
+                    onClick={() => handleCopiarPix(item)}
+                    disabled={copiando === item.id}
+                    className="flex-1 min-w-[80px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 p-2 rounded-xl transition-all flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-wait"
+                    title="Copiar PIX Copia-Cola (string BR Code)"
+                  >
+                    <Wallet size={16} />
+                    <span className="text-xs font-bold">PIX</span>
+                  </button>
+                )}
                 <button
                   onClick={() =>
                     window.open(`/dtf/${item.id}/visualizar`, '_blank')

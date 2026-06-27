@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import EmpresaViewSet, PedidoFabricaViewSet, ClienteViewSet, ProdutoViewSet, OrcamentoViewSet, DTFVendorViewSet, UserViewSet, UserMeView, DashboardStatsView, ChangePasswordView, BackupExportView, BackupImportView, DTFConfigViewSet
+from .views import EmpresaViewSet, PedidoFabricaViewSet, ClienteViewSet, ProdutoViewSet, OrcamentoViewSet, DTFVendorViewSet, UserViewSet, UserMeView, DashboardStatsView, ChangePasswordView, BackupExportView, BackupImportView, DTFConfigViewSet, ConfiguracaoLojaViewSet
 from .evolution_views import WhatsAppInstanceViewSet
 from .webhook_views import WhatsAppWebhookView, WhatsAppWebhookConfigureView
 
@@ -37,4 +37,7 @@ urlpatterns = [
     # DTF Config
     path('dtf-config/', DTFConfigViewSet.as_view({'get': 'list', 'post': 'create'}), name='dtf-config-list'),
     path('dtf-config/<int:pk>/', DTFConfigViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='dtf-config-detail'),
+    # Configuração da Loja (singleton)
+    path('configuracao-loja/', ConfiguracaoLojaViewSet.as_view({'get': 'list'}), name='configuracao-loja-list'),
+    path('configuracao-loja/<int:pk>/', ConfiguracaoLojaViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update'}), name='configuracao-loja-detail'),
 ]

@@ -76,7 +76,7 @@ const ModalEditarEmpresa: React.FC<Props> = ({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-      <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100">
+      <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-white">
           <h2 className="text-2xl font-black text-slate-800 uppercase italic">
@@ -90,7 +90,7 @@ const ModalEditarEmpresa: React.FC<Props> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-4">
+        <form onSubmit={handleSubmit} className="p-8 space-y-4 overflow-y-auto flex-1 min-h-0">
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
               Razão Social

@@ -10,12 +10,13 @@ from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Empresa, Cliente, Produto, Orcamento, DTFVendor, Usuario, PedidoFabrica, DTFConfig
+from decimal import Decimal
+from .models import Empresa, Cliente, Produto, Orcamento, DTFVendor, Usuario, PedidoFabrica, DTFConfig, ConfiguracaoLoja
 from .permissions import IsAdminUserCustom, IsVendedor, IsFinanceiro, IsMaquina
 from .serializers import (
     EmpresaSerializer, ClienteSerializer,
     ProdutoSerializer, OrcamentoSerializer, DTFVendorSerializer, UsuarioSerializer,
-    UserMeSerializer, PedidoFabricaSerializer, DTFConfigSerializer
+    UserMeSerializer, PedidoFabricaSerializer, DTFConfigSerializer, ConfiguracaoLojaSerializer
 )
 from .tools.utils import gerar_pdf_from_html
 from .services.backup_service import BackupService
@@ -157,6 +158,38 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
         name = f'dtf-{dtf.cliente.nome}-{dtf.id}'
 
         return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, f'{name}.pdf')
+
+
+class ConfiguracaoLojaViewSet(viewsets.ModelViewSet):
+    """
+    Configurações globais da loja (singleton). Listagem/update sempre em pk=1.
+    """
+    queryset = ConfiguracaoLoja.objects.all()
+    serializer_class = ConfiguracaoLojaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'patch', 'put', 'head', 'options']
+
+    def list(self, request, *args, **kwargs):
+        obj, _ = ConfiguracaoLoja.objects.get_or_create(pk=1)
+        serializer = self.get_serializer(obj)
+        return Response(serializer.data)
+
+    def retrieve(self, request, *args, **kwargs):
+        obj, _ = ConfiguracaoLoja.objects.get_or_create(pk=1)
+        serializer = self.get_serializer(obj)
+        return Response(serializer.data)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        obj, _ = ConfiguracaoLoja.objects.get_or_create(pk=1)
+        serializer = self.get_serializer(obj, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
 
 
 class UserMeView(APIView):

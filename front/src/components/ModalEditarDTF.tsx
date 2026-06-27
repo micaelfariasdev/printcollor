@@ -40,6 +40,10 @@ const ModalEditarDTF: React.FC<Props> = ({
   const [tamanhoCm, setTamanhoCm] = useState('');
   const [largura, setLargura] = useState('');
   const [comprimento, setComprimento] = useState('');
+  const [usarPrecoCustom, setUsarPrecoCustom] = useState(false);
+  const [precoCustom, setPrecoCustom] = useState('');
+  const [config, setConfig] = useState<any>(null);
+  const [quantidade, setQuantidade] = useState<number>(1);
   const [foiImpresso, setFoiImpresso] = useState('pendente');
   const [estaPago, setEstaPago] = useState(false);
   const [foiEntregue, setFoiEntregue] = useState(false);
@@ -61,6 +65,7 @@ const ModalEditarDTF: React.FC<Props> = ({
       setTamanhoCm('');
       setLargura('');
       setComprimento('');
+      setQuantidade(1);
       setFoiImpresso('pendente');
       setEstaPago(false);
       setFoiEntregue(false);
@@ -70,6 +75,8 @@ const ModalEditarDTF: React.FC<Props> = ({
       setUrlsAtuais({ layout: '', comprovante: '' });
       setIsDraggingLayout(false);
       setIsDraggingComprovante(false);
+      setUsarPrecoCustom(false);
+      setPrecoCustom('');
       setLoading(false);
 
       setLoading(true);
@@ -94,10 +101,25 @@ const ModalEditarDTF: React.FC<Props> = ({
             setLargura('');
             setComprimento('');
             setTamanhoCm(d.tamanho_cm.toString()); // guardamos a área original
+          } else if (d.tipo_produto === 'estampa') {
+            // Estampa: sem tamanho_cm relevante, só quantidade
+            setQuantidade(d.quantidade || 1);
+            setTamanhoCm('');
+            setLargura('');
+            setComprimento('');
           } else {
             setTamanhoCm(d.tamanho_cm.toString());
             setLargura('');
             setComprimento('');
+          }
+
+          // Override de preço: carregar do backend se existir
+          if (d.preco_unit_override !== null && d.preco_unit_override !== undefined && d.preco_unit_override !== '') {
+            setUsarPrecoCustom(true);
+            setPrecoCustom(String(d.preco_unit_override));
+          } else {
+            setUsarPrecoCustom(false);
+            setPrecoCustom('');
           }
 
           setUrlsAtuais({
@@ -183,6 +205,13 @@ const ModalEditarDTF: React.FC<Props> = ({
         // O backend vai manter o valor existente
         tamanhoCmFinal = null;
       }
+    } else if (tipoProduto === 'estampa') {
+      // Estampa: mantém tamanho_cm existente (não envia, e não recalcula aqui)
+      if (!quantidade || quantidade <= 0) {
+        addAlert('Informe a quantidade (>=1) de unidades da estampa.', 'error');
+        return;
+      }
+      tamanhoCmFinal = null;
     } else {
       // Para DTF, tamanhoCm é obrigatório
       if (!tamanhoCm || Number(tamanhoCm) <= 0) {
@@ -203,6 +232,7 @@ const ModalEditarDTF: React.FC<Props> = ({
       formData.append('tamanho_cm', tamanhoCmFinal);
     }
     formData.append('tipo_produto', tipoProduto);
+    formData.append('quantidade', String(quantidade));
     formData.append('foi_impresso', foiImpresso);
     formData.append('esta_pago', String(estaPago));
     formData.append('foi_entregue', String(foiEntregue));
@@ -210,6 +240,14 @@ const ModalEditarDTF: React.FC<Props> = ({
     if (novoLayout) formData.append('layout_arquivo', novoLayout);
     if (novoComprovante)
       formData.append('comprovante_pagamento', novoComprovante);
+
+    // Override de preço: envia valor convertido ou vazio ('') pra limpar override no backend
+    const precoOverrideNum = Number(precoCustom);
+    if (usarPrecoCustom && precoCustom !== '' && precoOverrideNum > 0) {
+      formData.append('preco_unit_override', precoCustom.replace(',', '.'));
+    } else if (!usarPrecoCustom) {
+      formData.append('preco_unit_override', '');
+    }
 
     try {
       await api.patch(`dtf/${dtfId}/`, formData, {
@@ -229,7 +267,7 @@ const ModalEditarDTF: React.FC<Props> = ({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-      <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100">
+      <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-white">
           <h2 className="text-2xl font-black text-slate-800 uppercase italic">
@@ -248,7 +286,7 @@ const ModalEditarDTF: React.FC<Props> = ({
             <Loader2 size={48} className="animate-spin text-blue-500" />
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-8 space-y-6">
+          <form onSubmit={handleSubmit} className="p-8 space-y-6 overflow-y-auto flex-1 min-h-0">
             {/* Tipo de Produto (Read-only) */}
             <div className="space-y-2">
                 <label className="text-xs font-black text-slate-500 uppercase ml-1">
@@ -288,7 +326,7 @@ const ModalEditarDTF: React.FC<Props> = ({
               </datalist>
             </div>
 
-            {/* Tamanho - DTF ou Sublimação */}
+            {/* Tamanho - DTF / Sublimação / Estampa */}
             {tipoProduto === 'sublimacao' ? (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -318,6 +356,21 @@ const ModalEditarDTF: React.FC<Props> = ({
                   />
                 </div>
               </div>
+            ) : tipoProduto === 'estampa' ? (
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-500 uppercase ml-1 flex items-center gap-2">
+                  <DollarSign size={14} /> Quantidade de Unidades
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  step="1"
+                  placeholder="Ex: 12"
+                  value={quantidade}
+                  onChange={(e) => setQuantidade(Math.max(1, Number(e.target.value) || 1))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
+                />
+              </div>
             ) : (
               <div className="space-y-2">
                 <label className="text-xs font-black text-slate-500 uppercase ml-1 flex items-center gap-2">
@@ -333,6 +386,48 @@ const ModalEditarDTF: React.FC<Props> = ({
                 />
               </div>
             )}
+
+            {/* Override de Preço Unitário (checkbox + input) */}
+            <div className="space-y-2 bg-amber-50/60 border border-amber-200 rounded-2xl p-4">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={usarPrecoCustom}
+                  onChange={(e) => {
+                    setUsarPrecoCustom(e.target.checked);
+                    if (!e.target.checked) setPrecoCustom('');
+                  }}
+                  className="w-5 h-5 rounded accent-amber-500"
+                />
+                <div className="flex items-center gap-2 flex-1">
+                  <DollarSign className="w-4 h-4 text-amber-600" />
+                  <span className="text-sm font-bold text-slate-700">
+                    {tipoProduto === 'sublimacao'
+                      ? 'Customizar valor por m²'
+                      : tipoProduto === 'estampa'
+                      ? 'Customizar valor por unidade'
+                      : 'Customizar valor por metro'}
+                  </span>
+                </div>
+              </label>
+              {usarPrecoCustom && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-500">R$</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    placeholder="0,00"
+                    value={precoCustom}
+                    onChange={(e) => setPrecoCustom(e.target.value)}
+                    className="flex-1 bg-white border border-amber-300 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-amber-500 font-bold text-base text-slate-800"
+                  />
+                  <span className="text-[10px] text-amber-700 font-bold whitespace-nowrap">
+                    (sobrescreve só este pedido)
+                  </span>
+                </div>
+              )}
+            </div>
 
             {/* Status Toggles */}
             <div className="grid grid-cols-3 gap-4">
