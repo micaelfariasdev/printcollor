@@ -14,17 +14,18 @@ logger = logging.getLogger(__name__)
 # Nomes em minúsculas para compatibilidade com backup
 # Auth models primeiro (grupos e permissões)
 MODELOS_BACKUP = [
-    'permission',  # auth_permission (primeiro, sem dependências)
+    'permission',  # auth_permission (primeiro, sem dependencias)
     'group',  # auth_group (depende de permission via M2M)
     'empresa',  # api_empresa
     'cliente',  # api_cliente
     'produto',  # api_produto
     'usuario',  # api_usuario (depende de Group e Permission)
+    'dtfconfig',  # api_dtfconfig (precos DTF/estampa)
+    'configuracaoloja',  # api_configuracaoloja (singleton PIX)
     'orcamento',  # api_orcamento (depende de Cliente, Usuario, Empresa)
     'itemorcamento',  # api_itemorcamento (depende de Orcamento, Produto)
     'pedidofabrica',  # api_pedidofabrica (depende de Cliente, Produto)
-    'dtfvendor',  # api_dtfvendor
-    'dtfconfig',  # api_dtfconfig
+    'dtfvendor',  # api_dtfvendor (DTF, sublimacao, estampa)
     'whatsappinstance',  # api_whatsappinstance (depende de Usuario)
     'whatsappmessage',  # api_whatsappmessage (depende de WhatsAppInstance, Cliente)
 ]
@@ -45,6 +46,7 @@ MODELO_MAP = {
     'dtfconfig': ('api', 'DTFConfig'),
     'whatsappinstance': ('api', 'WhatsAppInstance'),
     'whatsappmessage': ('api', 'WhatsAppMessage'),
+    'configuracaoloja': ('api', 'ConfiguracaoLoja'),
 }
 
 
