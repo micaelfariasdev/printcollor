@@ -59,14 +59,14 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
         api.get('dtf-config/'),
         api.get('clientes/'),
       ]).then(([resCfg, resCli]) => {
-        setConfigs(resCfg.data);
-        const found = resCfg.data.find((c: any) => c.tipo_produto === 'dtf_textil');
+        setConfigs(resCfg.data.results || []);
+        const found = (resCfg.data.results || []).find((c: any) => c.tipo_produto === 'dtf_textil');
         setConfig(found);
-        setClientes(resCli.data);
+        setClientes(resCli.data.results || []);
 
         // Preenche o nome do cliente se vier via prop
         if (propClienteId) {
-          const cliente = resCli.data.find((c: any) => c.id === propClienteId);
+          const cliente = (resCli.data.results || []).find((c: any) => c.id === propClienteId);
           if (cliente) {
             setClienteId(String(cliente.id));
             setClienteNome(cliente.nome);

@@ -42,7 +42,6 @@ const ModalEditarDTF: React.FC<Props> = ({
   const [comprimento, setComprimento] = useState('');
   const [usarPrecoCustom, setUsarPrecoCustom] = useState(false);
   const [precoCustom, setPrecoCustom] = useState('');
-  const [config, setConfig] = useState<any>(null);
   const [quantidade, setQuantidade] = useState<number>(1);
   const [foiImpresso, setFoiImpresso] = useState('pendente');
   const [estaPago, setEstaPago] = useState(false);
@@ -82,11 +81,11 @@ const ModalEditarDTF: React.FC<Props> = ({
       setLoading(true);
       Promise.all([api.get('clientes/'), api.get(`dtf/${dtfId}/`)])
         .then(([resCli, resDtf]) => {
-          setClientes(resCli.data);
+          setClientes(resCli.data.results || []);
           const d = resDtf.data;
           setClienteId(d.cliente);
           setStatus(d.status || 'orcamento');
-          const cli = resCli.data.find((c: any) => c.id === d.cliente);
+          const cli = (resCli.data.results || []).find((c: any) => c.id === d.cliente);
           setClienteNome(cli ? cli.nome : '');
           setTipoProduto(d.tipo_produto || 'dtf_textil');
           setTipoProdutoDisplay(d.tipo_produto_display || '');

@@ -49,11 +49,19 @@ def processar_imagem_base64(campo_arquivo):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['username', 'nome', 'email']
+    ordering_fields = ['id', 'username', 'nome', 'email']
+    ordering = ['-id']
 
 
 class EmpresaViewSet(viewsets.ModelViewSet):
     queryset = Empresa.objects.all()
     serializer_class = EmpresaSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['nome', 'cnpj', 'email']
+    ordering_fields = ['id', 'nome', 'cnpj', 'email']
+    ordering = ['-id']
 
     def get_permissions(self):
         # Use as classes sem instanciar (sem os parênteses)
@@ -63,11 +71,19 @@ class EmpresaViewSet(viewsets.ModelViewSet):
 class ClienteViewSet(viewsets.ModelViewSet):
     queryset = Cliente.objects.all()
     serializer_class = ClienteSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['nome', 'cpf', 'cnpj', 'telefone', 'email']
+    ordering_fields = ['id', 'nome', 'cpf', 'cnpj', 'telefone', 'email']
+    ordering = ['-id']
 
 
 class ProdutoViewSet(viewsets.ModelViewSet):
     queryset = Produto.objects.all()
     serializer_class = ProdutoSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['nome', 'categoria']
+    ordering_fields = ['id', 'nome', 'categoria']
+    ordering = ['-id']
 
 
 class OrcamentoViewSet(viewsets.ModelViewSet):
@@ -75,6 +91,10 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
     queryset = Orcamento.objects.all().prefetch_related(
         'itens__produto', 'cliente', 'empresa')
     serializer_class = OrcamentoSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['cliente__nome', 'empresa__nome', 'itens__produto__nome']
+    ordering_fields = ['id', 'data_criacao']
+    ordering = ['-data_criacao']
 
     def get_permissions(self):
         # Use as classes sem instanciar (sem os parênteses)
@@ -106,9 +126,11 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
     queryset = DTFVendor.objects.all().order_by('-data_criacao')
     serializer_class = DTFVendorSerializer
 
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['cliente', 'foi_impresso', 'esta_pago', 'foi_entregue', 'status']
     search_fields = ['cliente__nome', 'layout_arquivo']
+    ordering_fields = ['id', 'data_criacao']
+    ordering = ['-data_criacao']
 
     def get_permissions(self):
         # Ação de Deletar: Apenas Admin e Vendedor (Máquina fica de fora)
@@ -256,6 +278,10 @@ class PedidoFabricaViewSet(viewsets.ModelViewSet):
     queryset = PedidoFabrica.objects.all().order_by('-data_criacao')
     serializer_class = PedidoFabricaSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['cliente__nome', 'detalhes_tamanho']
+    ordering_fields = ['id', 'data_criacao']
+    ordering = ['-data_criacao']
 
     @action(detail=True, methods=['get'])
     def gerar_pdf(self, request, pk=None):

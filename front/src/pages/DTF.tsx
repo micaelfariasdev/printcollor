@@ -10,7 +10,7 @@ import {
   Wallet,
   Eye,
 } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { api } from '../auth/useAuth';
 import { formatarDataHora } from '../tools/dataHora';
 import { formatarReal } from '../tools/formatReal';
@@ -18,8 +18,9 @@ import ModalNovoDTF from '../components/ModalNovoDTF';
 import ModalEditarDTF from '../components/ModalEditarDTF';
 import ModalDelete from '../components/ModalDelete';
 import { TriStateFilter } from '../components/TriStateFilter';
-import { useAlert } from '../contexts/AlertContext'; // Importando o sistema de alertas
+import { useAlert } from '../contexts/AlertContext';
 import { buildPixBRCode } from '../utils/pix';
+import { usePaginatedList } from '../hooks/usePaginatedList';
 
 // Endereço da loja (constante — mover para Configuracoes quando virar configurável)
 const LOJA_ENDERECO = {
@@ -29,12 +30,15 @@ const LOJA_ENDERECO = {
 };
 
 export const DTFTable = () => {
-  const [busca, setBusca] = useState('');
-  const [mockData, setData] = useState<any[]>([]);
+  const { items: mockData, loading, hasMore, loadMore, totalCount, setSearch, refresh: carregarDados } = usePaginatedList<any>({
+    endpoint: 'dtf/',
+    pageSize: 50,
+    searchKey: 'search',
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const { addAlert } = useAlert(); // Inicializando o alerta
+  const { addAlert } = useAlert();
 
   const [selectedItem, setSelectedItem] = useState<{
     id: number | null;
@@ -60,15 +64,9 @@ export const DTFTable = () => {
   }>({});
   const [copiando, setCopiando] = useState<number | null>(null);
 
-  const carregarDados = () => {
-    api.get('dtf/').then((response) => {
-      setData(response.data);
-    });
+  // Carrega config PIX uma vez
+  React.useEffect(() => {
     api.get('configuracao-loja/').then((r) => setPixConfig(r.data || {})).catch(() => {});
-  };
-
-  useEffect(() => {
-    carregarDados();
   }, []);
 
   // Lógica automática de status: atualiza status baseado nos toggles
@@ -167,7 +165,6 @@ export const DTFTable = () => {
 
   /** Monta o texto-base do pedido com base no status (modelo padrão). */
   const montarMensagem = (item: any): string => {
-    const clienteNome = item.cliente_nome || item.cliente?.nome || 'cliente';
     const saudacao = `Olá! Seguem os detalhes do seu pedido:`;
 
     const tamanhoTexto =
@@ -269,9 +266,6 @@ export const DTFTable = () => {
 
   const filtrados = mockData
     .filter((o) => {
-      const bateBusca = o.nome_cliente
-        .toLowerCase()
-        .includes(busca.toLowerCase());
       const batePago =
         filtroPago === 'todos'
           ? true
@@ -291,7 +285,7 @@ export const DTFTable = () => {
             ? o.foi_entregue === true
             : o.foi_entregue === false;
 
-      return bateBusca && batePago && bateImpresso && bateEntregue;
+      return batePago && bateImpresso && bateEntregue;
     })
     .sort((a, b) => {
       return (
@@ -373,7 +367,7 @@ export const DTFTable = () => {
               type="text"
               placeholder="Buscar por cliente..."
               className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition"
-              onChange={(e) => setBusca(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
             />
           </div>
           <button
@@ -632,6 +626,19 @@ export const DTFTable = () => {
           </div>
         ))}
       </div>
+
+      {/* Carregar mais */}
+      {hasMore && (
+        <div className="flex justify-center mt-6">
+          <button
+            onClick={loadMore}
+            disabled={loading}
+            className="px-6 py-2.5 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 transition-all"
+          >
+            {loading ? 'Carregando...' : `Carregar mais (${mockData.length} de ${totalCount})`}
+          </button>
+        </div>
+      )}
 
       <ModalNovoDTF
         isOpen={isModalOpen}

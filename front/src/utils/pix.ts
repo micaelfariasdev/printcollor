@@ -77,11 +77,12 @@ export function buildPixBRCode({ chave, valor, txid, beneficiario, cidade }: Bui
     txid: normalize(txid).slice(0, 25) || '***',
   });
 
-  if ('hasError' in pix && pix.hasError) {
-    throw new Error(pix.error?.message || 'Falha ao gerar payload PIX.');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+const pixAny = pix as any;
+if (pixAny.error) {
+    throw new Error('Falha ao gerar payload PIX.');
   }
-
-  return pix.toBRCode();
+  return pixAny.toString();
 }
 
 /** Gera o QR como data URL (PNG base64-inline). */
