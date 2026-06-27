@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import EmpresaViewSet, PedidoFabricaViewSet, ClienteViewSet, ProdutoViewSet, OrcamentoViewSet, DTFVendorViewSet, UserViewSet, UserMeView, DashboardStatsView, ChangePasswordView, BackupExportView, BackupImportView, DTFConfigViewSet, ConfiguracaoLojaViewSet
+from .views import EmpresaViewSet, PedidoFabricaViewSet, ClienteViewSet, ProdutoViewSet, OrcamentoViewSet, DTFVendorViewSet, UserViewSet, UserMeView, DashboardStatsView, ReportsView, ChangePasswordView, BackupExportView, BackupImportView, DTFConfigViewSet, ConfiguracaoLojaViewSet
 from .evolution_views import WhatsAppInstanceViewSet
 from .webhook_views import WhatsAppWebhookView, WhatsAppWebhookConfigureView
 
@@ -18,6 +18,7 @@ urlpatterns = [
     path('', include(router.urls)),
     path('me/', UserMeView.as_view(), name='user-me'),
     path('dashboard/', DashboardStatsView.as_view(), name='dashboard-stats'),
+    path('reports/monthly/', ReportsView.as_view(), name='reports-monthly'),
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
     # WhatsApp - rotas manuais para actions do ViewSet
     path('whatsapp-instances/<int:pk>/qrcode/', WhatsAppInstanceViewSet.as_view({'get': 'qrcode'}), name='whatsapp-qrcode'),

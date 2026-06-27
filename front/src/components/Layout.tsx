@@ -8,6 +8,7 @@ import {
   Monitor,
   Activity,
   MessageSquare,
+  BarChart3,
 } from 'lucide-react';
 import { theme } from './Theme';
 import { api, useAuth } from '../auth/useAuth';
@@ -61,6 +62,7 @@ export const Layout: React.FC = () => {
     { id: 'usuarios', label: 'Equipe', icon: <Users size={22} />, roles: ['admin'] },
     { id: 'orcamentos-clientes', label: 'Pedidos Site', icon: <MessageCircle size={22} />, roles: ['admin', 'financeiro'] },
     { id: 'backup', label: 'Backup', icon: <DatabaseBackup size={22} />, roles: ['admin', 'financeiro'] },
+    { id: 'relatorios', label: 'Relatórios', icon: <BarChart3 size={22} />, roles: ['admin', 'financeiro'] },
     { id: 'whatsapp-instances', label: 'Instâncias', icon: <MessageCircle size={22} />, roles: ['all'] },
     { id: 'monitor', label: 'Fila de Produção', icon: <Monitor size={22} className="text-blue-500" />, roles: ['all'], isExternal: true },
   ];

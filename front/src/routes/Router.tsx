@@ -22,6 +22,7 @@ import { LandingPage } from '../pages/LandingPage';
 import { PedidosCarrosselMobile } from '../pages/PedidosCarrosselMobile';
 import { DTFTable } from '../pages/DTF';
 import { PedidosFabrica } from '../pages/PedidosFabrica';
+import Relatorios from '../pages/Relatorios';
 // useState e useEffect removidos - não utilizados
 import { useState, useEffect } from 'react';
 
@@ -77,6 +78,7 @@ export const AppRouter = () => {
           <Route path="whatsapp-instances" element={<WhatsAppInstances />} />
           <Route path="orcamentos-clientes" element={<AdminFinanceiroRoute><AdminOrcamentosClientes /></AdminFinanceiroRoute>} />
           <Route path="backup" element={<AdminFinanceiroRoute><ConfiguracoesBackup /></AdminFinanceiroRoute>} />
+          <Route path="relatorios" element={<AdminFinanceiroRoute><Relatorios /></AdminFinanceiroRoute>} />
         </Route>
       </Route>
 

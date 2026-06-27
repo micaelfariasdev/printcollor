@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from decimal import Decimal
-from .models import Empresa, Cliente, Produto, Orcamento, DTFVendor, Usuario, PedidoFabrica, DTFConfig, ConfiguracaoLoja
+from .models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, DTFVendor, Usuario, PedidoFabrica, DTFConfig, ConfiguracaoLoja
 from .permissions import IsAdminUserCustom, IsVendedor, IsFinanceiro, IsMaquina
 from .serializers import (
     EmpresaSerializer, ClienteSerializer,
@@ -255,6 +255,102 @@ class DashboardStatsView(APIView):
             'total_dtf_valor': total_vendas_dtf_valor,
             'total_vendas_dtf': total_vendas_dtf,
             'metragem_dtf': total_metragem,
+        })
+
+
+class ReportsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """
+        GET /api/reports/monthly/?year=2026
+        Retorna breakdown mensal do ano para DTF, PedidoFabrica e Orçamentos.
+        """
+        year = int(request.query_params.get('year', timezone.now().year))
+        month_param = request.query_params.get('month')
+
+        def mes_range():
+            if month_param:
+                return [int(month_param)]
+            return range(1, 13)
+
+        dtf_monthly = []
+        pedido_monthly = []
+        orcamento_monthly = []
+        revenue_received_monthly = []
+
+        for m in mes_range():
+            # --- DTF ---
+            qs_dtf = DTFVendor.objects.filter(data_criacao__year=year, data_criacao__month=m)
+            total_cm = qs_dtf.aggregate(s=Sum('tamanho_cm'))['s'] or Decimal('0')
+            total_valor = sum(row.valor_total() for row in qs_dtf)
+            dtf_monthly.append({
+                'mes': m,
+                'total_pedidos': qs_dtf.count(),
+                'total_cm': float(total_cm),
+                'total_revenue': float(total_valor),
+            })
+
+            # --- DTF pago (receita recebida) ---
+            qs_pago = DTFVendor.objects.filter(data_criacao__year=year, data_criacao__month=m, esta_pago=True)
+            total_recebido = sum(row.valor_total() for row in qs_pago)
+            revenue_received_monthly.append({
+                'mes': m,
+                'total_pedidos': qs_pago.count(),
+                'total_recebido': float(total_recebido),
+            })
+
+            # --- PedidoFabrica ---
+            qs_ped = PedidoFabrica.objects.filter(data_criacao__year=year, data_criacao__month=m)
+            total_pecas = sum(p.total_itens() for p in qs_ped)
+            pedido_monthly.append({
+                'mes': m,
+                'total_pedidos': qs_ped.count(),
+                'total_pecas': total_pecas,
+            })
+
+            # --- Orçamentos ---
+            from django.db.models import F
+            qs_orc = Orcamento.objects.filter(data_criacao__year=year, data_criacao__month=m)
+            total_orc_valor = ItemOrcamento.objects.filter(
+                orcamento__in=qs_orc
+            ).aggregate(
+                total=Sum(F('quantidade') * F('preco_negociado'))
+            )['total'] or Decimal('0')
+            orcamento_monthly.append({
+                'mes': m,
+                'total_orcamentos': qs_orc.count(),
+                'total_revenue': float(total_orc_valor),
+            })
+
+        # --- DTF por tipo (ano todo) ---
+        base_dtf_ano = DTFVendor.objects.filter(data_criacao__year=year)
+        TIPOS = [
+            ('dtf_textil', 'DTF Têxtil'),
+            ('dtf_uv', 'DTF UV'),
+            ('sublimacao', 'Sublimação'),
+            ('estampa', 'Estampa (por unidade)'),
+        ]
+        dtf_by_type = []
+        for tipo_val, tipo_label in TIPOS:
+            qs_t = base_dtf_ano.filter(tipo_produto=tipo_val)
+            if not qs_t.exists():
+                continue
+            total_valor = sum(row.valor_total() for row in qs_t)
+            dtf_by_type.append({
+                'tipo': tipo_val,
+                'tipo_display': tipo_label,
+                'total_pedidos': qs_t.count(),
+                'total_revenue': float(total_valor),
+            })
+
+        return Response({
+            'year': year,
+            'dtf_monthly': dtf_monthly,
+            'dtf_by_type': dtf_by_type,
+            'pedido_monthly': pedido_monthly,
+            'orcamento_monthly': orcamento_monthly,
+            'revenue_received_monthly': revenue_received_monthly,
         })
 
 
