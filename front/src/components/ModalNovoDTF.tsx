@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, Upload, Save, Loader2, Ruler, DollarSign } from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
 import { formatarReal } from '../tools/formatReal';
 import { useAlert } from '../contexts/AlertContext';
+import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 
 interface Props {
   isOpen: boolean;
@@ -24,6 +25,14 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
   const [clientes, setClientes] = useState<any[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const { addAlert } = useAlert();
+  const clientSearch = useDebouncedSearch('clientes/', 300);
+
+  // Combina clientes carregados com resultados da busca server-side (sem duplicatas)
+  const allClientes = useMemo(() => {
+    const seen = new Set(clientes.map((c) => c.id));
+    const extra = clientSearch.results.filter((c: any) => !seen.has(c.id));
+    return [...clientes, ...extra];
+  }, [clientes, clientSearch.results]);
 
   const [clienteId, setClienteId] = useState('');
   const [clienteNome, setClienteNome] = useState('');
@@ -272,17 +281,19 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
               className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700 transition-all"
               disabled={!!propClienteId}
               onChange={(e) => {
-                setClienteNome(e.target.value);
-                const cliente = clientes.find((c) => c.nome === e.target.value);
-                if (cliente) {
-                  setClienteId(cliente.id);
+                const val = e.target.value;
+                setClienteNome(val);
+                clientSearch.setQuery(val);
+                const found = allClientes.find((c: any) => c.nome === val);
+                if (found) {
+                  setClienteId(String(found.id));
                 } else {
                   setClienteId('');
                 }
               }}
             />
             <datalist id="clientes-list">
-              {clientes.map((c) => (
+              {allClientes.map((c) => (
                 <option key={c.id} value={c.nome} />
               ))}
             </datalist>

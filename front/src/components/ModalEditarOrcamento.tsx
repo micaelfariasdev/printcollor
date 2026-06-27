@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Trash2, Save, Loader2 } from 'lucide-react';
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
 import { useAlert } from '../contexts/AlertContext';
 import { formatarReal } from '../tools/formatReal';
+import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 import ModalDelete from './ModalDelete'; // Importe o seu Modal de Deletar
 
 interface Props {
@@ -33,6 +34,14 @@ const ModalEditarOrcamento: React.FC<Props> = ({
   const [selectedCliente, setSelectedCliente] = useState('');
   const [selectedEmpresa, setSelectedEmpresa] = useState('');
   const [itens, setItens] = useState<any[]>([]);
+  const clientSearch = useDebouncedSearch('clientes/', 300);
+
+  // Combina clientes carregados (50) com resultados da busca server-side
+  const allClientes = useMemo(() => {
+    const seen = new Set(clientes.map((c) => c.id));
+    const extra = clientSearch.results.filter((c: any) => !seen.has(c.id));
+    return [...clientes, ...extra];
+  }, [clientes, clientSearch.results]);
 
   useEffect(() => {
     if (isOpen && orcamentoId) {
@@ -44,9 +53,9 @@ const ModalEditarOrcamento: React.FC<Props> = ({
         api.get(`orcamentos/${orcamentoId}/`),
       ])
         .then(([resCli, resEmp, resProd, resOrc]) => {
-          setClientes(resCli.data);
-          setEmpresas(resEmp.data);
-          setProdutosDisponiveis(resProd.data);
+          setClientes(resCli.data.results || []);
+          setEmpresas(resEmp.data.results || []);
+          setProdutosDisponiveis(resProd.data.results || []);
 
           const orc = resOrc.data;
           setSelectedCliente(orc.cliente.toString());
@@ -169,17 +178,18 @@ const ModalEditarOrcamento: React.FC<Props> = ({
                   placeholder="Digite para buscar cliente..."
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700 transition-all"
                   onChange={(e) => {
-                    // Encontra o ID do cliente baseado no nome escrito
-                    const cliente = clientes.find(
-                      (c) => c.nome === e.target.value
+                    const valorDigitado = e.target.value;
+                    clientSearch.setQuery(valorDigitado);
+                    const clienteEncontrado = allClientes.find(
+                      (c: any) => c.nome === valorDigitado
                     );
-                    if (cliente) setSelectedCliente(cliente.id);
+                    if (clienteEncontrado) setSelectedCliente(clienteEncontrado.id);
                   }}
                 />
 
                 {/* A lista de sugestões que aparece ao digitar */}
                 <datalist id="clientes-list">
-                  {clientes.map((c) => (
+                  {allClientes.map((c) => (
                     <option key={c.id} value={c.nome} />
                   ))}
                 </datalist>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Save,
@@ -11,6 +11,7 @@ import {
 import { theme } from './Theme';
 import { api } from '../auth/useAuth';
 import { useAlert } from '../contexts/AlertContext';
+import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 
 interface Props {
   isOpen: boolean;
@@ -28,6 +29,15 @@ const ModalEditarDTF: React.FC<Props> = ({
   const [loading, setLoading] = useState(false);
   const [clientes, setClientes] = useState<any[]>([]);
   const { addAlert } = useAlert();
+  const clientSearch = useDebouncedSearch('clientes/', 300);
+
+  // Combina clientes carregados (50) com resultados da busca server-side
+  const allClientes = useMemo(() => {
+    const seen = new Set(clientes.map((c) => c.id));
+    const extra = clientSearch.results.filter((c: any) => !seen.has(c.id));
+    return [...clientes, ...extra];
+  }, [clientes, clientSearch.results]);
+
   // Estados para feedback visual de arrastar
   const [isDraggingLayout, setIsDraggingLayout] = useState(false);
   const [isDraggingComprovante, setIsDraggingComprovante] = useState(false);
@@ -307,19 +317,21 @@ const ModalEditarDTF: React.FC<Props> = ({
                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700"
                 value={clienteNome}
                 onChange={(e) => {
-                  const cli = clientes.find(
-                    (c) => c.nome === e.target.value
+                  const valorDigitado = e.target.value;
+                  clientSearch.setQuery(valorDigitado);
+                  const cli = allClientes.find(
+                    (c: any) => c.nome === valorDigitado
                   );
                   if (cli) {
                     setClienteId(cli.id);
                     setClienteNome(cli.nome);
                   } else {
-                    setClienteNome(e.target.value);
+                    setClienteNome(valorDigitado);
                   }
                 }}
               />
               <datalist id="edit-clientes-list">
-                {clientes.map((c) => (
+                {allClientes.map((c) => (
                   <option key={c.id} value={c.nome} />
                 ))}
               </datalist>

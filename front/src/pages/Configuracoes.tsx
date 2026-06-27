@@ -52,9 +52,10 @@ const Configuracoes: React.FC = () => {
   useEffect(() => {
     if (activeTab === 'dtf') {
       api.get('dtf-config/').then((res) => {
-        setDtfConfigs(res.data);
+        const configs = res.data.results || [];
+        setDtfConfigs(configs);
         const vals: any = {};
-        res.data.forEach((c: any) => {
+        configs.forEach((c: any) => {
           vals[c.tipo_produto] = {
             valor_metro: String(c.valor_metro ?? '35.00'),
             preco_minimo: String(c.preco_minimo ?? '20.00'),

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { api } from '../auth/useAuth';
 import { useAlert } from '../contexts/AlertContext';
+import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 
 interface Chat {
   jid: string;
@@ -21,6 +22,14 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({ chat, onClose, on
   const [nome, setNome] = useState(chat.name || '');
   const [telefone, setTelefone] = useState('');
   const [loading, setLoading] = useState(false);
+  const clientSearch = useDebouncedSearch('clientes/', 300);
+
+  // Combina clientes carregados com resultados da busca server-side
+  const allClientes = useMemo(() => {
+    const seen = new Set(clientes.map((c) => c.id));
+    const extra = clientSearch.results.filter((c: any) => !seen.has(c.id));
+    return [...clientes, ...extra];
+  }, [clientes, clientSearch.results]);
 
   useEffect(() => {
     if (chat.jid) {
@@ -30,7 +39,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({ chat, onClose, on
     }
     // Carrega lista de clientes
     api.get('clientes/').then(res => {
-      setClientes(res.data);
+      setClientes(res.data.results || []);
     });
   }, [chat.jid]);
 
@@ -105,10 +114,14 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({ chat, onClose, on
             list="clientes-modal-list"
             placeholder="Digite para buscar cliente..."
             className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700"
-            onChange={(e) => handleSelectClient(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              clientSearch.setQuery(val);
+              handleSelectClient(val);
+            }}
           />
           <datalist id="clientes-modal-list">
-            {clientes.map((c) => (
+            {allClientes.map((c: any) => (
               <option key={c.id} value={c.nome} />
             ))}
           </datalist>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   X,
   Upload,
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { api } from '../auth/useAuth';
 import { useAlert } from '../contexts/AlertContext';
+import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 
 export default function ModalNovoPedidoFabrica({
   isOpen,
@@ -21,6 +22,15 @@ export default function ModalNovoPedidoFabrica({
   const [clientes, setClientes] = useState<any[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const { addAlert } = useAlert();
+  const clientSearch = useDebouncedSearch('clientes/', 300);
+
+  // Combina clientes carregados (50) com resultados da busca server-side
+  const allClientes = useMemo(() => {
+    const seen = new Set(clientes.map((c) => c.id));
+    const extra = clientSearch.results.filter((c: any) => !seen.has(c.id));
+    return [...clientes, ...extra];
+  }, [clientes, clientSearch.results]);
+
   const [formData, setFormData] = useState<any>({
     cliente: '',
     nome_descricao: '',
@@ -48,7 +58,7 @@ export default function ModalNovoPedidoFabrica({
       setArquivo(null);
       setIsDragging(false);
       setLoading(false);
-      api.get('clientes/').then((res) => setClientes(res.data));
+      api.get('clientes/').then((res) => setClientes(res.data.results || []));
     }
   }, [isOpen]);
 
@@ -226,11 +236,11 @@ export default function ModalNovoPedidoFabrica({
                 }
                 onChange={(e) => {
                   const valorDigitado = e.target.value;
-                  const clienteEncontrado = clientes.find(
-                    (c) => c.nome === valorDigitado
+                  clientSearch.setQuery(valorDigitado);
+                  const clienteEncontrado = allClientes.find(
+                    (c: any) => c.nome === valorDigitado
                   );
 
-                  // Se achar o cliente pelo nome, grava o ID, senão grava o texto (ou limpa)
                   setFormData({
                     ...formData,
                     cliente: clienteEncontrado
@@ -242,7 +252,7 @@ export default function ModalNovoPedidoFabrica({
 
               {/* Lista de sugestões vinculada pelo ID "clientes-options" */}
               <datalist id="clientes-options">
-                {clientes.map((c) => (
+                {allClientes.map((c) => (
                   <option key={c.id} value={c.nome} />
                 ))}
               </datalist>
