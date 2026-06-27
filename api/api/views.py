@@ -1,6 +1,6 @@
 from django.conf import settings
 from PIL import Image  # Pip install Pillow
-import os
+import os, json
 from django.contrib.auth.hashers import check_password
 from num2words import num2words
 from django.utils import timezone
@@ -275,21 +275,61 @@ class ReportsView(APIView):
             return range(1, 13)
 
         dtf_monthly = []
+        dtf_by_type_monthly = []
         pedido_monthly = []
-        orcamento_monthly = []
         revenue_received_monthly = []
 
         for m in mes_range():
-            # --- DTF ---
+            # --- DTF: agregado geral (sem misturar unidades diferentes) ---
             qs_dtf = DTFVendor.objects.filter(data_criacao__year=year, data_criacao__month=m)
-            total_cm = qs_dtf.aggregate(s=Sum('tamanho_cm'))['s'] or Decimal('0')
             total_valor = sum(row.valor_total() for row in qs_dtf)
             dtf_monthly.append({
                 'mes': m,
                 'total_pedidos': qs_dtf.count(),
-                'total_cm': float(total_cm),
                 'total_revenue': float(total_valor),
             })
+
+            # --- DTF por tipo (com unidades corretas) ---
+            for tipo_val, tipo_label in DTFVendor.TIPOS_PRODUTO:
+                qs_t = qs_dtf.filter(tipo_produto=tipo_val)
+                if not qs_t.exists():
+                    continue
+                if tipo_val == 'estampa':
+                    # Estampa: quantidade de unidades
+                    total_un = sum(row.quantidade or 1 for row in qs_t)
+                    dtf_by_type_monthly.append({
+                        'mes': m,
+                        'tipo': tipo_val,
+                        'tipo_display': tipo_label,
+                        'total_pedidos': qs_t.count(),
+                        'total_revenue': float(sum(row.valor_total() for row in qs_t)),
+                        'quantidade': round(total_un, 2),
+                        'unidade': 'un',
+                    })
+                elif tipo_val == 'sublimacao':
+                    # Sublimação: tamanho_cm = cm² → converter para m²
+                    total_cm2 = sum(row.tamanho_cm for row in qs_t)
+                    dtf_by_type_monthly.append({
+                        'mes': m,
+                        'tipo': tipo_val,
+                        'tipo_display': tipo_label,
+                        'total_pedidos': qs_t.count(),
+                        'total_revenue': float(sum(row.valor_total() for row in qs_t)),
+                        'quantidade': round(float(total_cm2 / Decimal('10000')), 2),
+                        'unidade': 'm²',
+                    })
+                else:
+                    # DTF Têxtil/UV: tamanho_cm = cm lineares → metros
+                    total_cm = sum(row.tamanho_cm for row in qs_t)
+                    dtf_by_type_monthly.append({
+                        'mes': m,
+                        'tipo': tipo_val,
+                        'tipo_display': tipo_label,
+                        'total_pedidos': qs_t.count(),
+                        'total_revenue': float(sum(row.valor_total() for row in qs_t)),
+                        'quantidade': round(float(total_cm / Decimal('100')), 2),
+                        'unidade': 'm',
+                    })
 
             # --- DTF pago (receita recebida) ---
             qs_pago = DTFVendor.objects.filter(data_criacao__year=year, data_criacao__month=m, esta_pago=True)
@@ -309,49 +349,194 @@ class ReportsView(APIView):
                 'total_pecas': total_pecas,
             })
 
-            # --- Orçamentos ---
-            from django.db.models import F
-            qs_orc = Orcamento.objects.filter(data_criacao__year=year, data_criacao__month=m)
-            total_orc_valor = ItemOrcamento.objects.filter(
-                orcamento__in=qs_orc
-            ).aggregate(
-                total=Sum(F('quantidade') * F('preco_negociado'))
-            )['total'] or Decimal('0')
-            orcamento_monthly.append({
-                'mes': m,
-                'total_orcamentos': qs_orc.count(),
-                'total_revenue': float(total_orc_valor),
-            })
-
-        # --- DTF por tipo (ano todo) ---
+        # --- DTF por tipo (ano todo, para cards da tabela) ---
         base_dtf_ano = DTFVendor.objects.filter(data_criacao__year=year)
-        TIPOS = [
-            ('dtf_textil', 'DTF Têxtil'),
-            ('dtf_uv', 'DTF UV'),
-            ('sublimacao', 'Sublimação'),
-            ('estampa', 'Estampa (por unidade)'),
-        ]
         dtf_by_type = []
-        for tipo_val, tipo_label in TIPOS:
+        for tipo_val, tipo_label in DTFVendor.TIPOS_PRODUTO:
             qs_t = base_dtf_ano.filter(tipo_produto=tipo_val)
             if not qs_t.exists():
                 continue
-            total_valor = sum(row.valor_total() for row in qs_t)
-            dtf_by_type.append({
-                'tipo': tipo_val,
-                'tipo_display': tipo_label,
-                'total_pedidos': qs_t.count(),
-                'total_revenue': float(total_valor),
-            })
+            if tipo_val == 'estampa':
+                total_un = sum(row.quantidade or 1 for row in qs_t)
+                dtf_by_type.append({
+                    'tipo': tipo_val,
+                    'tipo_display': tipo_label,
+                    'total_pedidos': qs_t.count(),
+                    'total_revenue': float(sum(row.valor_total() for row in qs_t)),
+                    'quantidade': round(total_un, 2),
+                    'unidade': 'un',
+                })
+            elif tipo_val == 'sublimacao':
+                total_cm2 = sum(row.tamanho_cm for row in qs_t)
+                dtf_by_type.append({
+                    'tipo': tipo_val,
+                    'tipo_display': tipo_label,
+                    'total_pedidos': qs_t.count(),
+                    'total_revenue': float(sum(row.valor_total() for row in qs_t)),
+                    'quantidade': round(float(total_cm2 / Decimal('10000')), 2),
+                    'unidade': 'm²',
+                })
+            else:
+                total_cm = sum(row.tamanho_cm for row in qs_t)
+                dtf_by_type.append({
+                    'tipo': tipo_val,
+                    'tipo_display': tipo_label,
+                    'total_pedidos': qs_t.count(),
+                    'total_revenue': float(sum(row.valor_total() for row in qs_t)),
+                    'quantidade': round(float(total_cm / Decimal('100')), 2),
+                    'unidade': 'm',
+                })
 
         return Response({
             'year': year,
             'dtf_monthly': dtf_monthly,
             'dtf_by_type': dtf_by_type,
+            'dtf_by_type_monthly': dtf_by_type_monthly,
             'pedido_monthly': pedido_monthly,
-            'orcamento_monthly': orcamento_monthly,
             'revenue_received_monthly': revenue_received_monthly,
         })
+
+
+class ClientReportView(APIView):
+    """
+    GET /api/reports/clients/?year=2026&limit=20
+    Ranking de clientes por receita DTF no ano.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        year = int(request.query_params.get('year', timezone.now().year))
+        limit = int(request.query_params.get('limit', 20))
+
+        clients = Cliente.objects.filter(
+            dtfvendor__data_criacao__year=year
+        ).distinct().order_by('-dtfvendor__data_criacao')[:limit * 2]
+
+        # ranking manual por receita
+        client_revenue = {}
+        for d in DTFVendor.objects.filter(data_criacao__year=year).select_related('cliente'):
+            cid = d.cliente_id
+            if cid not in client_revenue:
+                client_revenue[cid] = {'cliente': d.cliente, 'total_revenue': 0, 'total_pedidos': 0}
+            client_revenue[cid]['total_revenue'] += d.valor_total()
+            client_revenue[cid]['total_pedidos'] += 1
+
+        sorted_clients = sorted(client_revenue.values(), key=lambda x: x['total_revenue'], reverse=True)[:limit]
+
+        result = []
+        for item in sorted_clients:
+            c = item['cliente']
+            dtf_orders = DTFVendor.objects.filter(cliente=c, data_criacao__year=year)
+            metros_lineares = sum(
+                row.tamanho_cm / Decimal('100')
+                for row in dtf_orders.filter(tipo_produto__in=['dtf_textil', 'dtf_uv'])
+            )
+            metros_quadrados = sum(
+                row.tamanho_cm / Decimal('10000')
+                for row in dtf_orders.filter(tipo_produto='sublimacao')
+            )
+            unidades_estampa = sum(
+                row.quantidade or 1
+                for row in dtf_orders.filter(tipo_produto='estampa')
+            )
+            result.append({
+                'cliente_id': c.id,
+                'cliente_nome': c.nome,
+                'total_pedidos': item['total_pedidos'],
+                'total_revenue': float(item['total_revenue']),
+                'metros_lineares': round(float(metros_lineares), 2),
+                'metros_quadrados': round(float(metros_quadrados), 2),
+                'unidades_estampa': unidades_estampa,
+            })
+
+        return Response({'year': year, 'clients': result})
+
+
+class DTFOrdersReportView(APIView):
+    """
+    GET /api/reports/dtf-orders/?year=2026&month=6
+    Lista todos os pedidos DTF de um mês específico com detalhes completos.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        year = int(request.query_params.get('year', timezone.now().year))
+        month = int(request.query_params.get('month', timezone.now().month))
+
+        qs = DTFVendor.objects.filter(
+            data_criacao__year=year, data_criacao__month=month
+        ).select_related('cliente').order_by('-data_criacao')
+
+        orders = []
+        for d in qs:
+            cliente_nome = d.cliente.nome if d.cliente else '—'
+            tipo_display = dict(DTFVendor.TIPOS_PRODUTO).get(d.tipo_produto, d.tipo_produto)
+            # Calcular quantidade/unidade conforme tipo
+            if d.tipo_produto == 'estampa':
+                qtd = d.quantidade or 1
+                unidade = 'un'
+            elif d.tipo_produto == 'sublimacao':
+                qtd = round(float(d.tamanho_cm / Decimal('10000')), 2)
+                unidade = 'm²'
+            else:
+                qtd = round(float(d.tamanho_cm / Decimal('100')), 2)
+                unidade = 'm'
+            orders.append({
+                'id': d.id,
+                'cliente_nome': cliente_nome,
+                'tipo_produto': d.tipo_produto,
+                'tipo_display': tipo_display,
+                'quantidade': qtd,
+                'unidade': unidade,
+                'valor_total': float(d.valor_total()),
+                'status': d.status,
+                'data_criacao': d.data_criacao.strftime('%d/%m/%Y'),
+                'preco_unit_override': d.preco_unit_override,
+                'tamanho_cm': d.tamanho_cm,
+            })
+
+        return Response({'year': year, 'month': month, 'orders': orders, 'total': len(orders)})
+
+
+class FabricaOrdersReportView(APIView):
+    """
+    GET /api/reports/fabrica-orders/?year=2026&month=6
+    Lista todos os pedidos fábrica de um mês específico com detalhes completos.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        year = int(request.query_params.get('year', timezone.now().year))
+        month = int(request.query_params.get('month', timezone.now().month))
+
+        qs = PedidoFabrica.objects.filter(
+            data_criacao__year=year, data_criacao__month=month
+        ).select_related('cliente').order_by('-data_criacao')
+
+        orders = []
+        for p in qs:
+            detalhes = p.detalhes_tamanho
+            # detalhes_tamanho é um JSONField com formato: {"P": 10, "M": 20, "G": 15} ou similar
+            total_pecas = 0
+            if isinstance(detalhes, dict):
+                total_pecas = sum(int(v) for v in detalhes.values() if str(v).isdigit())
+            elif isinstance(detalhes, list):
+                total_pecas = sum(int(item.get('quantidade', 0)) for item in detalhes if isinstance(item, dict))
+
+            cliente_nome = p.cliente.nome if p.cliente else '—'
+            status_display = p.get_status_display() if hasattr(p, 'get_status_display') else p.status
+            orders.append({
+                'id': p.id,
+                'cliente_nome': cliente_nome,
+                'status': p.status,
+                'status_display': status_display,
+                'total_pecas': total_pecas,
+                'valor_total': float(p.total_itens()),
+                'data_criacao': p.data_criacao.strftime('%d/%m/%Y') if p.data_criacao else '—',
+                'detalhes_tamanho': json.dumps(detalhes) if detalhes else '',
+            })
+
+        return Response({'year': year, 'month': month, 'orders': orders, 'total': len(orders)})
 
 
 class ChangePasswordView(APIView):
@@ -374,10 +559,18 @@ class PedidoFabricaViewSet(viewsets.ModelViewSet):
     queryset = PedidoFabrica.objects.all().order_by('-data_criacao')
     serializer_class = PedidoFabricaSerializer
     permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['status']
     search_fields = ['cliente__nome', 'detalhes_tamanho']
     ordering_fields = ['id', 'data_criacao']
     ordering = ['-data_criacao']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        cliente = self.request.query_params.get('cliente')
+        if cliente:
+            qs = qs.filter(cliente__nome__icontains=cliente)
+        return qs
 
     @action(detail=True, methods=['get'])
     def gerar_pdf(self, request, pk=None):
