@@ -14,7 +14,7 @@
  *   - merchantCity  ≤ 15 chars, ASCII/upper.
  *   - txid          ≤ 25 chars, alfanum.
  */
-import { createStaticPix } from 'pix-utils';
+import { createStaticPix, hasError } from 'pix-utils';
 import QRCode from 'qrcode';
 
 /** Remove acentos (NFKD) + colapsa espaços + UPPER. */
@@ -77,12 +77,10 @@ export function buildPixBRCode({ chave, valor, txid, beneficiario, cidade }: Bui
     txid: normalize(txid).slice(0, 25) || '***',
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const pixAny = pix as any;
-if (pixAny.error) {
+  if (hasError(pix)) {
     throw new Error('Falha ao gerar payload PIX.');
   }
-  return pixAny.toString();
+  return pix.toBRCode();
 }
 
 /** Gera o QR como data URL (PNG base64-inline). */
