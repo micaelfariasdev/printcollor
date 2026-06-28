@@ -1,3 +1,4 @@
+from datetime import timedelta, datetime
 from django.conf import settings
 from PIL import Image  # Pip install Pillow
 import os, json
@@ -229,6 +230,171 @@ class UserMeView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+class KDSPanelView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        hoje = timezone.localtime().date()
+
+        hoje_start = timezone.make_aware(
+            datetime.combine(hoje, datetime.min.time())
+        )
+        amanha_start = hoje_start + timedelta(days=1)
+        dois_dias_atras = hoje_start - timedelta(days=2)
+
+        # ===========================
+        # DTF
+        # ===========================
+
+        dtf_hoje = DTFVendor.objects.filter(
+            data_criacao__gte=hoje_start,
+            data_criacao__lt=amanha_start
+        ).select_related("cliente").order_by("data_criacao")
+
+        # Apenas pedidos pagos entram no fluxo do KDS
+        dtf_pagos = dtf_hoje.filter(esta_pago=True)
+
+        # Pagou, mas ainda não imprimiu
+        dtf_fila = dtf_pagos.filter(
+            foi_impresso="pendente",
+            foi_entregue=False
+        )
+
+        # Já imprimiu, falta entregar
+        dtf_prontos = dtf_pagos.filter(
+            foi_impresso="impresso",
+            foi_entregue=False
+        )
+
+        # Entregues
+        dtf_entregues = dtf_pagos.filter(
+            foi_entregue=True
+        )
+
+        # Urgentes = pagos há mais de 2 dias e ainda não entregues
+        dtf_urgentes = DTFVendor.objects.filter(
+            esta_pago=True,
+            foi_entregue=False,
+            data_criacao__lt=dois_dias_atras
+        ).select_related("cliente").order_by("data_criacao")[:10]
+
+        def serialize_dtf(item):
+            if item.foi_entregue:
+                status = "Finalizado"
+            elif item.foi_impresso == "impresso":
+                status = "Pronto"
+            elif item.esta_pago:
+                status = "Em Produção"
+            else:
+                status = "Orçamento"
+            return {
+                "id": item.id,
+                "cliente": item.cliente.nome,
+                "descricao": f"{item.tamanho_cm} cm",
+                "status_display": status,
+                "foi_impresso": item.foi_impresso,
+                "foi_entregue": item.foi_entregue,
+                "esta_pago": item.esta_pago,
+                "data_criacao": item.data_criacao.isoformat(),
+            }
+
+        def serialize_urgente(obj, tipo):
+            return {
+                "id": obj.id,
+                "tipo": tipo,
+                "cliente": obj.cliente.nome if obj.cliente else "",
+                "descricao": getattr(obj, "tamanho_cm", ""),
+                "foi_impresso": getattr(obj, "foi_impresso", None),
+                "foi_entregue": getattr(obj, "foi_entregue", None),
+                "data_criacao": obj.data_criacao.isoformat(),
+            }
+
+        # ===========================
+        # PEDIDO FABRICA
+        # ===========================
+
+        pf_total = PedidoFabrica.objects.filter(
+            data_criacao__gte=hoje_start,
+            data_criacao__lt=amanha_start
+        ).count()
+
+        pf_pendente = PedidoFabrica.objects.filter(
+            status="pendente",
+            data_criacao__gte=hoje_start,
+            data_criacao__lt=amanha_start
+        ).count()
+
+        pf_em_producao = PedidoFabrica.objects.filter(
+            status="em_producao",
+            data_criacao__gte=hoje_start,
+            data_criacao__lt=amanha_start
+        ).count()
+
+        pf_finalizado = PedidoFabrica.objects.filter(
+            status="finalizado",
+            data_criacao__gte=hoje_start,
+            data_criacao__lt=amanha_start
+        ).count()
+
+        pf_urgentes = PedidoFabrica.objects.filter(
+            status="pendente",
+            data_criacao__lt=dois_dias_atras
+        ).select_related("cliente").order_by("data_criacao")[:10]
+
+        return Response({
+            "dtf": {
+                "total": dtf_hoje.count(),
+
+                "pagos": dtf_pagos.count(),
+
+                "fila": dtf_fila.count(),
+                "fila_list": [
+                    serialize_dtf(i)
+                    for i in dtf_fila
+                ],
+
+                "prontos_entrega": dtf_prontos.count(),
+                "prontos_entrega_list": [
+                    serialize_dtf(i)
+                    for i in dtf_prontos
+                ],
+
+                "entregues": dtf_entregues.count(),
+
+                "urgentes": [
+                    serialize_urgente(i, "DTF")
+                    for i in dtf_urgentes
+                ]
+            },
+
+            "pedido_fabrica": {
+                "total": pf_total,
+                "pendente": pf_pendente,
+                "em_producao": pf_em_producao,
+                "finalizado": pf_finalizado,
+
+                "urgentes": [
+                    serialize_urgente(i, "FABRICA")
+                    for i in pf_urgentes
+                ]
+            }
+        })
+        
+class SyncDTFStatusView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        from api.models import DTFVendor
+        dtfs = DTFVendor.objects.all()
+        atualizados = 0
+        for dtf in dtfs:
+            old_status = dtf.status
+            dtf.atualizar_status()
+            if dtf.status != old_status:
+                dtf.save(update_fields=['status'])
+                atualizados += 1
+        return Response({'ok': True, 'total': dtfs.count(), 'atualizados': atualizados})
 
 class DashboardStatsView(APIView):
     permission_classes = [permissions.IsAuthenticated]

@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import EmpresaViewSet, PedidoFabricaViewSet, ClienteViewSet, ProdutoViewSet, OrcamentoViewSet, DTFVendorViewSet, UserViewSet, UserMeView, DashboardStatsView, ReportsView, ChangePasswordView, BackupExportView, BackupImportView, DTFConfigViewSet, ConfiguracaoLojaViewSet, ClientReportView, DTFOrdersReportView, FabricaOrdersReportView
+from .views import EmpresaViewSet, PedidoFabricaViewSet, ClienteViewSet, ProdutoViewSet, OrcamentoViewSet, DTFVendorViewSet, UserViewSet, UserMeView, DashboardStatsView, ReportsView, ChangePasswordView, BackupExportView, BackupImportView, DTFConfigViewSet, ConfiguracaoLojaViewSet, ClientReportView, DTFOrdersReportView, FabricaOrdersReportView, KDSPanelView, SyncDTFStatusView
 from .evolution_views import WhatsAppInstanceViewSet
 from .webhook_views import WhatsAppWebhookView, WhatsAppWebhookConfigureView
 
@@ -21,6 +21,8 @@ urlpatterns = [
     path('reports/monthly/', ReportsView.as_view(), name='reports-monthly'),
     path('reports/clients/', ClientReportView.as_view(), name='reports-clients'),
     path('reports/dtf-orders/', DTFOrdersReportView.as_view(), name='reports-dtf-orders'),
+    path('kds/', KDSPanelView.as_view(), name='kds-panel'),
+    path('sync-status/', SyncDTFStatusView.as_view(), name='dtf-sync-status'),
     path('reports/fabrica-orders/', FabricaOrdersReportView.as_view(), name='reports-fabrica-orders'),
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
     # WhatsApp - rotas manuais para actions do ViewSet

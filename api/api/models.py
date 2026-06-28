@@ -185,6 +185,17 @@ class DTFVendor(models.Model):
     comprovante_pagamento = models.ImageField(
         upload_to=path_comprovante_dtf, null=True, blank=True)
 
+    def atualizar_status(self):
+        """Atualiza o status automaticamente baseado nos flags."""
+        if self.foi_entregue:
+            self.status = "finalizado"
+        elif not self.esta_pago:
+            self.status = "orcamento"
+        elif self.foi_impresso == "impresso":
+            self.status = "em_producao"
+        else:
+            self.status = "aprovado"
+
     def save(self, *args, **kwargs):
         if self.tipo_produto in ('dtf_textil', 'dtf_uv'):
             self.unidade = 'ml'
@@ -194,6 +205,7 @@ class DTFVendor(models.Model):
             self.unidade = 'un'
             if not self.quantidade:
                 self.quantidade = 1
+        self.atualizar_status()
         super().save(*args, **kwargs)
 
     def valor_total(self):
