@@ -141,3 +141,48 @@ class WhatsAppConsumer(AsyncWebsocketConsumer):
         msg_data = {k: v for k, v in event.items() if k != 'type'}
         await self.send(text_data=json.dumps(msg_data))
         logger.info(f"[WS] Mensagem enviada para {self.channel_name}")
+
+
+class DTFConsumer(AsyncWebsocketConsumer):
+    """Notifica todos os clientes conectados quando um DTF muda para 'impresso'."""
+
+    async def connect(self):
+        logger.info(f"[WS-DTF] Tentando conectar...")
+        query_string = self.scope.get('query_string', b'').decode()
+        params = parse_qs(query_string)
+        token_list = params.get('token', [])
+        token = token_list[0] if token_list else None
+
+        if not token:
+            logger.warning("[WS-DTF] Conexão rejeitada: sem token")
+            await self.close(code=4001)
+            return
+
+        try:
+            from rest_framework_simplejwt.tokens import AccessToken
+            access_token = AccessToken(token)
+            user_id = access_token['user_id']
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            from asgiref.sync import sync_to_async
+            self.user = await sync_to_async(User.objects.get)(id=user_id)
+            logger.info(f"[WS-DTF] Token válido para user {user_id}")
+        except Exception as e:
+            logger.warning(f"[WS-DTF] Conexão rejeitada: token inválido - {e}")
+            await self.close(code=4001)
+            return
+
+        self.group_name = 'dtf_notifications'
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+        logger.info(f"[WS-DTF] Cliente conectado: {self.channel_name}")
+
+    async def disconnect(self, close_code):
+        if hasattr(self, 'group_name'):
+            await self.channel_layer.group_discard(self.group_name, self.channel_name)
+        logger.info(f"[WS-DTF] Cliente desconectado: {self.channel_name}")
+
+    async def dtf_status_changed(self, event):
+        """Envia a notificação de status para o cliente WebSocket."""
+        await self.send(text_data=json.dumps(event["data"]))
+        logger.info(f"[WS-DTF] Notificação enviada para {self.channel_name}: {event['data']}")

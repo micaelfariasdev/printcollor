@@ -6,6 +6,7 @@ import { formatarDataHora } from '../tools/dataHora';
 import { usePaginatedList } from '../hooks/usePaginatedList';
 import ModalNovoOrcamento from '../components/ModalNovoOrcamento';
 import ModalEditarOrcamento from '../components/ModalEditarOrcamento';
+import { api } from '../auth/useAuth';
 
 export interface ItemOrcamento {
  id: number;
@@ -40,6 +41,40 @@ const Orcamentos: React.FC = () => {
  setSelectedOrcamentoId(id);
  setIsEditModalOpen(true);
  };
+
+const DowloadOrcamento = async (id: number) => {
+  try {
+    const response = await api.get(`orcamentos/${id}/gerar_pdf/`, {
+      responseType: 'blob',
+    });
+
+    const url = window.URL.createObjectURL(response.data);
+
+    // Obtém o nome enviado pelo backend
+    const contentDisposition = response.headers['content-disposition'];
+    let filename = 'arquivo.pdf';
+
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="?([^"]+)"?/);
+      if (match?.[1]) {
+        filename = match[1];
+      }
+    }
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+
 
  return (
  <div className="space-y-6">
@@ -106,16 +141,15 @@ const Orcamentos: React.FC = () => {
  >
  <Edit size={18} />
  </button>
- {(orc as any).pdf_url && (
- <a
- href={(orc as any).pdf_url}
- target="_blank"
+ 
+ <button
+  onClick={() => DowloadOrcamento(orc.id)}
  rel="noopener noreferrer"
  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
  >
  <Download size={18} />
- </a>
- )}
+ </button>
+ 
  </div>
  </td>
  </tr>

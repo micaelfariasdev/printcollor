@@ -108,7 +108,7 @@ export default function Dashboard() {
             <span className={`text-[9px] font-black px-1 rounded flex-shrink-0 ${item.tipo === 'DTF' ? 'bg-blue-900 text-blue-300' : 'bg-purple-900 text-purple-300'}`}>
               {item.tipo}
             </span>
-            <span className="text-[11px] text-slate-300 flex-1 truncate">{item.cliente}</span>
+            <span className="text-[11px] text-slate-300 flex-1 truncate">{item.cliente} - {item.id}</span>
             <span className="text-[9px] text-slate-500 hidden md:inline">{item.descricao}</span>
             <span className="text-[9px] font-black text-red-400 flex-shrink-0">{diasAtras(item.data_criacao)}d</span>
             {item.tipo === 'DTF' && (

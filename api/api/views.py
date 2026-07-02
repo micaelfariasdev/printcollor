@@ -182,6 +182,39 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
 
         return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, f'{name}.pdf')
 
+    def partial_update(self, request, *args, **kwargs):
+        import sys
+        print(f"[DEBUG-VIEW] partial_update chamado: {kwargs}", flush=True)
+        instance = self.get_object()
+        old_foi_impresso = instance.foi_impresso
+        print(f"[DEBUG-VIEW] old_foi_impresso={old_foi_impresso}", flush=True)
+
+        response = super().partial_update(request, *args, **kwargs)
+
+        instance.refresh_from_db()
+        if old_foi_impresso != 'impresso' and instance.foi_impresso == 'impresso':
+            import threading
+            broadcast_data = {
+                "event": "impresso",
+                "id": instance.id,
+                "nome_cliente": instance.cliente.nome,
+            }
+
+            def broadcast():
+                from channels.layers import get_channel_layer
+                from asgiref.sync import async_to_sync
+                channel_layer = get_channel_layer()
+                async_to_sync(channel_layer.group_send)("dtf_notifications", {
+                    "type": "dtf_status_changed",
+                    "data": broadcast_data,
+                })
+
+            t = threading.Thread(target=broadcast)
+            t.start()
+            print(f"[DEBUG-VIEW] Thread de broadcast iniciada para DTF {instance.id}", flush=True)
+
+        return response
+
 
 class ConfiguracaoLojaViewSet(viewsets.ModelViewSet):
     """

@@ -3,4 +3,5 @@ from api import consumers
 
 websocket_urlpatterns = [
     re_path(r'ws/whatsapp/$', consumers.WhatsAppConsumer.as_asgi() ),
+    re_path(r'ws/dtf/$', consumers.DTFConsumer.as_asgi() ),
 ]
