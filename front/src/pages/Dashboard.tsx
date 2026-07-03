@@ -164,7 +164,7 @@ export default function Dashboard() {
               >
                 <Eye size={12} />
               </button>
-              <span className="text-[11px] text-slate-300 flex-1 truncate">{item.cliente}</span>
+              <span className="text-[11px] text-slate-300 flex-1 truncate">{item.cliente} - {item.id}</span>
               <span className="text-[9px] text-slate-500">{item.descricao}</span>
               {item.status_display !== undefined && (
                 <span className="flex-shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">

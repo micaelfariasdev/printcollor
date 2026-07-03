@@ -15,6 +15,7 @@ import { theme } from './Theme';
 import { api, useAuth } from '../auth/useAuth';
 import { useNotifications } from '../contexts/NotificationContext';
 import logo from '../assets/logo-printcollor.png';
+import { DTFNotificationListener } from './DTFNotificationListener';
 
 const NavItem = ({ icon, label, active, onClick }: any) => (
   <button
@@ -81,6 +82,7 @@ export const Layout: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
+        <DTFNotificationListener />
 
       {/* BOTÃO FLUTUANTE (FAB) - ACESSO RÁPIDO AO CARROSSEL */}
       <Link
