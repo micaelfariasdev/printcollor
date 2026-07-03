@@ -62,6 +62,9 @@ export const AppRouter = () => {
       <Route path="/dtf/:id/visualizar" element={<VisualizarDTFPage />} />
       <Route path="/pedidos-carrossel" element={<PedidosCarrosselMobile />} />
 
+      {/* Painel KDS standalone (sem sidebar, abre em popup) */}
+      <Route path="/kds" element={<AdminFinanceiroRoute><Dashboard /></AdminFinanceiroRoute>} />
+
       {/* Painel Interno com Layout sidebar */}
       <Route element={<Layout />}>
         <Route path="/painel">

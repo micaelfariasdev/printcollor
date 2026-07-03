@@ -370,6 +370,12 @@ export default function Dashboard() {
         >
           <RefreshCw size={14} /> Sincronizar Status
         </button>
+        <button
+          onClick={() => window.open('/kds', 'KDS', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no')}
+          className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl text-xs font-bold transition"
+        >
+          <Monitor size={14} /> Popup
+        </button>
       </div>
 
       <div className="grid grid-cols-2 gap-6">
