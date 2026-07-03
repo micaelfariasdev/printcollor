@@ -11,7 +11,7 @@ import { api } from '../auth/useAuth';
 import { useState } from 'react';
 
 export const PedidosFabrica = () => {
- const { items, loading, hasMore, loadMore, totalCount, setSearch, refresh } = usePaginatedList({
+ const { items, loading, hasMore, loadMore, totalCount, setSearch, refresh, updateItem } = usePaginatedList({
  endpoint: 'pedidos/',
  });
  const [isModalOpen, setIsModalOpen] = useState(false);
@@ -41,8 +41,8 @@ export const PedidosFabrica = () => {
  const novoStatus = proximosStatus[statusAtual] || 'pendente';
  try {
  await api.patch(`pedidos/${id}/`, { status: novoStatus });
+ updateItem(id, { status: novoStatus });
  addAlert(`Pedido #${id} movido para ${novoStatus.replace('_', ' ')}`, 'info');
- refresh();
  } catch (error) {
  console.error('Erro ao trocar status:', error);
  addAlert('Não foi possível atualizar o status agora.', 'error');

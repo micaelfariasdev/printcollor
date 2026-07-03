@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { api } from '../auth/useAuth';
 import { Printer, ArrowLeft, FileDown, Loader2, Camera } from 'lucide-react';
@@ -13,6 +13,23 @@ const VisualizarPedidoPage = () => {
   const [pedido, setPedido] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleTrocarStatus = async () => {
+    if (!pedido) return;
+    const proximos: Record<string, string> = {
+      pendente: 'em_producao',
+      em_producao: 'finalizado',
+      finalizado: 'pendente',
+    };
+    const novo = proximos[pedido.status] || 'pendente';
+    try {
+      await api.patch(`pedidos/${id}/`, { status: novo });
+      setPedido((p: any) => ({ ...p, status: novo }));
+      addAlert(`Pedido #${id} movido para ${novo.replace('_', ' ')}`, 'info');
+    } catch {
+      addAlert('Erro ao atualizar status.', 'error');
+    }
+  };
 
   useEffect(() => {
     api.get(`pedidos/${id}/`).then((response) => {
@@ -98,6 +115,27 @@ const VisualizarPedidoPage = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [pedido]);
+
+  // Auto-scale A4 to fit viewport
+  const escalaRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!escalaRef.current) return;
+    const el = escalaRef.current;
+    const aplicarEscala = () => {
+      const disponivel = window.innerHeight - 120;
+      const disponivelLarg = window.innerWidth - 40;
+      const scaleY = disponivel / 210;
+      const scaleX = disponivelLarg / 297;
+      const scale = Math.min(scaleY, scaleX, 1);
+      el.style.transform = `scale(${scale})`;
+      el.style.transformOrigin = 'top center';
+      el.style.marginBottom = `${(1 - scale) * 210}mm`;
+    };
+    aplicarEscala();
+    const ro = new ResizeObserver(aplicarEscala);
+    ro.observe(document.body);
+    return () => ro.disconnect();
+  }, []);
 
   if (loading)
     return (
@@ -192,7 +230,19 @@ const VisualizarPedidoPage = () => {
         >
           <ArrowLeft size={20} /> VOLTAR
         </button>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <button
+            onClick={handleTrocarStatus}
+            className={`px-3 py-2 rounded-lg font-black text-xs no-print ${
+              pedido?.status === 'finalizado'
+                ? 'bg-green-700 text-green-200'
+                : pedido?.status === 'em_producao'
+                ? 'bg-yellow-700 text-yellow-200'
+                : 'bg-orange-700 text-orange-200'
+            }`}
+          >
+            {pedido?.status?.replace('_', ' ').toUpperCase() || 'STATUS'}
+          </button>
           <button
             onClick={handleDownload}
             className="bg-white px-4 py-2 rounded-lg font-bold shadow-md flex items-center gap-2"
