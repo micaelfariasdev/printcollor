@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useAlert } from '../contexts/AlertContext';
+import { useNotifications } from '../contexts/NotificationContext';
 
 /**
  * Componente de nível app que mantém o WebSocket DTF conectado.
@@ -7,6 +8,7 @@ import { useAlert } from '../contexts/AlertContext';
  */
 export function DTFNotificationListener() {
   const { addAlert } = useAlert();
+  const { silenciado } = useNotifications();
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -37,6 +39,7 @@ export function DTFNotificationListener() {
       };
 
       ws.onmessage = (event) => {
+        if (silenciado) return;
         try {
           const data = JSON.parse(event.data);
           if (data.event === 'impresso') {
@@ -71,7 +74,7 @@ export function DTFNotificationListener() {
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       if (wsRef.current) wsRef.current.close();
     };
-  }, [addAlert]);
+  }, [addAlert, silenciado]);
 
   return null;
 }

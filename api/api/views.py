@@ -183,11 +183,8 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
         return gerar_pdf_from_html('pdfs/dtf_pedido.html', context, f'{name}.pdf')
 
     def partial_update(self, request, *args, **kwargs):
-        import sys
-        print(f"[DEBUG-VIEW] partial_update chamado: {kwargs}", flush=True)
         instance = self.get_object()
         old_foi_impresso = instance.foi_impresso
-        print(f"[DEBUG-VIEW] old_foi_impresso={old_foi_impresso}", flush=True)
 
         response = super().partial_update(request, *args, **kwargs)
 
@@ -211,9 +208,25 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
 
             t = threading.Thread(target=broadcast)
             t.start()
-            print(f"[DEBUG-VIEW] Thread de broadcast iniciada para DTF {instance.id}", flush=True)
 
         return response
+
+    @action(detail=False, methods=['get'])
+    def all_pendentes(self, request):
+        """Retorna todos os DTF não entregues (pendentes)."""
+        queryset = self.get_queryset().filter(foi_entregue=False).order_by('-data_criacao')
+        serializer = DTFVendorSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def entregues_hoje(self, request):
+        """Retorna IDs dos DTF entregues hoje."""
+        today = timezone.now().date()
+        ids = list(self.get_queryset().filter(
+            foi_entregue=True,
+            data_criacao__date=today
+        ).values_list('id', flat=True))
+        return Response({'ids': ids, 'count': len(ids)})
 
 
 class ConfiguracaoLojaViewSet(viewsets.ModelViewSet):
@@ -300,8 +313,8 @@ class KDSPanelView(APIView):
             foi_entregue=False
         )
 
-        # Entregues
-        dtf_entregues = dtf_pagos.filter(
+        # Entregues (todos, não só hoje)
+        dtf_entregues = DTFVendor.objects.filter(
             foi_entregue=True
         )
 
@@ -419,7 +432,7 @@ class SyncDTFStatusView(APIView):
 
     def post(self, request):
         from api.models import DTFVendor
-        dtfs = DTFVendor.objects.all()
+        dtfs = DTFVendor.objects.exclude(status='finalizado')
         atualizados = 0
         for dtf in dtfs:
             old_status = dtf.status

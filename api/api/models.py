@@ -153,6 +153,7 @@ class DTFVendor(models.Model):
         ('orcamento', 'Orçamento'),
         ('aprovado', 'Aprovado'),
         ('em_producao', 'Em Produção'),
+        ('impresso', 'Impresso'),
         ('finalizado', 'Finalizado'),
     )
 
@@ -192,7 +193,7 @@ class DTFVendor(models.Model):
         elif not self.esta_pago:
             self.status = "orcamento"
         elif self.foi_impresso == "impresso":
-            self.status = "em_producao"
+            self.status = "impresso"
         else:
             self.status = "aprovado"
 

@@ -7,19 +7,22 @@ import {
   DatabaseBackup,
   Monitor,
   Activity,
-  // MessageSquare,
+  Volume2,
+  VolumeX,
   BarChart3,
 } from 'lucide-react';
 import { theme } from './Theme';
 import { api, useAuth } from '../auth/useAuth';
+import { useNotifications } from '../contexts/NotificationContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import logo from '../assets/logo-printcollor.png';
 
 const NavItem = ({ icon, label, active, onClick }: any) => (
   <button
     onClick={onClick}
     className={`w-full flex items-center space-x-3 p-4 rounded-2xl transition-all duration-200 ${active
-        ? `${theme.colors.sidebarActive} text-white shadow-lg scale-[1.02]`
-        : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+      ? `${theme.colors.sidebarActive} text-white shadow-lg scale-[1.02]`
+      : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
       }`}
   >
     {icon}
@@ -31,6 +34,7 @@ export const Layout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
+  const { silenciado, toggle } = useNotifications();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [meData, setMeData] = useState<any>(null);
@@ -131,11 +135,17 @@ export const Layout: React.FC = () => {
         </nav>
 
         {/* User Profile Footer */}
-        <div className="p-4 border-t border-slate-800/50 relative">
+        <div className="p-4 border-t border-slate-800/50 relative"
+          onMouseLeave={() => setShowProfileMenu(false)}
+        >
           {showProfileMenu && (
             <div className="absolute bottom-24 left-4 right-4 bg-slate-800 rounded-3xl shadow-2xl border border-slate-700 overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
               <button onClick={() => handleNav('configuracoes')} className="w-full flex items-center gap-3 p-4 text-slate-300 hover:bg-slate-700 transition-all text-[10px] font-black uppercase">
                 <UserCog size={18} className="text-blue-400" /> Configurações
+              </button>
+              <button onClick={toggle} className="w-full flex items-center gap-3 p-4 text-slate-300 hover:bg-slate-700 transition-all text-[10px] font-black uppercase border-t border-slate-700">
+                {silenciado ? <VolumeX size={18} className="text-yellow-400" /> : <Volume2 size={18} className="text-green-400" />}
+                {silenciado ? 'Silenciar Som' : 'Ativar Som'}
               </button>
               <button onClick={logout} className="w-full flex items-center gap-3 p-4 text-red-400 hover:bg-red-500/10 transition-all text-[10px] font-black uppercase border-t border-slate-700">
                 <LogOut size={18} /> Sair do Sistema
@@ -143,8 +153,7 @@ export const Layout: React.FC = () => {
             </div>
           )}
           <button
-            onMouseEnter={() => setShowProfileMenu(!showProfileMenu)}
-            onMouseLeave={() => setShowProfileMenu(!showProfileMenu)}
+            onMouseEnter={() => setShowProfileMenu(true)}
             className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all ${showProfileMenu ? 'bg-slate-800 ring-1 ring-slate-700' : 'hover:bg-slate-800/40'}`}
           >
             <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black shadow-lg uppercase">

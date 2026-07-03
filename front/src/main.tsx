@@ -5,17 +5,20 @@ import { AppRouter } from './routes/Router';
 import { LoadingScreen } from './components/LoadingScreen.tsx';
 import { AlertProvider } from './contexts/AlertContext.tsx';
 import { DTFNotificationListener } from './components/DTFNotificationListener.tsx';
+import { NotificationProvider } from './contexts/NotificationContext.tsx';
 
 const root = document.getElementById('root');
 
 if (root) {
   ReactDOM.createRoot(root).render(
     <AlertProvider>
-      <DTFNotificationListener />
-      <BrowserRouter>
-        <LoadingScreen />
-        <AppRouter />
-      </BrowserRouter>
+      <NotificationProvider>
+        <DTFNotificationListener />
+        <BrowserRouter>
+          <LoadingScreen />
+          <AppRouter />
+        </BrowserRouter>
+      </NotificationProvider>
     </AlertProvider>
   );
 }

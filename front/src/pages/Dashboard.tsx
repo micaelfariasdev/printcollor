@@ -50,8 +50,15 @@ function diasAtras(iso: string) {
 
 export default function Dashboard() {
   const [data, setData] = useState<KDSPanel | null>(null);
+  const [allPendentes, setAllPendentes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [filtroStatus, setFiltroStatus] = useState<string>('todos');
+  const [entregueCount, setEntregueCount] = useState(0);
+
+  useEffect(() => {
+    api.get('/dtf/entregues_hoje/').then(res => setEntregueCount(res.data.count)).catch(() => {});
+  }, [data]);
 
   const fetchKDS = useCallback(async () => {
     try {
@@ -63,16 +70,30 @@ export default function Dashboard() {
     }
   }, []);
 
+  const fetchAllPendentes = useCallback(async () => {
+    const res = await api.get('/dtf/all_pendentes/');
+    setAllPendentes(res.data);
+  }, []);
+
   useEffect(() => {
     fetchKDS();
+    fetchAllPendentes();
     const interval = setInterval(fetchKDS, 30000);
     return () => clearInterval(interval);
-  }, [fetchKDS]);
+  }, [fetchKDS, fetchAllPendentes]);
 
   const toggle = async (id: number, tipo: string, field: 'foi_impresso' | 'foi_entregue', val: any) => {
     const path = tipo === 'DTF' ? `/dtf/${id}/` : `/pedidos/${id}/`;
     await api.patch(path, { [field]: val });
+
+    if (tipo === 'DTF' && field === 'foi_entregue') {
+      // Recarrega contagem de entregues hoje
+      const res = await api.get('/dtf/entregues_hoje/');
+      setEntregueCount(res.data.count);
+    }
+
     fetchKDS();
+    fetchAllPendentes();
   };
 
   if (loading) {
@@ -189,12 +210,11 @@ export default function Dashboard() {
         <span className="text-[10px] text-slate-500">{hoje}</span>
       </div>
 
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         {[
           { label: 'Pagos', val: dtf.pagos, cor: 'text-blue-400' },
           { label: 'Fila', val: dtf.fila, cor: 'text-yellow-400' },
           { label: 'Prontos', val: dtf.prontos_entrega, cor: 'text-orange-400' },
-          { label: 'Entregues', val: dtf.entregue, cor: 'text-emerald-400' },
         ].map(({ label, val, cor }) => (
           <div key={label} className="bg-slate-800 rounded-xl p-3 text-center">
             <p className={`text-3xl font-black ${cor}`}>{val}</p>
@@ -223,16 +243,74 @@ export default function Dashboard() {
           <p className="text-[9px] text-slate-500 uppercase font-black">Prontos <span className="text-orange-400">(impressos)</span></p>
           <p className="text-2xl font-black text-orange-400">{dtf.prontos_entrega}</p>
         </div>
-        <div className="flex-1 bg-slate-800 rounded-xl px-4 py-3">
-          <p className="text-[9px] text-slate-500 uppercase font-black">Entregues <span className="text-emerald-400">(hoje)</span></p>
-          <p className="text-2xl font-black text-emerald-400">{dtf.entregue}</p>
-        </div>
       </div>
 
       {renderDTFListSection('Fila', dtf.fila_list, <Clock size={11} />, 'text-yellow-400')}
       {renderDTFListSection('Prontos para Entrega', dtf.prontos_entrega_list, <Printer size={11} />, 'text-orange-400')}
 
-      {renderUrgentes(dtf.urgentes, 'text-red-400')}
+      {/* Lista completa de todos DTF pendentes */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-[10px] font-black text-slate-400 uppercase">Todos DTF ({allPendentes.length})</h3>
+          <div className="flex gap-1">
+            {['todos', 'orcamento', 'aprovado', 'em_producao', 'finalizado'].map((s) => (
+              <button
+                key={s}
+                onClick={() => setFiltroStatus(s)}
+                className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${filtroStatus === s ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-500'}`}
+              >
+                {s === 'todos' ? 'All' : s.replace('_', ' ')}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="overflow-y-auto max-h-[300px] space-y-0.5">
+          {(filtroStatus === 'todos' ? allPendentes : allPendentes.filter((d: any) => d.status === filtroStatus)).map((item: any) => {
+            const dias = Math.floor((Date.now() - new Date(item.data_criacao).getTime()) / 86400000);
+            return (
+              <div key={item.id} className="flex items-center gap-2 bg-slate-800 rounded-lg px-3 py-1.5">
+                <button
+                  onClick={() => window.open(`/dtf/${item.id}/visualizar`, '_blank', 'width=900,height=700')}
+                  className="text-blue-400 hover:text-blue-300"
+                >
+                  <Eye size={11} />
+                </button>
+                <span className="text-[9px] font-black text-slate-500 w-6">#{item.id}</span>
+                <span className="flex-1 text-[10px] text-slate-300 truncate">{item.nome_cliente}</span>
+                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${!item.esta_pago ? 'bg-red-900 text-red-300' : 'bg-slate-700 text-slate-400'}`}>
+                  {!item.esta_pago ? 'NP' : 'P'}
+                </span>
+                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${
+                  item.status === 'finalizado' ? 'bg-green-900 text-green-300' :
+                  item.status === 'em_producao' ? 'bg-orange-900 text-orange-300' :
+                  item.status === 'aprovado' ? 'bg-blue-900 text-blue-300' :
+                  'bg-yellow-900 text-yellow-300'
+                }`}>
+                  {item.status === 'orcamento' ? 'ORC' : item.status === 'aprovado' ? 'APR' : item.status === 'em_producao' ? 'PROD' : 'FIN'}
+                </span>
+                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${
+                  item.foi_impresso === 'impresso' ? 'bg-blue-900 text-blue-300' : 'bg-slate-700 text-slate-500'
+                }`}>
+                  {item.foi_impresso === 'impresso' ? 'IMP' : 'PEN'}
+                </span>
+                {dias >= 2 && <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-red-900 text-red-300">{dias}d</span>}
+                <button
+                  onClick={() => toggle(item.id, 'DTF', 'foi_impresso', item.foi_impresso === 'impresso' ? 'pendente' : 'impresso')}
+                  className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${item.foi_impresso === 'impresso' ? 'bg-green-800 text-green-300' : 'bg-slate-700 text-slate-400'}`}
+                >
+                  {item.foi_impresso === 'impresso' ? 'OK' : 'IMP'}
+                </button>
+                <button
+                  onClick={() => toggle(item.id, 'DTF', 'foi_entregue', !item.foi_entregue)}
+                  className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${item.foi_entregue ? 'bg-green-800 text-green-300' : 'bg-slate-700 text-slate-400'}`}
+                >
+                  {item.foi_entregue ? 'OK' : 'ENT'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 
