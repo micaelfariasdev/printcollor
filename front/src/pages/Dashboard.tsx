@@ -54,11 +54,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
-  const [entregueCount, setEntregueCount] = useState(0);
 
-  useEffect(() => {
-    api.get('/dtf/entregues_hoje/').then(res => setEntregueCount(res.data.count)).catch(() => {});
-  }, [data]);
 
   const fetchKDS = useCallback(async () => {
     try {
@@ -86,11 +82,6 @@ export default function Dashboard() {
     const path = tipo === 'DTF' ? `/dtf/${id}/` : `/pedidos/${id}/`;
     await api.patch(path, { [field]: val });
 
-    if (tipo === 'DTF' && field === 'foi_entregue') {
-      // Recarrega contagem de entregues hoje
-      const res = await api.get('/dtf/entregues_hoje/');
-      setEntregueCount(res.data.count);
-    }
 
     fetchKDS();
     fetchAllPendentes();
