@@ -30,7 +30,7 @@ export function DTFNotificationListener() {
       let wsBase: string;
       try {
         const parsed = new URL(apiUrl);
-        wsBase = `ws://${parsed.host}`;
+        wsBase = `${parsed.protocol === 'https:' ? 'wss' : 'ws'}://${parsed.host}`;
       } catch {
         wsBase = 'ws://localhost:8000';
       }

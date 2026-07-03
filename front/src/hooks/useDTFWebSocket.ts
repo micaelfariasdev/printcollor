@@ -19,7 +19,11 @@ export function useDTFWebSocket() {
 
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.host;
-      const wsUrl = `${protocol}//${host}/ws/dtf/?token=${token}`;
+      if (host.startsWith('localhost:')){
+        var wsUrl = `${protocol}//${host}/ws/dtf/?token=${token}`;
+      } else {
+        var wsUrl = `${protocol}//${host}/api/ws/dtf/?token=${token}`;
+      }
 
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
