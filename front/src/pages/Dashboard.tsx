@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../auth/useAuth';
-import { RefreshCw, AlertTriangle, Eye, Printer, Truck, Clock } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Eye, Printer, Truck, Clock, Monitor } from 'lucide-react';
 
 interface KDSPanel {
   dtf: {
