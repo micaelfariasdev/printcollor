@@ -11,23 +11,28 @@ export function DTFNotificationListener() {
   const { silenciado } = useNotifications();
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const silencingRef = useRef(silenciado);
+
+  // Mantém ref atualizada sem causar reconnect
+  useEffect(() => {
+    silencingRef.current = silenciado;
+  }, [silenciado]);
 
   useEffect(() => {
     const connect = () => {
       const token = localStorage.getItem('access_token');
       if (!token) {
-        // Tenta novamente em 2s se não tiver token (pode ser que ainda não carregou)
         reconnectTimerRef.current = setTimeout(connect, 2000);
         return;
       }
 
-      // Monta URL do WS: extrai host:port do VITE_API_URL (http://localhost:8000/api -> ws://localhost:8000)
       const apiUrl = (import.meta.env.VITE_API_URL as string) || 'http://localhost:8000/api';
+      let wsBase: string;
       try {
         const parsed = new URL(apiUrl);
-        var wsBase = `ws://${parsed.host}`;
+        wsBase = `ws://${parsed.host}`;
       } catch {
-        var wsBase = 'ws://localhost:8000';
+        wsBase = 'ws://localhost:8000';
       }
       const wsUrl = `${wsBase}/ws/dtf/?token=${token}`;
 
@@ -39,14 +44,14 @@ export function DTFNotificationListener() {
       };
 
       ws.onmessage = (event) => {
-        if (silenciado) return;
+        // Lê da ref, não do estado, pra sempre usar o valor mais recente
+        if (silencingRef.current) return;
         try {
           const data = JSON.parse(event.data);
           if (data.event === 'impresso') {
             const message = `Pedido ${data.id} de ${data.nome_cliente} está impresso`;
             addAlert(message, 'info');
 
-            // TTS em português brasileiro
             const utter = new SpeechSynthesisUtterance(message);
             utter.lang = 'pt-BR';
             utter.volume = 1;
@@ -74,7 +79,7 @@ export function DTFNotificationListener() {
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       if (wsRef.current) wsRef.current.close();
     };
-  }, [addAlert, silenciado]);
+  }, [addAlert]); // sem silenciado aqui - não reconecta ao toggle
 
   return null;
 }

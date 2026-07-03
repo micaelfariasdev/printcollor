@@ -14,7 +14,6 @@ import {
 import { theme } from './Theme';
 import { api, useAuth } from '../auth/useAuth';
 import { useNotifications } from '../contexts/NotificationContext';
-import { useNotifications } from '../contexts/NotificationContext';
 import logo from '../assets/logo-printcollor.png';
 
 const NavItem = ({ icon, label, active, onClick }: any) => (
