@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   X,
   Save,
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { api } from '../auth/useAuth';
 import { useAlert } from '../contexts/AlertContext';
+import { useDebouncedSearch } from '../hooks/useDebouncedSearch';
 
 interface Props {
   isOpen: boolean;
@@ -27,6 +28,13 @@ export default function ModalEditarPedidoFabrica({
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const { addAlert } = useAlert();
+  const [clientes, setClientes] = useState<any[]>([]);
+  const clientSearch = useDebouncedSearch('clientes/', 300);
+  const allClientes = useMemo(() => {
+    const seen = new Set(clientes.map((c: any) => c.id));
+    const extra = clientSearch.results.filter((c: any) => !seen.has(c.id));
+    return [...clientes, ...extra];
+  }, [clientes, clientSearch.results]);
   const [formData, setFormData] = useState<any>({
     nome_descricao: '',
     status: 'pendente',
@@ -34,28 +42,38 @@ export default function ModalEditarPedidoFabrica({
     aplicacao_arte: '',
     descricao: '',
     cliente: '',
+    cliente_nome: '',
+    data_entrega: '',
+    layout: '',
     detalhes_tamanho: {},
   });
   const [novaChave, setNovaChave] = useState('');
-
-  // Limpar tudo ao abrir e carregar dados do pedido
-  useEffect(() => {
-    if (isOpen && pedidoId) {
-      // Limpa todos os states antes de carregar
-      setFormData({
+const limpar = () => {
+    setFormData({
         nome_descricao: '',
         status: 'pendente',
         material: '',
         aplicacao_arte: '',
         descricao: '',
         cliente: '',
+        cliente_nome: '',
+        data_entrega: '',
+        layout: '',
         detalhes_tamanho: {},
       });
+}
+  // Limpar tudo ao abrir e carregar dados do pedido
+  useEffect(() => {
+    limpar()
+    if (isOpen && pedidoId) {
+      // Limpa todos os states antes de carregar
+    
       setNovaChave('');
       setArquivo(null);
       setIsDragging(false);
       setLoading(false);
 
+      api.get('clientes/').then((res) => setClientes(res.data.results || []));
       api.get(`pedidos/${pedidoId}/`).then((res) => {
         setFormData(res.data);
       });
@@ -139,6 +157,9 @@ export default function ModalEditarPedidoFabrica({
       data.append('material', formData.material);
       data.append('aplicacao_arte', formData.aplicacao_arte);
       data.append('descricao', formData.descricao || '');
+      if (formData.data_entrega) {
+        data.append('data_entrega', formData.data_entrega);
+      }
       data.append('detalhes_tamanho', JSON.stringify(gradeLimpa));
 
       const clienteId =
@@ -196,7 +217,37 @@ export default function ModalEditarPedidoFabrica({
 
         <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar">
           {/* Informações Básicas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
+                Cliente
+              </label>
+              <input
+                list="edit-clientes-options"
+                placeholder="Buscar cliente..."
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                defaultValue={formData.cliente_nome || ''}
+                onChange={(e) => {
+                  const valorDigitado = e.target.value;
+                  clientSearch.setQuery(valorDigitado);
+                  const clienteEncontrado = allClientes.find(
+                    (c: any) => c.nome === valorDigitado
+                  );
+                  setFormData({
+                    ...formData,
+                    cliente: clienteEncontrado
+                      ? clienteEncontrado.id
+                      : valorDigitado,
+                  });
+                }}
+              />
+              <datalist id="edit-clientes-options">
+                {allClientes.map((c: any) => (
+                  <option key={c.id} value={c.nome} />
+                ))}
+              </datalist>
+            </div>
+
             <div className="space-y-1">
               <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
                 Descrição do Pedido
@@ -205,9 +256,23 @@ export default function ModalEditarPedidoFabrica({
                 name="nome_descricao"
                 value={formData.nome_descricao}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold"
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all"
               />
             </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
+                Data de Entrega
+              </label>
+              <input
+                type="date"
+                name="data_entrega"
+                value={formData.data_entrega ? formData.data_entrega.split('T')[0] : ''}
+                onChange={handleInputChange}
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+              />
+            </div>
+
             <div className="space-y-1">
               <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
                 Status
@@ -216,7 +281,7 @@ export default function ModalEditarPedidoFabrica({
                 name="status"
                 value={formData.status}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-blue-600"
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 text-blue-600"
               >
                 <option value="pendente">PENDENTE</option>
                 <option value="em_producao">EM PRODUÇÃO</option>
@@ -335,8 +400,11 @@ export default function ModalEditarPedidoFabrica({
                     <span className="text-xs font-bold text-slate-700">
                       {arquivo.name}
                     </span>
+                    <img src={URL.createObjectURL(arquivo)} alt="" />
                   </div>
-                ) : (
+                ) : (formData.layout ? (<div className="text-slate-400">
+                  <img src={formData.layout} alt="" />
+                </div>) : (
                   <div className="text-slate-400">
                     <Upload
                       size={24}
@@ -346,7 +414,7 @@ export default function ModalEditarPedidoFabrica({
                       Arraste ou Ctrl+V para trocar a arte
                     </p>
                   </div>
-                )}
+                ))}
               </div>
             </div>
           </div>
