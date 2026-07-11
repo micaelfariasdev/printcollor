@@ -1,15 +1,18 @@
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
+from django.db import transaction, models
 from django.conf import settings
 from PIL import Image  # Pip install Pillow
 import os, json
 from django.contrib.auth.hashers import check_password
 from num2words import num2words
 from django.utils import timezone
+from django.http import FileResponse, HttpResponseRedirect
 from django.db.models import Count, Sum
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.exceptions import NotFound
 from django_filters.rest_framework import DjangoFilterBackend
 from decimal import Decimal
 from .models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, DTFVendor, Usuario, PedidoFabrica, DTFConfig, ConfiguracaoLoja
@@ -21,6 +24,8 @@ from .serializers import (
 )
 from .tools.utils import gerar_pdf_from_html
 from .services.backup_service import BackupService
+from .services.mercadopago_service import MercadoPagoService
+from .serializers import PedidoPublicoSerializer
 
 import base64
 from io import BytesIO
@@ -122,16 +127,59 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
         template_nome = f'pdfs/{tid}.html'
         return gerar_pdf_from_html(template_nome, context, f'{name}.pdf')
 
+    @action(detail=True, methods=['post'])
+    def duplicar(self, request, pk=None):
+        orcamento = self.get_object()
+        empresa_id = request.data.get('empresa_id')
+        if not empresa_id:
+            return Response({'error': 'empresa_id é obrigatório'}, status=400)
+        try:
+            empresa = Empresa.objects.get(id=empresa_id)
+        except Empresa.DoesNotExist:
+            return Response({'error': 'Empresa não encontrada'}, status=404)
+
+        with transaction.atomic():
+            novo = Orcamento.objects.create(
+                empresa=empresa,
+                cliente=orcamento.cliente,
+                agencia=orcamento.agencia,
+                campanha=orcamento.campanha,
+            )
+            for item in orcamento.itens.all():
+                ItemOrcamento.objects.create(
+                    orcamento=novo,
+                    produto=item.produto,
+                    descricao=item.descricao,
+                    quantidade=item.quantidade,
+                    preco_negociado=item.preco_negociado,
+                )
+        serializer = OrcamentoSerializer(novo)
+        return Response(serializer.data, status=201)
+
 
 class DTFVendorViewSet(viewsets.ModelViewSet):
-    queryset = DTFVendor.objects.all().order_by('-data_criacao')
+    queryset = DTFVendor.objects.all()
     serializer_class = DTFVendorSerializer
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['cliente', 'foi_impresso', 'esta_pago', 'foi_entregue', 'status']
     search_fields = ['cliente__nome', 'layout_arquivo']
     ordering_fields = ['id', 'data_criacao']
-    ordering = ['-data_criacao']
+
+    def get_queryset(self):
+        qs = DTFVendor.objects.annotate(
+            status_order=models.Case(
+                models.When(status='orcamento', then=models.Value(0)),
+                models.When(status='aprovado', then=models.Value(1)),
+                models.When(status='em_producao', then=models.Value(2)),
+                models.When(status='impresso', then=models.Value(3)),
+                models.When(status='finalizado', then=models.Value(4)),
+                default=models.Value(99),
+                output_field=models.IntegerField(),
+            )
+        ).order_by("status_order", "-data_criacao")
+
+        return qs
 
     def get_permissions(self):
         # Ação de Deletar: Apenas Admin e Vendedor (Máquina fica de fora)
@@ -228,6 +276,90 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
         ).values_list('id', flat=True))
         return Response({'ids': ids, 'count': len(ids)})
 
+    @action(detail=True, methods=['post'], url_path='mp-pagar')
+    def mp_pagar(self, request, pk=None):
+        """Cria Mercado Pago Preference para o DTF e retorna init_point."""
+        dtf = self.get_object()
+        if dtf.esta_pago:
+            return Response({'error': 'Pedido já está pago'}, status=400)
+        obj, _ = ConfiguracaoLoja.objects.get_or_create(pk=1)
+        if not obj.mp_connected:
+            return Response({'error': 'Mercado Pago não está conectado'}, status=400)
+        try:
+            result = MercadoPagoService.criar_preferencia(dtf)
+            return Response(result)
+        except RuntimeError as e:
+            return Response({'error': str(e)}, status=500)
+
+
+# View função para redirect real (não ViewSet action que retorna JSON)
+def mp_oauth_redirect_view(request):
+    """Redirect real para URL de OAuth do Mercado Pago."""
+    from .services.mercadopago_service import MercadoPagoService
+    try:
+        url = MercadoPagoService.get_oauth_redirect_url()
+    except RuntimeError as e:
+        from django.http import HttpResponse
+        return HttpResponse(f'Erro ao iniciar OAuth MP: {e}', status=500)
+    return HttpResponseRedirect(url)
+
+
+def mp_oauth_callback_view(request):
+    """
+    Callback do OAuth MP. Acesso via browser (redirect MP).
+    Troca code por tokens e redireciona para página frontend.
+    """
+    code = request.GET.get('code')
+    error = request.GET.get('error')
+    error_description = request.GET.get('error_description', '')
+
+    frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+
+    if error:
+        return HttpResponseRedirect(f"{frontend_url}/configuracoes?mp_status=error&mp_message={error_description or error}")
+
+    if not code:
+        return HttpResponse("code não fornecido", status=400)
+
+    try:
+        MercadoPagoService.trocar_code_por_tokens(code)
+    except RuntimeError as e:
+        return HttpResponseRedirect(f"{frontend_url}/configuracoes?mp_status=error&mp_message={str(e)}")
+
+    return HttpResponseRedirect(f"{frontend_url}/configuracoes?mp_status=success")
+
+
+class PedidoPublicoView(APIView):
+    """
+    Endpoint público para cliente consultar pedido DTF via código.
+    Não requer autenticação.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, codigo_publico):
+        try:
+            dtf = DTFVendor.objects.select_related('cliente').get(codigo_publico=codigo_publico)
+        except DTFVendor.DoesNotExist:
+            raise NotFound("Pedido não encontrado")
+        return Response(PedidoPublicoSerializer(dtf).data)
+
+    def post(self, request, codigo_publico):
+        """Cria Mercado Pago Preference via codigo_publico (sem autenticação)."""
+        try:
+            dtf = DTFVendor.objects.select_related('cliente').get(codigo_publico=codigo_publico)
+        except DTFVendor.DoesNotExist:
+            raise NotFound("Pedido não encontrado")
+        if dtf.esta_pago:
+            return Response({'error': 'Pedido já está pago'}, status=400)
+        obj, _ = ConfiguracaoLoja.objects.get_or_create(pk=1)
+        if not obj.mp_connected:
+            return Response({'error': 'Mercado Pago não está conectado'}, status=400)
+        try:
+            result = MercadoPagoService.criar_preferencia(dtf)
+            return Response(result)
+        except RuntimeError as e:
+            return Response({'error': str(e)}, status=500)
+
 
 class ConfiguracaoLojaViewSet(viewsets.ModelViewSet):
     """
@@ -259,6 +391,40 @@ class ConfiguracaoLojaViewSet(viewsets.ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         kwargs['partial'] = True
         return self.update(request, *args, **kwargs)
+
+    # ---------- Mercado Pago OAuth ---------- #
+
+    @action(detail=False, methods=['get'], url_path='mp-redirect')
+    def mp_redirect(self, request):
+        """Inicia OAuth Connect com Mercado Pago. Retorna redirect URL."""
+        try:
+            url = MercadoPagoService.get_oauth_redirect_url()
+            return Response({'redirect_url': url})
+        except RuntimeError as e:
+            return Response({'error': str(e)}, status=500)
+
+    @action(detail=False, methods=['get'], url_path='mp-callback')
+    def mp_callback(self, request):
+        """Callback do OAuth. Troca code por tokens e salva em ConfiguracaoLoja."""
+        code = request.query_params.get('code', '')
+        if not code:
+            return Response({'error': 'code não fornecido'}, status=400)
+        try:
+            config = MercadoPagoService.trocar_code_por_tokens(code)
+            return Response({
+                'success': True,
+                'mp_user_id': config.mp_user_id,
+                'mp_connected': config.mp_connected,
+            })
+        except RuntimeError as e:
+            return Response({'error': str(e)}, status=500)
+
+    @action(detail=False, methods=['post'], url_path='mp-desconectar')
+    def mp_desconectar(self, request):
+        """Remove credenciais MP da ConfiguracaoLoja."""
+        obj, _ = ConfiguracaoLoja.objects.get_or_create(pk=1)
+        MercadoPagoService.desconectar(obj)
+        return Response({'success': True, 'mp_connected': False})
 
 
 class UserMeView(APIView):
@@ -775,10 +941,17 @@ class PedidoFabricaViewSet(viewsets.ModelViewSet):
     filterset_fields = ['status']
     search_fields = ['cliente__nome', 'detalhes_tamanho']
     ordering_fields = ['id', 'data_criacao']
-    ordering = ['-data_criacao']
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        qs = PedidoFabrica.objects.annotate(
+            _status_order=models.Case(
+                models.When(status='finalizado', then=2),
+                models.When(status='em_producao', then=1),
+                models.When(status='pendente', then=0),
+                default=3,
+                output_field=models.IntegerField(),
+            )
+        ).order_by('_status_order', '-data_criacao')
         cliente = self.request.query_params.get('cliente')
         if cliente:
             qs = qs.filter(cliente__nome__icontains=cliente)
@@ -845,7 +1018,7 @@ class BackupExportView(APIView):
     permission_classes = [permissions.IsAdminUser]
 
     def get(self, request):
-        from django.http import FileResponse
+        from django.http import FileResponse, HttpResponseRedirect
         buffer = BackupService.export_backup()
         response = FileResponse(
             buffer,

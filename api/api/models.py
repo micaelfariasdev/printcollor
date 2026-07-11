@@ -1,5 +1,5 @@
 from django.utils import timezone
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.models import AbstractUser
 from decimal import Decimal
 import os
@@ -12,6 +12,13 @@ def gerar_codigo(tamanho=6):
     caracteres = string.ascii_uppercase + string.digits
     codigo = ''.join(random.choices(caracteres, k=tamanho))
     return codigo
+
+
+ALFABETO_PUBLICO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # sem 0/O/1/I
+
+
+def gerar_codigo_publico(tamanho=7):
+    return ''.join(random.choices(ALFABETO_PUBLICO, k=tamanho))
 
 
 def path_layout_dtf(instance, filename):
@@ -185,6 +192,11 @@ class DTFVendor(models.Model):
 
     comprovante_pagamento = models.ImageField(
         upload_to=path_comprovante_dtf, null=True, blank=True)
+    comprovante_mp_data = models.JSONField(
+        null=True, blank=True,
+        help_text="Dados do pagamento via Mercado Pago (recebedor, método,最后的4 dígitos, etc.)")
+    codigo_publico = models.CharField(
+        max_length=12, unique=True, null=True, blank=True, db_index=True)
 
     def atualizar_status(self):
         """Atualiza o status automaticamente baseado nos flags."""
@@ -207,6 +219,22 @@ class DTFVendor(models.Model):
             if not self.quantidade:
                 self.quantidade = 1
         self.atualizar_status()
+
+        # Gerar codigo_publico apenas na criação (pk ainda None)
+        if not self.codigo_publico and not self.pk:
+            for _ in range(10):
+                self.codigo_publico = gerar_codigo_publico(7)
+                try:
+                    with transaction.atomic():
+                        super().save(*args, **kwargs)
+                    return
+                except transaction.TransactionManagementError:
+                    raise
+                except Exception:
+                    self.codigo_publico = None
+                    continue
+            raise RuntimeError("Não foi possível gerar codigo_publico único")
+
         super().save(*args, **kwargs)
 
     def valor_total(self):
@@ -294,6 +322,17 @@ class ConfiguracaoLoja(models.Model):
         max_length=15, default='Sao Paulo',
         help_text="Cidade do beneficiário (máx 15 chars, sem acentos)"
     )
+    # Mercado Pago Connect
+    mp_connected = models.BooleanField(default=False)
+    mp_user_id = models.CharField(max_length=64, blank=True, default='')
+    mp_access_token_encrypted = models.TextField(blank=True, default='')
+    mp_refresh_token_encrypted = models.TextField(blank=True, default='')
+    mp_token_expires_em = models.DateTimeField(null=True, blank=True)
+    mp_percentual_taxa = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal('4.99'),
+        help_text="Taxa do Mercado Pago em % (ex: 4.99)"
+    )
+    mp_connected_em = models.DateTimeField(null=True, blank=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 
     class Meta:

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Loader2, ShieldCheck, KeyRound, BadgeCheck, Printer } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Mail, Loader2, ShieldCheck, KeyRound, BadgeCheck, Printer, CreditCard, ExternalLink, CheckCircle, XCircle } from 'lucide-react';
 import { theme } from '../components/Theme';
 import { api } from '../auth/useAuth';
 import { useAlert } from '../contexts/AlertContext';
@@ -15,6 +16,17 @@ const Configuracoes: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'perfil' | 'seguranca' | 'dtf'>('perfil');
   const { addAlert } = useAlert();
+  const [searchParams] = useSearchParams();
+
+  // Mostrar toast após redirect do OAuth MP
+  useEffect(() => {
+    const mpStatus = searchParams.get('mp_status');
+    if (mpStatus === 'success') {
+      addAlert('Mercado Pago conectado com sucesso!', 'success');
+    } else if (mpStatus === 'error') {
+      addAlert(searchParams.get('mp_message') || 'Erro ao conectar Mercado Pago', 'error');
+    }
+  }, []);
 
   const [formData, setFormData] = useState({
     username: '',
@@ -37,6 +49,14 @@ const Configuracoes: React.FC = () => {
     pix_beneficiario: '',
     pix_cidade: '',
   });
+
+  const [mpConfig, setMpConfig] = useState<{
+    mp_connected?: boolean;
+    mp_user_id?: string;
+    mp_percentual_taxa?: number;
+    mp_connected_em?: string;
+  }>({});
+  const [mpTaxa, setMpTaxa] = useState('');
 
   useEffect(() => {
     api.get('/me/').then((res) => {
@@ -65,12 +85,20 @@ const Configuracoes: React.FC = () => {
         setDtfValues(vals);
       });
       api.get('configuracao-loja/').then((res) => {
-        setPixConfig(res.data || {});
+        const data = res.data || {};
+        setPixConfig(data);
         setPixForm({
-          pix_chave_telefone: res.data?.pix_chave_telefone || '',
-          pix_beneficiario: res.data?.pix_beneficiario || '',
-          pix_cidade: res.data?.pix_cidade || '',
+          pix_chave_telefone: data.pix_chave_telefone || '',
+          pix_beneficiario: data.pix_beneficiario || '',
+          pix_cidade: data.pix_cidade || '',
         });
+        setMpConfig({
+          mp_connected: data.mp_connected || false,
+          mp_user_id: data.mp_user_id || '',
+          mp_percentual_taxa: data.mp_percentual_taxa || 4.99,
+          mp_connected_em: data.mp_connected_em || '',
+        });
+        setMpTaxa(String(data.mp_percentual_taxa ?? '4.99'));
       }).catch(() => { /* configuração ainda não criada — ok */ });
     }
   }, [activeTab]);
@@ -162,6 +190,44 @@ const Configuracoes: React.FC = () => {
         ? JSON.stringify(err.response.data)
         : 'Erro ao salvar.';
       addAlert(detail, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMpConectar = () => {
+    const baseUrl = import.meta.env.VITE_API_URL;
+    window.location.href = `${baseUrl}integracoes/mercadopago/redirect/`;
+  };
+
+  const handleMpDesconectar = async () => {
+    if (!confirm('Desconectar conta Mercado Pago?')) return;
+    setLoading(true);
+    try {
+      await api.post('configuracao-loja/mp-desconectar/');
+      setMpConfig(prev => ({ ...prev, mp_connected: false, mp_user_id: '' }));
+      addAlert('Mercado Pago desconectado.', 'success');
+    } catch {
+      addAlert('Erro ao desconectar Mercado Pago.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMpTaxaSave = async () => {
+    const taxa = parseFloat(mpTaxa.replace(',', '.'));
+    if (isNaN(taxa) || taxa < 0) {
+      addAlert('Informe uma taxa válida.', 'error');
+      return;
+    }
+    setLoading(true);
+    try {
+      const configId = pixConfig.id || 1;
+      await api.patch(`configuracao-loja/${configId}/`, { mp_percentual_taxa: taxa });
+      setMpConfig(prev => ({ ...prev, mp_percentual_taxa: taxa }));
+      addAlert('Taxa do cartão salva!', 'success');
+    } catch {
+      addAlert('Erro ao salvar taxa.', 'error');
     } finally {
       setLoading(false);
     }
@@ -367,6 +433,83 @@ const Configuracoes: React.FC = () => {
                 >
                   {loading ? <Loader2 className="animate-spin mx-auto" size={18} /> : "Salvar Configuração PIX"}
                 </button>
+              </div>
+
+              {/* Bloco Mercado Pago — OAuth Connect */}
+              <div className={`border rounded-2xl p-6 space-y-4 ${mpConfig.mp_connected ? 'border-blue-300 bg-blue-50/40' : 'border-slate-200 bg-slate-50/40'}`}>
+                <h3 className="font-black text-slate-700 uppercase text-sm flex items-center gap-2">
+                  <CreditCard size={16} />
+                  Pagamento com Cartão (Mercado Pago)
+                </h3>
+
+                {mpConfig.mp_connected ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-green-700 text-sm font-semibold">
+                      <CheckCircle size={16} />
+                      Mercado Pago conectado
+                    </div>
+                    {mpConfig.mp_user_id && (
+                      <p className="text-xs text-slate-500">Conta MP: {mpConfig.mp_user_id}</p>
+                    )}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
+                        Taxa do cartão (%)
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="flex-1 bg-white border border-slate-200 rounded-2xl p-3.5 font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                          value={mpTaxa}
+                          onChange={(e) => setMpTaxa(e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          disabled={loading}
+                          onClick={handleMpTaxaSave}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-2xl font-black text-xs uppercase transition-all disabled:opacity-50"
+                        >
+                          {loading ? <Loader2 className="animate-spin" size={16} /> : 'Salvar'}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-slate-400 ml-1">
+                        Valor final = valor_base × (1 + taxa/100). Diferença fica com a loja.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={handleMpDesconectar}
+                      className="text-red-500 hover:text-red-700 text-xs font-semibold underline transition-colors disabled:opacity-50"
+                    >
+                      Desconectar Mercado Pago
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-slate-500 text-sm">
+                      <XCircle size={16} />
+                      Mercado Pago não conectado
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      Conecte sua conta Mercado Pago para permitir pagamento via cartão de crédito no checkout dos clientes.
+                    </p>
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={handleMpConectar}
+                      className="bg-blue-600 hover:bg-blue-700 text-white w-full py-3 rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {loading ? <Loader2 className="animate-spin mx-auto" size={18} /> : (
+                        <>
+                          <ExternalLink size={14} />
+                          Conectar Mercado Pago
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}

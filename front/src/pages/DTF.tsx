@@ -9,6 +9,7 @@ import {
   MessageCircle,
   Wallet,
   Eye,
+  ExternalLink,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { api } from '../auth/useAuth';
@@ -72,7 +73,7 @@ export const DTFTable = () => {
   // Lógica automática de status: atualiza status baseado nos toggles
   const calcularStatusAuto = (foiEntregue: boolean, estaPago: boolean, foiImpresso: string) => {
     if (foiEntregue) return 'finalizado';
-    if (foiImpresso === 'impresso') return 'finalizado'; // Impresso = Finalizado
+    if (foiImpresso === 'impresso') return 'impresso'; // Impresso mas não entregue
     if (estaPago) return 'aprovado'; // Aprovado = apenas Pago
     return 'orcamento';
   };
@@ -80,7 +81,8 @@ export const DTFTable = () => {
   // Lógica inversa: atualiza toggles baseado no status
   const calcularTogglesDoStatus = (status: string) => {
     if (status === 'finalizado') return { foiEntregue: true, estaPago: true, foiImpresso: 'impresso' };
-    if (status === 'aprovado') return { foiEntregue: false, estaPago: true, foiImpresso: 'pendente' }; // Aprovado = Pago, não impresso
+    if (status === 'impresso') return { foiEntregue: false, estaPago: true, foiImpresso: 'impresso' };
+    if (status === 'aprovado') return { foiEntregue: false, estaPago: true, foiImpresso: 'pendente' };
     if (status === 'em_producao') return { foiEntregue: false, estaPago: true, foiImpresso: 'pendente' };
     return { foiEntregue: false, estaPago: false, foiImpresso: 'pendente' };
   };
@@ -174,10 +176,14 @@ export const DTFTable = () => {
         ? `📏 Área: ${(item.tamanho_cm / 10000).toFixed(2)} m²`
         : `📏 Tamanho: ${item.tamanho_cm}cm`;
 
+    const publicUrl = item.codigo_publico
+      ? `${import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '')}/pedido-publico/${item.codigo_publico}`
+      : null;
     const detalhes =
       `\n\n📌 Pedido #${item.id}` +
       `\n${tamanhoTexto}` +
-      `\n💰 Valor: ${formatarReal(item.valor_total)}`;
+      `\n💰 Valor: ${formatarReal(item.valor_total)}` +
+      (publicUrl ? `\n\n🔗 Acompanhe ou pague online:\n${publicUrl}` : '');
 
     // Endereço da loja — sempre aparece em todos os status
     const enderecoTexto =
@@ -287,11 +293,7 @@ export const DTFTable = () => {
 
       return batePago && bateImpresso && bateEntregue;
     })
-    .sort((a, b) => {
-      return (
-        new Date(b.data_criacao).getTime() - new Date(a.data_criacao).getTime()
-      );
-    });
+    
 
   const totalAReceber = mockData
     .filter((i) => !i.esta_pago)
@@ -529,12 +531,15 @@ export const DTFTable = () => {
                       ? 'bg-blue-50 text-blue-700 border-blue-200'
                       : item.status === 'em_producao'
                       ? 'bg-purple-50 text-purple-700 border-purple-200'
+                      : item.status === 'impresso'
+                      ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
                       : 'bg-green-50 text-green-700 border-green-200'
                   }"
                 >
                   <option value="orcamento">💰 Orçamento</option>
                   <option value="aprovado">✅ Aprovado</option>
                   <option value="em_producao">⚙️ Em Produção</option>
+                  <option value="impresso">🖨️ Impresso</option>
                   <option value="finalizado">🏁 Finalizado</option>
                 </select>
               </div>
@@ -605,6 +610,19 @@ export const DTFTable = () => {
                   <Eye size={16} />
                   <span className="text-xs font-bold">Ver</span>
                 </button>
+                {item.codigo_publico && (
+                  <button
+                    onClick={() => {
+                      const url = `${import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '')}/pedido-publico/${item.codigo_publico}`;
+                      window.open(url, '_blank');
+                    }}
+                    className="flex-1 min-w-[80px] bg-blue-50 hover:bg-blue-100 text-blue-600 p-2 rounded-xl transition-all flex items-center justify-center gap-1"
+                    title="Link público do pedido"
+                  >
+                    <ExternalLink size={16} />
+                    <span className="text-xs font-bold">Link</span>
+                  </button>
+                )}
                 <button
                   onClick={() => handleEdit(item.id)}
                   className="flex-1 min-w-[80px] bg-slate-50 hover:bg-slate-100 text-slate-600 p-2 rounded-xl transition-all flex items-center justify-center gap-1"

@@ -56,6 +56,16 @@ export function DTFNotificationListener() {
             utter.lang = 'pt-BR';
             utter.volume = 1;
             speechSynthesis.speak(utter);
+          } else if (data.event === 'pago') {
+            const message = `Pedido ${data.id} de ${data.nome_cliente} foi pago!`;
+            addAlert(message, 'success');
+
+            if (!silencingRef.current) {
+              const utter = new SpeechSynthesisUtterance(message);
+              utter.lang = 'pt-BR';
+              utter.volume = 1;
+              speechSynthesis.speak(utter);
+            }
           }
         } catch {
           console.error('[WS-DTF] Erro ao parsear mensagem:', event.data);

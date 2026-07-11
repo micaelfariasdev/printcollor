@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Webhook views para receber eventos da Evolution API
+# Webhook views para receber eventos da Evolution API e Mercado Pago
 from django.http import JsonResponse
 from django.views import View
 from django.utils import timezone
@@ -8,13 +8,144 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 import json
 import logging
+import mercadopago
 
-from .models import WhatsAppInstance, WhatsAppMessage
+# Cache em memória para idempotência do webhook (em produção usar Redis)
+_mp_processed_ids = set()
+
+from .models import WhatsAppInstance, WhatsAppMessage, DTFVendor, ConfiguracaoLoja
 from .services.evolution_service import EvolutionService
+from .services.mercadopago_service import MercadoPagoService
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
 logger = logging.getLogger(__name__)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class MercadoPagoWebhookView(View):
+    """
+    Webhook chamado pelo Mercado Pago quando um pagamento é aprovado.
+    Valida HMAC x-signature, confirma status via SDK e atualiza DTFVendor.
+    """
+
+    def post(self, request):
+        import hmac as _hmac
+        import hashlib as _hashlib
+        from django.conf import settings
+
+        try:
+            # 1. Extrair x-signature e x-request-id
+            x_sig = request.headers.get('x-signature', '')
+            x_req = request.headers.get('x-request-id', '')
+
+            # 2. Extrair payment ID do body
+            body = json.loads(request.body) if request.body else {}
+            # MP pode mandar { "action": "payment.created", "data": { "id": "123" } }
+            data_id = body.get('data', {}).get('id', '') or request.POST.get('data_id', '')
+            if not data_id:
+                # Às vezes MP manda topic em vez de data.id (ex: payment)
+                topic = body.get('type', '') or body.get('topic', '')
+                action = body.get('action', '')
+                logger.info(f"[MP_WEBHOOK] Body sem data.id, topic={topic} action={action}")
+                return JsonResponse({'status': 'ignored'}, status=200)
+
+            # 3. Validar HMAC
+            secret = getattr(settings, 'MERCADOPAGO_WEBHOOK_SECRET', '')
+            if secret:
+                mac = _hmac.new(
+                    secret.encode(),
+                    f"{data_id}{x_req}".encode(),
+                    _hashlib.sha256
+                ).hexdigest()
+                # MP pode mandar no formato "t=timestamp,v1=mac"
+                # ou vírgula-separado: "t=timestamp,v1=mac,..."
+                hmac_ok = False
+                for part in x_sig.split(','):
+                    if '=' in part:
+                        val = part.split('=', 1)[1]
+                        if _hmac.compare_digest(mac, val):
+                            hmac_ok = True
+                            break
+                if not hmac_ok:
+                    logger.warning(f"[MP_WEBHOOK] HMAC inválido para payment {data_id}")
+                    return JsonResponse({'error': 'forbidden'}, status=403)
+
+            # 4. Idempotência
+            if data_id in _mp_processed_ids:
+                logger.info(f"[MP_WEBHOOK] Payment {data_id} já processado, ignorando")
+                return JsonResponse({'status': 'already_processed'}, status=200)
+
+            # 5. Confirmar payment via SDK (não confiar no body do webhook)
+            config = ConfiguracaoLoja.objects.filter(mp_connected=True).first()
+            if not config:
+                logger.error("[MP_WEBHOOK] Nenhuma config MP conectada")
+                return JsonResponse({'error': 'not_configured'}, status=500)
+
+            access_token = MercadoPagoService.get_access_token(config)
+            sdk = mercadopago.SDK(access_token)
+            payment_resp = sdk.payment().get(data_id)
+            payment = payment_resp.get('response', {})
+
+            logger.info(f"[MP_WEBHOOK] Payment {data_id} status={payment.get('status')}")
+
+            # 6. Processar se aprovado
+            if payment.get('status') == 'approved':
+                dtf_id = payment.get('external_reference', '')
+                if dtf_id:
+                    try:
+                        dtf = DTFVendor.objects.get(id=int(dtf_id))
+                        if not dtf.esta_pago:
+                            payer = payment.get('payer', {})
+                            identification = payer.get('identification', {})
+                            dtf.esta_pago = True
+                            dtf.comprovante_mp_data = {
+                                'payment_id': payment.get('id'),
+                                'metodo': payment.get('payment_method_id'),
+                                'nome': f"{payer.get('first_name', '')} {payer.get('last_name', '')}".strip(),
+                                'email': payer.get('email'),
+                                'cpf': identification.get('number'),
+                                'ultimos4': (payment.get('card', {}) or {}).get('last_four_digits') or payment.get('last_four_digits', ''),
+                                'valor': payment.get('transaction_amount'),
+                                'data': payment.get('date_approved') or payment.get('last_modified'),
+                            }
+                            dtf.save()
+                            _mp_processed_ids.add(data_id)
+                            # Limitar cache para não crescer infinitamente
+                            if len(_mp_processed_ids) > 10000:
+                                _mp_processed_ids.clear()
+                            logger.info(f"[MP_WEBHOOK] DTF {dtf_id} marcado como pago")
+
+                            # 7. Broadcast via Channels
+                            channel_layer = get_channel_layer()
+                            async_to_sync(channel_layer.group_send)(
+                                'dtf_notifications',
+                                {
+                                    'type': 'dtf_notification',
+                                    'event': 'pago',
+                                    'dtf_id': dtf.id,
+                                    'codigo_publico': dtf.codigo_publico or '',
+                                    'cliente_nome': dtf.cliente.nome,
+                                }
+                            )
+                            logger.info(f"[MP_WEBHOOK] Broadcast WS enviado para DTF {dtf_id}")
+                        else:
+                            logger.info(f"[MP_WEBHOOK] DTF {dtf_id} já estava pago")
+                    except DTFVendor.DoesNotExist:
+                        logger.warning(f"[MP_WEBHOOK] DTF id={dtf_id} não encontrado")
+                    except Exception as e:
+                        logger.error(f"[MP_WEBHOOK] Erro processando DTF {dtf_id}: {e}")
+                        return JsonResponse({'error': str(e)}, status=500)
+
+            return JsonResponse({'status': 'ok'}, status=200)
+
+        except json.JSONDecodeError:
+            logger.error("[MP_WEBHOOK] Body não é JSON válido")
+            return JsonResponse({'error': 'invalid json'}, status=400)
+        except Exception as e:
+            logger.error(f"[MP_WEBHOOK] Erro interno: {e}")
+            return JsonResponse({'error': str(e)}, status=500)
+
 
 @method_decorator(csrf_exempt, name='dispatch')
 class WhatsAppWebhookView(View):

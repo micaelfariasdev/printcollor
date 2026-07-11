@@ -7,6 +7,7 @@ import Dashboard from '../pages/Dashboard';
 // Visualização externa
 import VisualizarPedidoPage from '../pages/VisualizarPedidoPage';
 import VisualizarDTFPage from '../pages/VisualizarDTFPage';
+import PedidoPublicoPage from '../pages/publico/PedidoPublicoPage';
 
 // Páginas internas
 import Orcamentos from '../pages/Orcamentos';
@@ -61,6 +62,9 @@ export const AppRouter = () => {
       <Route path="/pedido/:id/visualizar" element={<VisualizarPedidoPage />} />
       <Route path="/dtf/:id/visualizar" element={<VisualizarDTFPage />} />
       <Route path="/pedidos-carrossel" element={<PedidosCarrosselMobile />} />
+
+      {/* Página pública de pedido (sem login) */}
+      <Route path="/pedido-publico/:codigo_publico" element={<PedidoPublicoPage />} />
 
       {/* Painel KDS standalone (sem sidebar, abre em popup) */}
       <Route path="/kds" element={<AdminFinanceiroRoute><Dashboard /></AdminFinanceiroRoute>} />

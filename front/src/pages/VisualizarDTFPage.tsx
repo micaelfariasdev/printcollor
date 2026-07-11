@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { api } from '../auth/useAuth';
-import { Printer, ArrowLeft, Loader2, FileDown, Camera } from 'lucide-react';
+import { Printer, ArrowLeft, Loader2, FileDown, Camera, CreditCard, CheckCircle } from 'lucide-react';
 import { formatarReal } from '../tools/formatReal';
 import logo from '../assets/logo-printcollor-blk.png';
 import html2canvas from 'html2canvas';
@@ -222,8 +222,46 @@ const VisualizarDTFPage = () => {
 
           <div className="flex flex-col min-h-0">
             <span className="text-[10px] font-black text-slate-400 uppercase mb-2 flex-shrink-0">Comprovante</span>
-            <div className="flex-1 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center overflow-hidden p-2">
-              {dtf?.comprovante_pagamento ? (
+            <div className="flex-1 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl overflow-hidden p-2">
+              {dtf?.comprovante_mp_data ? (
+                <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl p-3 text-white h-full flex flex-col justify-between">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <div className="bg-white rounded px-1.5 py-0.5">
+                        <span className="text-blue-600 font-black text-[9px]">Mercado</span>
+                        <span className="text-blue-500 font-black text-[9px]">Pago</span>
+                      </div>
+                      <CheckCircle size={12} className="text-green-300" />
+                    </div>
+                    <CreditCard size={14} className="text-blue-200" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-blue-200 text-[9px]">Valor</span>
+                      <span className="font-black text-sm">{formatarReal(dtf.comprovante_mp_data.valor)}</span>
+                    </div>
+                    {dtf.comprovante_mp_data.ultimos4 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-blue-200 text-[9px]">Cartão</span>
+                        <span className="text-white font-semibold text-xs">•••• {dtf.comprovante_mp_data.ultimos4}</span>
+                      </div>
+                    )}
+                    {dtf.comprovante_mp_data.nome && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-blue-200 text-[9px]">Titular</span>
+                        <span className="text-white font-semibold text-[10px] truncate ml-2">{dtf.comprovante_mp_data.nome}</span>
+                      </div>
+                    )}
+                    {dtf.comprovante_mp_data.metodo && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-blue-200 text-[9px]">Forma</span>
+                        <span className="text-white font-semibold text-[10px] uppercase">{dtf.comprovante_mp_data.metodo}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-[8px] text-blue-200 mt-1 text-right">{dtf.comprovante_mp_data.payment_id}</div>
+                </div>
+              ) : dtf?.comprovante_pagamento ? (
                 <img src={dtf.comprovante_pagamento} className="max-w-full max-h-full object-contain" alt="Comprovante" />
               ) : (
                 <span className="text-slate-300 font-black text-xs uppercase">Sem Comprovante</span>

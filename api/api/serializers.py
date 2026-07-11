@@ -131,14 +131,15 @@ class DTFVendorSerializer(serializers.ModelSerializer):
     preco_unit_override = serializers.DecimalField(
         max_digits=10, decimal_places=2, required=False, allow_null=True
     )
+    comprovante_mp_data = serializers.SerializerMethodField()
 
     class Meta:
         model = DTFVendor
         fields = [
-            'id', 'cliente', 'nome_cliente', 'layout_arquivo', 'tamanho_cm',
+            'id', 'cliente', 'nome_cliente', 'codigo_publico','layout_arquivo', 'tamanho_cm',
             'data_criacao', 'foi_impresso', 'esta_pago', 'foi_entregue',
             'comprovante_pagamento', 'valor_total', 'tipo_produto', 'tipo_produto_display', 'unidade',
-            'status', 'status_display', 'quantidade', 'preco_unit_override'
+            'status', 'status_display', 'quantidade', 'preco_unit_override', 'comprovante_mp_data'
         ]
 
     def get_tipo_produto_display(self, obj):
@@ -146,6 +147,11 @@ class DTFVendorSerializer(serializers.ModelSerializer):
 
     def get_status_display(self, obj):
         return dict(obj.STATUS_ORCAMENTO).get(obj.status, 'Orçamento')
+
+    def get_comprovante_mp_data(self, obj):
+        if not obj.esta_pago or not obj.comprovante_mp_data:
+            return None
+        return obj.comprovante_mp_data
 
 
 class DTFConfigSerializer(serializers.ModelSerializer):
@@ -248,3 +254,88 @@ class ConfiguracaoLojaSerializer(serializers.ModelSerializer):
         if len(normalized) > 15:
             raise serializers.ValidationError("Cidade deve ter no máximo 15 caracteres.")
         return normalized
+
+
+class PedidoPublicoSerializer(serializers.Serializer):
+    """Serializer público para endpoint /pedido-publico/<codigo>/ - whitelist explícita."""
+
+    codigo_publico = serializers.CharField()
+    status = serializers.CharField()
+    status_display = serializers.SerializerMethodField()
+    esta_pago = serializers.BooleanField()
+    tipo_produto_display = serializers.SerializerMethodField()
+    tamanho_cm = serializers.DecimalField(max_digits=10, decimal_places=2)
+    unidade = serializers.CharField()
+    quantidade = serializers.IntegerField()
+    valor_total = serializers.SerializerMethodField()
+    cliente_nome = serializers.SerializerMethodField()
+    data_criacao = serializers.DateTimeField(format='%d/%m/%Y %H:%M')
+    data_entrega = serializers.DateTimeField(format='%d/%m/%Y', allow_null=True)
+    foi_impresso = serializers.CharField()
+    foi_entregue = serializers.BooleanField()
+
+    # PIX: campos para o front construir BR Code
+    pix = serializers.SerializerMethodField()
+
+    # Cartão: exposto apenas se !esta_pago e loja conectada
+    pode_pagar_cartao = serializers.SerializerMethodField()
+    valor_cartao = serializers.SerializerMethodField()
+    # Comprovante MP (preenchido após pagamento aprovado)
+    comprovante_mp_data = serializers.SerializerMethodField()
+
+    def get_status_display(self, obj):
+        return obj.get_status_display()
+
+    def get_tipo_produto_display(self, obj):
+        return obj.get_tipo_produto_display()
+
+    def get_cliente_nome(self, obj):
+        return obj.cliente.nome if obj.cliente else ''
+
+    def get_valor_total(self, obj):
+        from decimal import Decimal
+        valor = obj.valor_total()
+        if isinstance(valor, Decimal):
+            return float(valor)
+        return valor
+
+    def get_pix(self, obj):
+        from .models import ConfiguracaoLoja
+        config = ConfiguracaoLoja.objects.first()
+        if not config or not config.pix_chave_telefone:
+            return None
+        from decimal import Decimal
+        valor = obj.valor_total()
+        if isinstance(valor, Decimal):
+            valor = float(valor)
+        return {
+            'chave': config.pix_chave_telefone,
+            'beneficiario': config.pix_beneficiario or '',
+            'cidade': config.pix_cidade or '',
+            'valor': valor,
+            'txid': f'DTFPED-{obj.id}',
+        }
+
+    def get_pode_pagar_cartao(self, obj):
+        from .models import ConfiguracaoLoja
+        config = ConfiguracaoLoja.objects.first()
+        if not config or not config.mp_connected:
+            return False
+        return not obj.esta_pago
+
+    def get_valor_cartao(self, obj):
+        from decimal import Decimal
+        from .models import ConfiguracaoLoja
+        config = ConfiguracaoLoja.objects.first()
+        if not config or not config.mp_connected:
+            return None
+        valor_base = obj.valor_total()
+        taxa = config.mp_percentual_taxa or Decimal('0')
+        if isinstance(valor_base, Decimal):
+            valor_base = float(valor_base)
+        return round(valor_base * (1 + float(taxa) / 100), 2)
+
+    def get_comprovante_mp_data(self, obj):
+        if not obj.esta_pago or not obj.comprovante_mp_data:
+            return None
+        return obj.comprovante_mp_data
