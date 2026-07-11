@@ -93,7 +93,7 @@ export default function PedidoPublicoPage() {
       const brCode = buildPixBRCode({
         chave: pedido.pix!.chave,
         valor: pedido.pix!.valor,
-        txid: pedido.pix!.txid,
+        txid: pedido.codigo_publico,
         beneficiario: pedido.pix!.beneficiario,
         cidade: pedido.pix!.cidade,
       });
