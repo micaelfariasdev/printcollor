@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Search, Download, Plus, Edit } from 'lucide-react';
+import { Search, Download, Plus, Edit, Copy } from 'lucide-react';
 import { theme } from '../components/Theme';
 import { formatarReal } from '../tools/formatReal';
 import { formatarDataHora } from '../tools/dataHora';
 import { usePaginatedList } from '../hooks/usePaginatedList';
 import ModalNovoOrcamento from '../components/ModalNovoOrcamento';
 import ModalEditarOrcamento from '../components/ModalEditarOrcamento';
+import ModalDuplicarOrcamento from '../components/ModalDuplicarOrcamento';
 import { api } from '../auth/useAuth';
 
 export interface ItemOrcamento {
@@ -35,10 +36,22 @@ const Orcamentos: React.FC = () => {
  });
  const [isModalOpen, setIsModalOpen] = useState(false);
  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+ const [isDuplicarModalOpen, setIsDuplicarModalOpen] = useState(false);
  const [selectedOrcamentoId, setSelectedOrcamentoId] = useState<number | null>(null);
 
  const handleEditar = (id: number) => {
  setSelectedOrcamentoId(id);
+ setIsEditModalOpen(true);
+ };
+
+ const handleDuplicar = (id: number) => {
+ setSelectedOrcamentoId(id);
+ setIsDuplicarModalOpen(true);
+ };
+
+ const handleDuplicarSuccess = (novoId: number) => {
+ refresh();
+ setSelectedOrcamentoId(novoId);
  setIsEditModalOpen(true);
  };
 
@@ -135,13 +148,21 @@ const DowloadOrcamento = async (id: number) => {
  <td className="p-4">
  <div className="flex items-center justify-center gap-2">
  <button
+ title="Duplicar"
+ className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+ onClick={() => handleDuplicar(orc.id)}
+ >
+ <Copy size={18} />
+ </button>
+
+ <button
  title="Visualizar Detalhes"
  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
  onClick={() => handleEditar(orc.id)}
  >
  <Edit size={18} />
  </button>
- 
+
  <button
   onClick={() => DowloadOrcamento(orc.id)}
  rel="noopener noreferrer"
@@ -149,7 +170,6 @@ const DowloadOrcamento = async (id: number) => {
  >
  <Download size={18} />
  </button>
- 
  </div>
  </td>
  </tr>
@@ -191,6 +211,13 @@ const DowloadOrcamento = async (id: number) => {
  onSuccess={refresh}
  orcamentoId={selectedOrcamentoId}
  />
+      <ModalDuplicarOrcamento
+        isOpen={isDuplicarModalOpen}
+        onClose={() => setIsDuplicarModalOpen(false)}
+        onSuccess={handleDuplicarSuccess}
+        orcamentoId={selectedOrcamentoId || 0}
+        orcamentoNome={items.find((i: any) => i.id === selectedOrcamentoId)?.nome_cliente || ""}
+      />
  </div>
  );
 };
