@@ -70,7 +70,8 @@ class EmpresaViewSet(viewsets.ModelViewSet):
     ordering = ['-id']
 
     def get_permissions(self):
-        # Use as classes sem instanciar (sem os parênteses)
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]
         return [(IsAdminUserCustom | IsFinanceiro)()]
 
 

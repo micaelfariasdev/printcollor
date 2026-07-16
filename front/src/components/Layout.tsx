@@ -55,12 +55,12 @@ export const Layout: React.FC = () => {
   const isFinanceiro = meData?.nivel_acesso === 'financeiro';
 
   const menuItems = [
-    { id: 'dashboard', label: 'Início', icon: <LayoutDashboard size={22} />, roles: ['admin', 'financeiro'] },
+    { id: 'dashboard', label: 'Início', icon: <LayoutDashboard size={22} />, roles: ['all'] },
     { id: 'pedidos', label: 'Produção', icon: <Package size={22} />, roles: ['all'] },
     { id: 'dtf', label: 'DTF / UV', icon: <Printer size={22} />, roles: ['all'] },
     // { id: 'whatsapp', label: 'WhatsApp', icon: <MessageSquare size={22} />, roles: ['all'] },
-    { id: 'orcamentos', label: 'Orçamentos', icon: <FileText size={22} />, roles: ['admin', 'financeiro'] },
-    { id: 'clientes', label: 'Clientes', icon: <Users size={22} />, roles: ['admin', 'financeiro'] },
+    { id: 'orcamentos', label: 'Orçamentos', icon: <FileText size={22} />, roles: ['all'] },
+    { id: 'clientes', label: 'Clientes', icon: <Users size={22} />, roles: ['all'] },
     { id: 'produtos', label: 'Produtos', icon: <Package size={22} />, roles: ['admin', 'financeiro'] },
     { id: 'empresas', label: 'Unidades', icon: <Building2 size={22} />, roles: ['admin', 'financeiro'] },
     { id: 'usuarios', label: 'Equipe', icon: <Users size={22} />, roles: ['admin'] },

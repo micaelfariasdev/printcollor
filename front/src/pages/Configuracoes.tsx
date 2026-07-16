@@ -33,6 +33,7 @@ const Configuracoes: React.FC = () => {
     first_name: '',
     last_name: '',
     email: '',
+    is_staff: ''
   });
 
   const [pwdData, setPwdData] = useState({
@@ -65,6 +66,7 @@ const Configuracoes: React.FC = () => {
         first_name: res.data.first_name || '',
         last_name: res.data.last_name || '',
         email: res.data.email || '',
+        is_staff: res.data.is_staff || ''
       });
     });
   }, []);
@@ -239,7 +241,7 @@ const Configuracoes: React.FC = () => {
       <div className="flex bg-white p-1.5 rounded-[1.5rem] shadow-sm border border-slate-200 w-fit">
         <button onClick={() => setActiveTab('perfil')} className={`px-8 py-3 rounded-xl text-xs font-black uppercase transition-all ${activeTab === 'perfil' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}>Meu Perfil</button>
         <button onClick={() => setActiveTab('seguranca')} className={`px-8 py-3 rounded-xl text-xs font-black uppercase transition-all ${activeTab === 'seguranca' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}>Segurança</button>
-        <button onClick={() => setActiveTab('dtf')} className={`px-8 py-3 rounded-xl text-xs font-black uppercase transition-all ${activeTab === 'dtf' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}><Printer size={14} className="inline mr-1" /> DTF</button>
+        {formData && <button onClick={() => setActiveTab('dtf')} className={`px-8 py-3 rounded-xl text-xs font-black uppercase transition-all ${activeTab === 'dtf' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}><Printer size={14} className="inline mr-1" /> DTF</button>}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -269,11 +271,11 @@ const Configuracoes: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nome</label>
-                  <input type="text" value={formData.first_name} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 font-bold outline-none focus:ring-2 focus:ring-blue-500" onChange={(e) => setFormData({...formData, first_name: e.target.value})} />
+                  <input type="text" value={formData.first_name} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 font-bold outline-none focus:ring-2 focus:ring-blue-500" onChange={(e) => setFormData({ ...formData, first_name: e.target.value })} />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Sobrenome</label>
-                  <input type="text" value={formData.last_name} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 font-bold outline-none focus:ring-2 focus:ring-blue-500" onChange={(e) => setFormData({...formData, last_name: e.target.value})} />
+                  <input type="text" value={formData.last_name} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 font-bold outline-none focus:ring-2 focus:ring-blue-500" onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} />
                 </div>
               </div>
               <div className="space-y-4 pt-4 border-t border-slate-50">
@@ -281,7 +283,7 @@ const Configuracoes: React.FC = () => {
                   <label className="text-[10px] font-black text-slate-400 uppercase ml-1">E-mail</label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-3.5 text-slate-300" size={18} />
-                    <input type="email" value={formData.email} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-12 font-bold outline-none focus:ring-2 focus:ring-blue-500" onChange={(e) => setFormData({...formData, email: e.target.value})} />
+                    <input type="email" value={formData.email} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-12 font-bold outline-none focus:ring-2 focus:ring-blue-500" onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
                   </div>
                 </div>
               </div>
@@ -296,16 +298,16 @@ const Configuracoes: React.FC = () => {
               </h2>
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Senha Atual</label>
-                <input type="password" value={pwdData.current_password} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 font-bold outline-none" onChange={(e) => setPwdData({...pwdData, current_password: e.target.value})} />
+                <input type="password" value={pwdData.current_password} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 font-bold outline-none" onChange={(e) => setPwdData({ ...pwdData, current_password: e.target.value })} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nova Senha</label>
-                  <input type="password" value={pwdData.new_password} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 font-bold outline-none" onChange={(e) => setPwdData({...pwdData, new_password: e.target.value})} />
+                  <input type="password" value={pwdData.new_password} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 font-bold outline-none" onChange={(e) => setPwdData({ ...pwdData, new_password: e.target.value })} />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Repetir Senha</label>
-                  <input type="password" value={pwdData.confirm_password} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 font-bold outline-none" onChange={(e) => setPwdData({...pwdData, confirm_password: e.target.value})} />
+                  <input type="password" value={pwdData.confirm_password} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 font-bold outline-none" onChange={(e) => setPwdData({ ...pwdData, confirm_password: e.target.value })} />
                 </div>
               </div>
               <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase shadow-xl hover:bg-black transition-all">
