@@ -2,7 +2,9 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    dependencies = [('api', '0013_configuracaoloja_mp_public_key')]
+    # 0013 existia apenas localmente e nunca foi versionada; 0012 é o último
+    # marco comum entre ambientes já publicados.
+    dependencies = [('api', '0012_mp_comprovante_data')]
 
     operations = [
         migrations.AddField(
