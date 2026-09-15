@@ -1,9 +1,9 @@
 from django.utils import timezone
-from django.db import models, transaction
+from django.db import models, transaction, IntegrityError
 from django.contrib.auth.models import AbstractUser
 from decimal import Decimal
 import os
-import random
+import secrets
 import string
 
 
@@ -18,7 +18,7 @@ ALFABETO_PUBLICO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # sem 0/O/1/I
 
 
 def gerar_codigo_publico(tamanho=7):
-    return ''.join(random.choices(ALFABETO_PUBLICO, k=tamanho))
+    return ''.join(secrets.choice(ALFABETO_PUBLICO) for _ in range(tamanho))
 
 
 def path_layout_dtf(instance, filename):
@@ -197,6 +197,12 @@ class DTFVendor(models.Model):
         help_text="Dados do pagamento via Mercado Pago (recebedor, método,最后的4 dígitos, etc.)")
     codigo_publico = models.CharField(
         max_length=12, unique=True, null=True, blank=True, db_index=True)
+    preco_unitario_aplicado = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Preco unitario congelado na criacao do pedido.')
+    preco_minimo_aplicado = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Preco minimo congelado na criacao do pedido.')
 
     def atualizar_status(self):
         """Atualiza o status automaticamente baseado nos flags."""
@@ -206,8 +212,18 @@ class DTFVendor(models.Model):
             self.status = "orcamento"
         elif self.foi_impresso == "impresso":
             self.status = "impresso"
-        else:
+        elif self.status == 'orcamento':
             self.status = "aprovado"
+
+    def _precos_aplicaveis(self):
+        try:
+            config = DTFConfig.objects.get(tipo_produto=self.tipo_produto)
+            preco_unitario = config.valor_unidade if self.tipo_produto == 'estampa' else config.valor_metro
+            preco_minimo = config.preco_minimo
+        except DTFConfig.DoesNotExist:
+            preco_unitario = Decimal('8.00') if self.tipo_produto == 'estampa' else Decimal('35.00')
+            preco_minimo = Decimal('20.00')
+        return self.preco_unit_override if self.preco_unit_override is not None else preco_unitario, preco_minimo
 
     def save(self, *args, **kwargs):
         if self.tipo_produto in ('dtf_textil', 'dtf_uv'):
@@ -219,6 +235,10 @@ class DTFVendor(models.Model):
             if not self.quantidade:
                 self.quantidade = 1
         self.atualizar_status()
+        if self._state.adding:
+            preco_unitario, preco_minimo = self._precos_aplicaveis()
+            self.preco_unitario_aplicado = preco_unitario
+            self.preco_minimo_aplicado = preco_minimo
 
         # Gerar codigo_publico apenas na criação (pk ainda None)
         if not self.codigo_publico and not self.pk:
@@ -230,7 +250,7 @@ class DTFVendor(models.Model):
                     return
                 except transaction.TransactionManagementError:
                     raise
-                except Exception:
+                except IntegrityError:
                     self.codigo_publico = None
                     continue
             raise RuntimeError("Não foi possível gerar codigo_publico único")
@@ -248,12 +268,19 @@ class DTFVendor(models.Model):
             preco_por_metro = Decimal('35.00')
             preco_minimo = Decimal('20.00')
 
+        if self.preco_unitario_aplicado is not None:
+            preco_por_metro = self.preco_unitario_aplicado
+        if self.preco_minimo_aplicado is not None:
+            preco_minimo = self.preco_minimo_aplicado
+
         # Aplicar override por pedido: se preenchido, sobrescreve o preço base
         # para todos os tipos (estampa = valor por unidade, demais = valor por metro)
         if self.preco_unit_override is not None:
             preco_por_metro = self.preco_unit_override
 
         if self.tipo_produto == 'estampa':
+            if self.preco_unitario_aplicado is not None:
+                return self.preco_unitario_aplicado * (self.quantidade or 1)
             # Estampa: usa preco_unit_override (se houver) como valor por unidade,
             # senão usa o valor_unidade da config
             if self.preco_unit_override is not None:

@@ -1,177 +1,37 @@
 import { useState } from 'react';
-import {
-  Printer, Zap, ArrowRight, Upload, Loader2,
-  CheckCircle,
-  Scissors, Activity, Layers, Cpu
-} from 'lucide-react';
+import { ArrowRight, Check, Factory, Layers3, Loader2, Palette, Printer, Scissors, Send, Sparkles, Upload, Zap } from 'lucide-react';
 import { api } from '../auth/useAuth';
 import { useAlert } from '../contexts/AlertContext';
 import logo from '../assets/logo-printcollor.png';
 
+const services = [
+  [Printer, '01', 'DTF Textil', 'Estampas vivas e flexiveis para vestir.'],
+  [Sparkles, '02', 'DTF UV', 'Personalizacao premium para brindes.'],
+  [Layers3, '03', 'Sublimacao', 'Escala para tecido, uniformes e colecoes.'],
+  [Scissors, '04', 'Acabamento', 'Corte preciso e cuidado em cada detalhe.'],
+] as const;
+
 export const LandingPage = () => {
   const { addAlert } = useAlert();
   const [loading, setLoading] = useState(false);
-  const [enviado, setEnviado] = useState(false);
-  const [arquivo, setArquivo] = useState<File | null>(null);
-  const [formData, setFormData] = useState({
-    cliente_nome: '',
-    whatsapp: '',
-    tipo_servico: 'dtf',
-    descricao: ''
-  });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    const data = new FormData();
-    Object.entries(formData).forEach(([key, val]) => data.append(key, val));
-    if (arquivo) data.append('arquivo', arquivo);
-
-    try {
-      await api.post('solicitar-orcamento/', data);
-      setEnviado(true);
-      addAlert('Solicitação enviada!', 'success');
-    } catch (error) {
-      addAlert('Erro ao enviar.', 'error');
-    } finally { setLoading(false); }
+  const [sent, setSent] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [form, setForm] = useState({ cliente_nome: '', whatsapp: '', tipo_servico: 'dtf', descricao: '' });
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault(); setLoading(true);
+    const data = new FormData(); Object.entries(form).forEach(([key, value]) => data.append(key, value)); if (file) data.append('arquivo', file);
+    try { await api.post('solicitar-orcamento/', data); setSent(true); addAlert('Solicitacao enviada!', 'success'); }
+    catch { addAlert('Nao foi possivel enviar.', 'error'); }
+    finally { setLoading(false); }
   };
-
-  return (
-    <div className="min-h-screen bg-[#020617] font-sans text-white overflow-x-hidden overflow-y-auto">
-      
-      {/* Navbar Premium */}
-      <nav className="fixed top-4 inset-x-4 z-50">
-        <div className="max-w-6xl mx-auto bg-[#0f172a]/70 backdrop-blur-xl border border-white/10 px-6 h-16 rounded-2xl flex items-center justify-between shadow-2xl">
-          <img src={logo} alt="PrintCollor" className="h-10 object-contain" />
-          <div className="hidden md:flex gap-8 text-[10px] font-black uppercase italic tracking-[0.2em] text-slate-400">
-            <a href="#tecnologia" className="hover:text-blue-500 transition">Tecnologia</a>
-            <a href="#produtos" className="hover:text-blue-500 transition">Produtos</a>
-            <a href="#orcamento" className="hover:text-blue-500 transition">Orçamento</a>
-          </div>
-          <a href="#orcamento" className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl font-black uppercase italic text-[10px] tracking-widest transition-all">
-            Solicitar Orçamento
-          </a>
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <section className="relative pt-48 pb-20 px-6 overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-blue-600/20 blur-[120px] rounded-full -z-10"></div>
-        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center text-left">
-          <div className="space-y-5">
-            <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-full text-blue-400 text-[10px] font-black uppercase tracking-widest italic">
-              <Activity size={12} className="animate-pulse" /> Produção Industrial em Tempo Real
-            </div>
-            <h1 className="text-6xl md:text-8xl font-black uppercase italic leading-[0.8] tracking-tighter">
-              Velocidade <br /> <span className="text-blue-600">Máxima.</span>
-            </h1>
-            <p className="text-slate-400 text-lg max-w-md font-medium">
-              A maior infraestrutura de impressão digital de Teresina. Tecnologia de fábrica para pequenos e grandes volumes.
-            </p>
-          </div>
-
-          <div id="orcamento" className="bg-white rounded-[2.5rem] p-8 shadow-2xl text-slate-900 border border-slate-200">
-            {enviado ? (
-              <div className="py-20 text-center space-y-4">
-                <CheckCircle size={60} className="text-green-500 mx-auto" />
-                <h2 className="text-2xl font-black uppercase italic text-slate-800">Recebemos seu pedido!</h2>
-                <p className="text-slate-500 font-bold uppercase text-[10px]">Em breve entraremos em contato via WhatsApp.</p>
-                <button onClick={() => setEnviado(false)} className="bg-slate-900 text-white px-8 py-3 rounded-xl font-black uppercase italic text-xs">Novo Orçamento</button>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <h2 className="text-2xl font-black uppercase italic text-slate-800">Solicitar Orçamento</h2>
-                <div className="grid grid-cols-2 gap-4">
-                   <input required placeholder="Nome" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-500" onChange={e => setFormData({...formData, cliente_nome: e.target.value})} />
-                   <input required placeholder="WhatsApp" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-500" onChange={e => setFormData({...formData, whatsapp: e.target.value})} />
-                </div>
-                <select className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold outline-none" onChange={e => setFormData({...formData, tipo_servico: e.target.value})}>
-                  <option value="dtf">DTF Têxtil (Rolo)</option>
-                  <option value="uv">DTF UV (Brindes)</option>
-                  <option value="sublimacao">Sublimação Total / Calandra</option>
-                  <option value="fardamento">Fardamento / Camisaria</option>
-                  <option value="laser">Corte a Laser</option>
-                </select>
-                <textarea required placeholder="Quantidades, tamanhos e detalhes..." className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold h-24 outline-none focus:ring-2 focus:ring-blue-500" onChange={e => setFormData({...formData, descricao: e.target.value})} />
-                <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition text-slate-400 font-black uppercase text-[10px]">
-                  <Upload size={18} /> {arquivo ? arquivo.name : 'Anexar Arte'}
-                  <input type="file" className="hidden" onChange={e => setArquivo(e.target.files ? e.target.files[0] : null)} />
-                </label>
-                <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase italic shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all">
-                  {loading ? <Loader2 className="animate-spin" /> : <>Pedir Orçamento <ArrowRight size={20} /></>}
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Seção Tecnologia e Poder de Máquina */}
-      <section id="tecnologia" className="py-24 bg-slate-900/50">
-        <div className="max-w-7xl mx-auto px-6 text-left">
-          <div className="mb-16">
-            <h2 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter mb-4">Nossa <span className="text-blue-500">Engenharia</span></h2>
-            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.3em]">Capacidade produtiva real sem intermediários</p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 text-left">
-            <div className="bg-slate-950 p-8 rounded-[2rem] border border-white/5 space-y-4">
-              <Printer className="text-blue-500" size={32} />
-              <h3 className="text-2xl font-black italic uppercase">DTF Têxtil</h3>
-              <p className="text-slate-500 text-sm font-bold leading-relaxed">Imprimindo mais de <span className="text-white text-lg">50 metros por hora</span> com 58cm de largura. Alta definição para qualquer tecido.</p>
-            </div>
-            <div className="bg-slate-950 p-8 rounded-[2rem] border border-white/5 space-y-4">
-              <Zap className="text-purple-500" size={32} />
-              <h3 className="text-2xl font-black italic uppercase">DTF UV 3D</h3>
-              <p className="text-slate-500 text-sm font-bold leading-relaxed">Personalização com relevo e largura de <span className="text-white text-lg">58cm</span>. Perfeito para rígidos e brindes de alto padrão.</p>
-            </div>
-            <div className="bg-slate-950 p-8 rounded-[2rem] border border-white/5 space-y-4">
-              <Layers className="text-orange-500" size={32} />
-              <h3 className="text-2xl font-black italic uppercase">Sublimação</h3>
-              <p className="text-slate-500 text-sm font-bold leading-relaxed">Infraestrutura com <span className="text-white text-lg">3 máquinas</span> industriais e <span className="text-white text-lg">Calandra</span> para rolos fechados.</p>
-            </div>
-            <div className="bg-slate-950 p-8 rounded-[2rem] border border-white/5 space-y-4">
-              <Scissors className="text-green-500" size={32} />
-              <h3 className="text-2xl font-black italic uppercase">Corte a Laser</h3>
-              <p className="text-slate-500 text-sm font-bold leading-relaxed">Acabamento milimétrico para tecidos e patches. Precisão digital que elimina falhas humanas.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Banner Grande - Calandra/Laser */}
-      <section className="py-10 px-6">
-        <div className="max-w-7xl mx-auto bg-gradient-to-br from-blue-700 to-blue-900 rounded-[3.5rem] p-12 md:p-20 relative overflow-hidden flex flex-col md:flex-row items-center gap-10">
-          <div className="absolute top-0 right-0 p-10 opacity-10"><Cpu size={300} /></div>
-          <div className="relative z-10 text-left space-y-6 md:w-2/3">
-            <span className="bg-white/20 px-4 py-1 rounded-full text-[10px] font-black uppercase italic tracking-widest">Produção em Rolo</span>
-            <h2 className="text-5xl md:text-7xl font-black uppercase italic leading-none">Sublimação em <br /> Larga Escala</h2>
-            <p className="text-blue-100 font-bold max-w-lg">Nossa Calandra industrial permite a estampagem de tecidos em rolo com velocidade e fidelidade de cor imbatíveis no mercado piauiense.</p>
-            <div className="flex gap-4 pt-4 text-left">
-              <div className="bg-white/10 p-4 rounded-2xl"><p className="text-2xl font-black italic">3x</p><p className="text-[8px] uppercase font-bold text-blue-200 tracking-widest">Capacidade</p></div>
-              <div className="bg-white/10 p-4 rounded-2xl"><p className="text-2xl font-black italic">100%</p><p className="text-[8px] uppercase font-bold text-blue-200 tracking-widest">Fidelidade</p></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer com Logo Grande */}
-      <footer className="py-24 border-t border-white/5 bg-[#020617] text-center space-y-12">
-        <div className="max-w-7xl mx-auto px-6">
-            <img src={logo} alt="PrintCollor" className="h-40 mx-auto" />
-            <div className="grid md:grid-cols-2 gap-8 py-12 text-slate-500 border-y border-white/5">
-                <div>
-                    <h5 className="font-black text-white uppercase italic text-[10px] tracking-widest mb-4">Endereço</h5>
-                    <p className="text-xs font-bold leading-relaxed">Teresina - PI <br /> R. Coelho de Resende, 540 / Centro-Sul</p>
-                </div>
-                <div>
-                    <h5 className="font-black text-white uppercase italic text-[10px] tracking-widest mb-4">Contato</h5>
-                    <p className="text-xs font-bold leading-relaxed">(86) 9 9817-1570 <br /> printcollor8@gmail.com</p>
-                </div>
-            </div>
-            <p className="text-slate-700 text-[9px] font-black uppercase tracking-[0.5em] pt-12">© 2026 PrintCollor Graphics • Sistema Interno PC-ERP</p>
-        </div>
-      </footer>
-    </div>
-  );
+  return <main className="min-h-screen overflow-x-hidden bg-[#f4f4ee] text-[#151515] selection:bg-lime-300">
+    <style>{`@keyframes rise{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}@keyframes float{50%{transform:translateY(-18px) rotate(4deg)}}@keyframes run{to{transform:translateX(-50%)}}.rise{animation:rise .75s cubic-bezier(.2,.8,.2,1) both}.float{animation:float 6s ease-in-out infinite}.run{animation:run 22s linear infinite;width:max-content}.dots{background-image:radial-gradient(#1e40af 1px,transparent 1px);background-size:17px 17px}`}</style>
+    <nav className="absolute inset-x-0 top-0 z-20 px-5 py-5 md:px-10"><div className="mx-auto flex max-w-7xl items-center justify-between"><img src={logo} alt="PrintCollor" className="h-10 w-auto" /><div className="hidden gap-7 text-[10px] font-black uppercase tracking-widest md:flex"><a href="#servicos">Servicos</a><a href="#processo">Processo</a></div><a href="#orcamento" className="rounded-full bg-[#151515] px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-blue-600">Faca seu pedido</a></div></nav>
+    <section className="relative min-h-[780px] overflow-hidden px-5 pt-36 md:px-10 md:pt-44"><div className="dots absolute right-0 top-0 h-full w-1/2 opacity-30" /><div className="absolute -left-20 bottom-0 h-72 w-72 rounded-full bg-cyan-300 blur-3xl" /><div className="relative mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.25fr_.75fr] lg:items-end"><div className="rise pb-16"><p className="mb-7 flex items-center gap-2 text-[10px] font-black uppercase tracking-[.2em] text-blue-600"><Zap size={14} fill="currentColor" /> Producao grafica local</p><h1 className="text-[17vw] font-black uppercase leading-[.74] tracking-[-.1em] md:text-[9rem]">Imprima<br/><span className="text-blue-600">grande.</span></h1><div className="mt-10 flex max-w-xl flex-col gap-6 md:flex-row md:items-end"><p className="max-w-sm text-base leading-relaxed text-neutral-600">Sua ideia ganha cor, textura e presenca. Da arte ao produto final, sem intermediarios.</p><a href="#orcamento" className="flex w-fit items-center gap-3 border-b-2 border-black pb-2 text-xs font-black uppercase tracking-widest">Comecar <ArrowRight size={18}/></a></div></div><div className="rise relative pb-10" style={{animationDelay:'.15s'}}><div className="relative aspect-[4/5] overflow-hidden rounded-[2.5rem] bg-[#101827] p-7 text-white shadow-2xl"><div className="float absolute -right-10 -top-10 h-48 w-48 rounded-full border-[26px] border-fuchsia-500"/><div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-blue-700 to-transparent"/><div className="relative flex h-full flex-col justify-between"><div className="flex justify-between text-[10px] font-black uppercase tracking-widest"><span>PrintCollor / 2026</span><Palette size={18}/></div><div><p className="text-xs font-bold uppercase tracking-widest text-cyan-200">Alta definicao</p><p className="mt-2 text-4xl font-black uppercase italic leading-none">Sua marca<br/>em movimento.</p></div></div></div><div className="absolute -bottom-1 -left-3 rounded-2xl bg-lime-300 px-5 py-4"><p className="text-2xl font-black">100%</p><p className="text-[8px] font-black uppercase tracking-widest">producao local</p></div></div></div></section>
+    <div className="overflow-hidden border-y-2 border-black bg-lime-300 py-4"><div className="run flex gap-8 whitespace-nowrap text-xl font-black uppercase italic"><span>DTF Textil ✦ DTF UV ✦ Sublimacao ✦ Uniformes ✦ Comunicacao Visual ✦ DTF Textil ✦ DTF UV ✦ Sublimacao ✦ Uniformes ✦ Comunicacao Visual ✦</span></div></div>
+    <section id="servicos" className="bg-[#151515] px-5 py-24 text-white md:px-10"><div className="mx-auto max-w-7xl"><div className="mb-14 flex flex-col justify-between gap-6 md:flex-row md:items-end"><div><p className="mb-3 text-[10px] font-black uppercase tracking-widest text-lime-300">O que fazemos</p><h2 className="text-5xl font-black uppercase leading-none md:text-7xl">Materia-prima<br/>para impacto.</h2></div><p className="max-w-xs text-sm text-neutral-400">Tecnologia e acabamento para marcas que precisam ser lembradas.</p></div><div className="grid gap-px overflow-hidden rounded-3xl border border-white/15 bg-white/15 md:grid-cols-2">{services.map(([Icon, number, title, text])=><article key={number} className="group min-h-64 bg-[#151515] p-8 transition hover:bg-[#252525]"><div className="flex h-full flex-col justify-between"><div className="flex justify-between"><Icon size={32} className="text-lime-300"/><span className="text-xs font-black text-neutral-500">{number}</span></div><div><h3 className="text-3xl font-black uppercase italic">{title}</h3><p className="mt-3 max-w-xs text-sm text-neutral-400">{text}</p></div></div></article>)}</div></div></section>
+    <section id="processo" className="px-5 py-24 md:px-10"><div className="mx-auto max-w-7xl"><p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Sem enrolacao</p><div className="mt-5 grid gap-10 lg:grid-cols-[.8fr_1.2fr]"><h2 className="text-5xl font-black uppercase leading-[.84] md:text-7xl">Sua arte<br/>vira produto.</h2><div className="grid gap-4 md:grid-cols-3">{[['01','Envie a ideia'],['02','A gente produz'],['03','Voce recebe']].map(([n,t])=><div key={n} className="border-t-2 border-black pt-5"><p className="font-black text-blue-600">{n}</p><p className="mt-8 text-xl font-black uppercase">{t}</p><p className="mt-3 text-sm text-neutral-500">Atendimento direto e acompanhamento em cada etapa.</p></div>)}</div></div></div></section>
+    <section id="orcamento" className="bg-blue-600 px-5 py-20 md:px-10"><div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[.8fr_1.2fr]"><div className="text-white"><p className="mb-5 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"><Factory size={15}/> Fale com a producao</p><h2 className="text-5xl font-black uppercase leading-[.84] md:text-7xl">Vamos tirar<br/>do papel?</h2><p className="mt-7 max-w-sm text-blue-100">Conte o que precisa e nossa equipe retorna pelo WhatsApp.</p></div><div className="rounded-[2rem] bg-white p-7 shadow-2xl">{sent?<div className="flex min-h-96 flex-col items-center justify-center text-center"><div className="rounded-full bg-lime-300 p-4"><Check size={32}/></div><h3 className="mt-5 text-3xl font-black uppercase">Recebido.</h3><p className="mt-3 text-sm text-neutral-500">Logo falamos com voce no WhatsApp.</p><button onClick={()=>setSent(false)} className="mt-8 rounded-full bg-black px-6 py-3 text-xs font-black uppercase text-white">Enviar outro</button></div>:<form onSubmit={submit} className="space-y-4"><p className="text-[10px] font-black uppercase tracking-widest text-blue-600">Orcamento rapido</p><h3 className="text-3xl font-black uppercase italic">Seu projeto comeca aqui.</h3><div className="grid gap-4 md:grid-cols-2"><input required value={form.cliente_nome} onChange={e=>setForm({...form,cliente_nome:e.target.value})} placeholder="Seu nome" className="rounded-xl border bg-neutral-50 p-4 font-bold outline-none focus:border-blue-600"/><input required value={form.whatsapp} onChange={e=>setForm({...form,whatsapp:e.target.value})} placeholder="WhatsApp" className="rounded-xl border bg-neutral-50 p-4 font-bold outline-none focus:border-blue-600"/></div><select value={form.tipo_servico} onChange={e=>setForm({...form,tipo_servico:e.target.value})} className="w-full rounded-xl border bg-neutral-50 p-4 font-bold"><option value="dtf">DTF Textil</option><option value="uv">DTF UV</option><option value="sublimacao">Sublimacao</option><option value="fardamento">Fardamento</option><option value="laser">Corte a laser</option></select><textarea required value={form.descricao} onChange={e=>setForm({...form,descricao:e.target.value})} placeholder="Quantidades, tamanhos e detalhes..." className="h-28 w-full rounded-xl border bg-neutral-50 p-4 font-bold outline-none focus:border-blue-600"/><label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed p-4 text-xs font-black uppercase text-neutral-500"><Upload size={17}/>{file?file.name:'Anexar arte'}<input type="file" className="hidden" onChange={e=>setFile(e.target.files?.[0]??null)}/></label><button disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-xl bg-black py-5 text-xs font-black uppercase tracking-widest text-white hover:bg-blue-600">{loading?<Loader2 className="animate-spin"/>:<>Enviar solicitacao <Send size={17}/></>}</button></form>}</div></div></section>
+    <footer className="bg-[#151515] px-5 py-12 text-white md:px-10"><div className="mx-auto flex max-w-7xl flex-col justify-between gap-7 md:flex-row md:items-end"><div><img src={logo} alt="PrintCollor" className="h-12"/><p className="mt-4 text-sm text-neutral-400">Teresina, PI · Producao grafica e impressao digital.</p></div><p className="text-sm font-bold text-neutral-400">(86) 9 9817-1570<br/>printcollor8@gmail.com</p></div></footer>
+  </main>;
 };

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Trash2, AlertTriangle } from 'lucide-react';
 import { api } from '../auth/useAuth';
 import { useAlert } from '../contexts/AlertContext';
@@ -21,7 +21,10 @@ const ModalDelete: React.FC<Props> = ({
   itemName,
 }) => {
   const { addAlert } = useAlert();
+  const [loading, setLoading] = useState(false);
   const handleDelete = async () => {
+  if (loading || itemId === null) return;
+  setLoading(true);
   try {
     await api.delete(`${endpoint}/${itemId}/`);
     addAlert(`O registro de ${itemName} foi removido permanentemente.`, 'info');
@@ -29,6 +32,8 @@ const ModalDelete: React.FC<Props> = ({
     onClose();
   } catch (err) {
     addAlert('Este item não pode ser removido pois possui vínculos ativos.', 'error');
+  } finally {
+    setLoading(false);
   }
 };
 
@@ -57,13 +62,15 @@ const ModalDelete: React.FC<Props> = ({
         <div className="p-6 space-y-3">
           <button
             onClick={handleDelete}
+            disabled={loading}
             className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 transition-all active:scale-95 disabled:opacity-50"
           >
-                <Trash2 size={20} /> Sim, Excluir
+                <Trash2 size={20} /> {loading ? 'Excluindo...' : 'Sim, Excluir'}
           </button>
 
           <button
             onClick={onClose}
+            disabled={loading}
             className="w-full py-3 rounded-xl font-bold text-slate-400 hover:text-slate-600 transition-all"
           >
             Cancelar

@@ -144,6 +144,28 @@ class DTFVendorSerializer(serializers.ModelSerializer):
     )
     comprovante_mp_data = serializers.SerializerMethodField()
 
+    def validate_layout_arquivo(self, value):
+        return DTFConfigSerializer.comprimir_imagem(self, value, qualidade=85, max_width=2500)
+
+    def validate_comprovante_pagamento(self, value):
+        return DTFConfigSerializer.comprimir_imagem(self, value, qualidade=50, max_width=1200)
+
+    def validate(self, attrs):
+        tamanho = attrs.get('tamanho_cm', getattr(self.instance, 'tamanho_cm', None))
+        quantidade = attrs.get('quantidade', getattr(self.instance, 'quantidade', 1))
+        tipo = attrs.get('tipo_produto', getattr(self.instance, 'tipo_produto', 'dtf_textil'))
+        if tamanho is not None and tamanho <= 0:
+            raise serializers.ValidationError({'tamanho_cm': 'Informe um tamanho maior que zero.'})
+        if tipo == 'estampa' and (quantidade is None or quantidade < 1):
+            raise serializers.ValidationError({'quantidade': 'Informe uma quantidade maior que zero.'})
+        return attrs
+
+    def get_fields(self):
+        fields = super().get_fields()
+        for name in ('codigo_publico', 'esta_pago', 'comprovante_mp_data', 'valor_total', 'status_display', 'tipo_produto_display'):
+            fields[name].read_only = True
+        return fields
+
     class Meta:
         model = DTFVendor
         fields = [
@@ -221,6 +243,14 @@ class PedidoFabricaSerializer(serializers.ModelSerializer):
     class Meta:
         model = PedidoFabrica
         fields = '__all__'
+
+    def validate_detalhes_tamanho(self, value):
+        if not isinstance(value, dict):
+            raise serializers.ValidationError('A grade deve ser um objeto.')
+        for tamanho, quantidade in value.items():
+            if not isinstance(tamanho, str) or not isinstance(quantidade, int) or quantidade < 0:
+                raise serializers.ValidationError('Use tamanhos em texto e quantidades inteiras nao negativas.')
+        return value
 
 
 def _normalize_pix_text(value: str) -> str:

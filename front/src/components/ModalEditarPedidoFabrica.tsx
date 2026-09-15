@@ -48,6 +48,7 @@ export default function ModalEditarPedidoFabrica({
     detalhes_tamanho: {},
   });
   const [novaChave, setNovaChave] = useState('');
+  const [clienteTexto, setClienteTexto] = useState('');
 const limpar = () => {
     setFormData({
         nome_descricao: '',
@@ -76,6 +77,7 @@ const limpar = () => {
       api.get('clientes/').then((res) => setClientes(res.data.results || []));
       api.get(`pedidos/${pedidoId}/`).then((res) => {
         setFormData(res.data);
+        setClienteTexto(res.data.cliente_nome || '');
       });
     }
   }, [isOpen, pedidoId]);
@@ -226,9 +228,10 @@ const limpar = () => {
                 list="edit-clientes-options"
                 placeholder="Buscar cliente..."
                 className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                defaultValue={formData.cliente_nome || ''}
+                value={clienteTexto}
                 onChange={(e) => {
                   const valorDigitado = e.target.value;
+                  setClienteTexto(valorDigitado);
                   clientSearch.setQuery(valorDigitado);
                   const clienteEncontrado = allClientes.find(
                     (c: any) => c.nome === valorDigitado

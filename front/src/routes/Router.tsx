@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from '../pages/Login';
-import Register from '../pages/Register';
 import { Layout } from '../components/Layout';
 import Dashboard from '../pages/Dashboard';
 
@@ -56,7 +55,6 @@ export const AppRouter = () => {
       {/* Rotas Públicas */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
 
       {/* Visualização Externa */}
       <Route path="/pedido/:id/visualizar" element={<VisualizarPedidoPage />} />
