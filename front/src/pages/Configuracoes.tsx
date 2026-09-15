@@ -12,6 +12,25 @@ const TIPOS_DTF = [
   { value: 'estampa', label: 'Estampa (por unidade)' },
 ];
 
+interface DtfConfig {
+  id: number;
+  tipo_produto: string;
+  valor_metro: string | number;
+  preco_minimo: string | number;
+  valor_unidade: string | number;
+}
+
+interface LojaConfig {
+  id: number;
+  pix_chave_telefone?: string;
+  pix_beneficiario?: string;
+  pix_cidade?: string;
+  mp_connected?: boolean;
+  mp_user_id?: string;
+  mp_percentual_taxa?: number;
+  mp_connected_em?: string;
+}
+
 const Configuracoes: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'perfil' | 'seguranca' | 'dtf'>('perfil');
@@ -33,7 +52,7 @@ const Configuracoes: React.FC = () => {
     first_name: '',
     last_name: '',
     email: '',
-    is_staff: ''
+    is_staff: false
   });
 
   const [pwdData, setPwdData] = useState({
@@ -42,21 +61,16 @@ const Configuracoes: React.FC = () => {
     confirm_password: '',
   });
 
-  const [dtfConfigs, setDtfConfigs] = useState<any[]>([]);
+  const [dtfConfigs, setDtfConfigs] = useState<DtfConfig[]>([]);
   const [dtfValues, setDtfValues] = useState<{ [key: string]: { valor_metro: string; preco_minimo: string; valor_unidade: string } }>({});
-  const [pixConfig, setPixConfig] = useState<{ id?: number; pix_chave_telefone?: string; pix_beneficiario?: string; pix_cidade?: string }>({});
+  const [pixConfig, setPixConfig] = useState<Partial<LojaConfig>>({});
   const [pixForm, setPixForm] = useState({
     pix_chave_telefone: '',
     pix_beneficiario: '',
     pix_cidade: '',
   });
 
-  const [mpConfig, setMpConfig] = useState<{
-    mp_connected?: boolean;
-    mp_user_id?: string;
-    mp_percentual_taxa?: number;
-    mp_connected_em?: string;
-  }>({});
+  const [mpConfig, setMpConfig] = useState<Partial<LojaConfig>>({});
   const [mpTaxa, setMpTaxa] = useState('');
 
   useEffect(() => {
@@ -66,7 +80,7 @@ const Configuracoes: React.FC = () => {
         first_name: res.data.first_name || '',
         last_name: res.data.last_name || '',
         email: res.data.email || '',
-        is_staff: res.data.is_staff || ''
+        is_staff: Boolean(res.data.is_staff)
       });
     });
   }, []);
@@ -74,10 +88,10 @@ const Configuracoes: React.FC = () => {
   useEffect(() => {
     if (activeTab === 'dtf') {
       api.get('dtf-config/').then((res) => {
-        const configs = res.data.results || [];
+        const configs: DtfConfig[] = res.data.results || [];
         setDtfConfigs(configs);
-        const vals: any = {};
-        configs.forEach((c: any) => {
+        const vals: Record<string, { valor_metro: string; preco_minimo: string; valor_unidade: string }> = {};
+        configs.forEach((c) => {
           vals[c.tipo_produto] = {
             valor_metro: String(c.valor_metro ?? '35.00'),
             preco_minimo: String(c.preco_minimo ?? '20.00'),
@@ -87,7 +101,7 @@ const Configuracoes: React.FC = () => {
         setDtfValues(vals);
       });
       api.get('configuracao-loja/').then((res) => {
-        const data = res.data || {};
+        const data: LojaConfig = res.data || {};
         setPixConfig(data);
         setPixForm({
           pix_chave_telefone: data.pix_chave_telefone || '',
@@ -121,7 +135,7 @@ const Configuracoes: React.FC = () => {
     if (!vals) return;
     setLoading(true);
     try {
-      const payload: any = {
+      const payload = {
         tipo_produto: tipo,
         valor_metro: vals.valor_metro,
         preco_minimo: vals.preco_minimo,
@@ -197,9 +211,16 @@ const Configuracoes: React.FC = () => {
     }
   };
 
-  const handleMpConectar = () => {
-    const baseUrl = import.meta.env.VITE_API_URL;
-    window.location.href = `${baseUrl}integracoes/mercadopago/redirect/`;
+  const handleMpConectar = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get('configuracao-loja/mp-redirect/');
+      window.location.assign(data.redirect_url);
+    } catch {
+      addAlert('NÃ£o foi possÃ­vel iniciar a conexÃ£o com o Mercado Pago.', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleMpDesconectar = async () => {
@@ -241,7 +262,7 @@ const Configuracoes: React.FC = () => {
       <div className="flex bg-white p-1.5 rounded-[1.5rem] shadow-sm border border-slate-200 w-fit">
         <button onClick={() => setActiveTab('perfil')} className={`px-8 py-3 rounded-xl text-xs font-black uppercase transition-all ${activeTab === 'perfil' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}>Meu Perfil</button>
         <button onClick={() => setActiveTab('seguranca')} className={`px-8 py-3 rounded-xl text-xs font-black uppercase transition-all ${activeTab === 'seguranca' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}>Segurança</button>
-        {formData && <button onClick={() => setActiveTab('dtf')} className={`px-8 py-3 rounded-xl text-xs font-black uppercase transition-all ${activeTab === 'dtf' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}><Printer size={14} className="inline mr-1" /> DTF</button>}
+        {formData.is_staff && <button onClick={() => setActiveTab('dtf')} className={`px-8 py-3 rounded-xl text-xs font-black uppercase transition-all ${activeTab === 'dtf' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}><Printer size={14} className="inline mr-1" /> DTF</button>}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

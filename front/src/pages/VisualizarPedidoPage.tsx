@@ -1,77 +1,76 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { api } from '../auth/useAuth';
-import { Printer, ArrowLeft, FileDown, Loader2, Camera } from 'lucide-react';
+import { Printer, ArrowLeft, Camera } from 'lucide-react';
 import logo from '../assets/logo-printcollor-blk.png';
 import html2canvas from 'html2canvas';
 import { useAlert } from '../contexts/AlertContext';
+import { separarGrade } from '../tools/pedidoGrade';
+
+type StatusPedido = 'pendente' | 'em_producao' | 'finalizado';
+
+interface PedidoFabrica {
+  id: number;
+  cliente_nome: string;
+  nome_descricao: string;
+  data_criacao: string;
+  data_entrega?: string | null;
+  status: StatusPedido;
+  layout?: string | null;
+  detalhes_tamanho: Record<string, string | number>;
+  total_pecas: number;
+  descricao?: string;
+  material?: string;
+  aplicacao_arte?: string;
+}
 
 const VisualizarPedidoPage = () => {
   const { addAlert } = useAlert();
   const { id } = useParams();
   const navigate = useNavigate();
-  const [pedido, setPedido] = useState<any>(null);
+  const [pedido, setPedido] = useState<PedidoFabrica | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isDownloading, setIsDownloading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
-  const handleTrocarStatus = async () => {
+  const handleTrocarStatus = async (novo: StatusPedido) => {
     if (!pedido) return;
-    const proximos: Record<string, string> = {
-      pendente: 'em_producao',
-      em_producao: 'finalizado',
-      finalizado: 'pendente',
-    };
-    const novo = proximos[pedido.status] || 'pendente';
+    if (novo === pedido.status) return;
+    if (novo === 'finalizado' && !window.confirm('Marcar este pedido como finalizado?')) return;
+    setIsUpdatingStatus(true);
     try {
       await api.patch(`pedidos/${id}/`, { status: novo });
-      setPedido((p: any) => ({ ...p, status: novo }));
+      setPedido((atual) => atual ? { ...atual, status: novo } : atual);
       addAlert(`Pedido #${id} movido para ${novo.replace('_', ' ')}`, 'info');
     } catch {
       addAlert('Erro ao atualizar status.', 'error');
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
   useEffect(() => {
-    api.get(`pedidos/${id}/`).then((response) => {
-      setPedido(response.data);
-      setLoading(false);
-    });
+    setLoading(true);
+    setLoadError(false);
+    api.get(`pedidos/${id}/`)
+      .then((response) => setPedido(response.data))
+      .catch(() => setLoadError(true))
+      .finally(() => setLoading(false));
   }, [id]);
 
-  const handleDownload = async () => {
-    if (!pedido) return;
-    setIsDownloading(true);
-    try {
-      const response = await api.get(`pedidos/${id}/gerar_pdf/`, {
-        responseType: 'blob',
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `${pedido.cliente_nome}-${id}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode?.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
   const captureAndCopy = async () => {
-    const folha = document.querySelector('.folha-a4');
+    const folha = document.getElementById('folha-pedido');
     if (!folha) return;
     try {
       const canvas = await html2canvas(folha as HTMLElement, {
         scale: 2,
         backgroundColor: '#ffffff',
         onclone: (doc) => {
-          const el = doc.querySelector('.folha-a4');
+          const el = doc.getElementById('folha-pedido');
           if (el) {
             (el as HTMLElement).style.boxShadow = 'none';
             (el as HTMLElement).style.filter = 'none';
+            (el as HTMLElement).style.transform = 'none';
           }
           doc.querySelectorAll('*').forEach((node) => {
             const el = node as HTMLElement;
@@ -107,7 +106,7 @@ const VisualizarPedidoPage = () => {
   useEffect(() => {
     if (!pedido) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'c') {
         e.preventDefault();
         captureAndCopy();
       }
@@ -116,26 +115,24 @@ const VisualizarPedidoPage = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [pedido]);
 
-  // Auto-scale A4 to fit viewport
+  // Autoescala somente para a visualização; impressão preserva A4 real.
   const escalaRef = useRef<HTMLDivElement>(null);
+  const [escala, setEscala] = useState(1);
   useEffect(() => {
     if (!escalaRef.current) return;
-    const el = escalaRef.current;
     const aplicarEscala = () => {
       const disponivel = window.innerHeight - 120;
       const disponivelLarg = window.innerWidth - 40;
       const scaleY = disponivel / 210;
       const scaleX = disponivelLarg / 297;
       const scale = Math.min(scaleY, scaleX, 1);
-      el.style.transform = `scale(${scale})`;
-      el.style.transformOrigin = 'top center';
-      el.style.marginBottom = `${(1 - scale) * 210}mm`;
+      setEscala(scale);
     };
     aplicarEscala();
     const ro = new ResizeObserver(aplicarEscala);
     ro.observe(document.body);
     return () => ro.disconnect();
-  }, []);
+  }, [loading]);
 
   if (loading)
     return (
@@ -144,48 +141,28 @@ const VisualizarPedidoPage = () => {
       </div>
     );
 
+  if (loadError || !pedido) {
+    return (
+      <div className="min-h-screen flex flex-col gap-4 items-center justify-center bg-slate-900 text-white p-6 text-center">
+        <p className="font-bold uppercase tracking-widest">Não foi possível carregar o pedido.</p>
+        <div className="flex gap-3">
+          <button onClick={() => navigate(-1)} className="px-4 py-2 rounded-lg bg-slate-700 font-bold">Voltar</button>
+          <button onClick={() => window.location.reload()} className="px-4 py-2 rounded-lg bg-blue-600 font-bold">Tentar novamente</button>
+        </div>
+      </div>
+    );
+  }
+
   // --- LÓGICA DE ORDENAÇÃO DE TAMANHOS ---
-  const ordemTamanhos: { [key: string]: number } = {
-    'pp': 1, 'p': 2, 'm': 3, 'g': 4, 'gg': 5, 'xgg': 6, 'xxgg': 7,
-    'bl pp': 10, 'bl p': 11, 'bl m': 12, 'bl g': 13, 'bl gg': 14, 'bl xgg': 15, 'bl xxgg': 16,
-    '02': 20, '04': 21, '06': 22, '08': 23, '10': 24, '12': 25, '14': 26, '16': 27,
-    '2a': 20, '4a': 21, '6a': 22, '8a': 23, '10a': 24, '12a': 25, '14a': 26, '16a': 27
-  };
-
-  const ordenarGrade = (a: [string, any], b: [string, any]) => {
-    const pesoA = ordemTamanhos[a[0].toLowerCase()] || 99;
-    const pesoB = ordemTamanhos[b[0].toLowerCase()] || 99;
-    return pesoA - pesoB;
-  };
-
-  const tamanhos = Object.entries(pedido.detalhes_tamanho || {});
-
-  const gradeBL = tamanhos
-    .filter(([tam]) => tam.toLowerCase().startsWith('bl'))
-    .sort(ordenarGrade);
-
-  const gradeInfantil = tamanhos
-    .filter(([tam]) => {
-      const n = parseInt(tam);
-      return !isNaN(n) && n <= 16 && !tam.toLowerCase().startsWith('bl');
-    })
-    .sort(ordenarGrade);
-
-  const gradeAdulto = tamanhos
-    .filter(([tam]) => {
-      const isBL = tam.toLowerCase().startsWith('bl');
-      const n = parseInt(tam);
-      const isInfantil = !isNaN(n) && n <= 16;
-      const isGeneric = tam.toLowerCase() === 'quantidade';
-      return !isBL && !isInfantil && !isGeneric;
-    })
-    .sort(ordenarGrade);
+  const { gradeAdulto, gradeBL, gradeInfantil } = separarGrade(pedido.detalhes_tamanho);
 
   return (
     <div className="min-h-screen bg-slate-800 flex flex-col items-center p-4 print:p-0 print:bg-white overflow-y-auto">
       <style>{`
         @media print {
           .no-print { display: none !important; }
+          .preview-scale { width: 297mm !important; height: 210mm !important; }
+          .folha-a4 { transform: none !important; }
           body { background: white !important; margin: 0 !important; padding: 0 !important; }
           @page { size: A4 landscape; margin: 0; }
           * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -223,7 +200,7 @@ const VisualizarPedidoPage = () => {
       `}</style>
 
       {/* AÇÕES */}
-      <div className="w-[290mm] flex justify-between mb-4 no-print">
+      <div className="w-full max-w-[290mm] flex justify-between mb-4 no-print">
         <button
           onClick={() => navigate(-1)}
           className="text-white font-bold flex items-center gap-2"
@@ -231,8 +208,11 @@ const VisualizarPedidoPage = () => {
           <ArrowLeft size={20} /> VOLTAR
         </button>
         <div className="flex gap-2 items-center">
-          <button
-            onClick={handleTrocarStatus}
+          <select
+            value={pedido.status}
+            disabled={isUpdatingStatus}
+            onChange={(event) => handleTrocarStatus(event.target.value as StatusPedido)}
+            aria-label="Alterar status do pedido"
             className={`px-3 py-2 rounded-lg font-black text-xs no-print ${
               pedido?.status === 'finalizado'
                 ? 'bg-green-700 text-green-200'
@@ -241,19 +221,10 @@ const VisualizarPedidoPage = () => {
                 : 'bg-orange-700 text-orange-200'
             }`}
           >
-            {pedido?.status?.replace('_', ' ').toUpperCase() || 'STATUS'}
-          </button>
-          <button
-            onClick={handleDownload}
-            className="bg-white px-4 py-2 rounded-lg font-bold shadow-md flex items-center gap-2"
-          >
-            {isDownloading ? (
-              <Loader2 className="animate-spin" size={18} />
-            ) : (
-              <FileDown size={18} />
-            )}{' '}
-            PDF
-          </button>
+            <option value="pendente">PENDENTE</option>
+            <option value="em_producao">EM PRODUÇÃO</option>
+            <option value="finalizado">FINALIZADO</option>
+          </select>
           <button
             onClick={captureAndCopy}
             className="bg-slate-700 text-white px-4 py-2 rounded-lg font-bold shadow-md flex items-center gap-2"
@@ -269,7 +240,12 @@ const VisualizarPedidoPage = () => {
         </div>
       </div>
 
-      <div className="folha-a4 shadow-2xl print:shadow-none">
+      <div
+        ref={escalaRef}
+        className="preview-scale"
+        style={{ width: `${297 * escala}mm`, height: `${210 * escala}mm` }}
+      >
+      <div id="folha-pedido" className="folha-a4 shadow-2xl print:shadow-none" style={{ transform: `scale(${escala})`, transformOrigin: 'top left' }}>
         {/* HEADER */}
         <div className="header-container">
           <div className="logo-section">
@@ -403,6 +379,7 @@ const VisualizarPedidoPage = () => {
         <div className="footer-note">
           Print Collor Factory - {new Date().toLocaleString('pt-BR')}
         </div>
+      </div>
       </div>
     </div>
   );

@@ -3,6 +3,8 @@ from django.core.files.base import ContentFile
 import io
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from django.conf import settings
+from django.utils.crypto import constant_time_compare
 from .models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, Usuario, DTFVendor, PedidoFabrica, DTFConfig, ConfiguracaoLoja
 
 
@@ -72,7 +74,7 @@ class OrcamentoSerializer(serializers.ModelSerializer):
 
 class UsuarioSerializer(serializers.ModelSerializer):
     # Mantemos o seu sistema de segurança por código de convite
-    codigo_convite = serializers.CharField(write_only=True)
+    codigo_convite = serializers.CharField(write_only=True, required=False, allow_blank=False)
 
     class Meta:
         model = Usuario
@@ -91,14 +93,23 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
     def validate_codigo_convite(self, value):
         # Sua lógica de código mestre
-        CODIGO_MESTRE = "PRINTCOLLOR2026"
-        if value != CODIGO_MESTRE:
+        convite_configurado = getattr(settings, 'INVITE_CODE', '')
+        if not convite_configurado or not constant_time_compare(value, convite_configurado):
             raise ValidationError("Código de convite inválido ou expirado.")
         return value
 
     def create(self, validated_data):
         # Removemos o código antes de salvar
-        validated_data.pop('codigo_convite', None)
+        request = self.context.get('request')
+        is_admin = bool(request and request.user and request.user.is_authenticated and request.user.is_staff)
+        codigo_convite = validated_data.pop('codigo_convite', None)
+        if not is_admin:
+            convite_configurado = getattr(settings, 'INVITE_CODE', '')
+            if not codigo_convite or not convite_configurado or not constant_time_compare(codigo_convite, convite_configurado):
+                raise ValidationError({'codigo_convite': 'CÃ³digo de convite invÃ¡lido ou expirado.'})
+            validated_data['nivel_acesso'] = 'vendedor'
+            validated_data['is_staff'] = False
+            validated_data['is_superuser'] = False
 
         # O create_user do Django lida perfeitamente com first_name e last_name
         user = Usuario.objects.create_user(**validated_data)
@@ -228,7 +239,11 @@ def _normalize_pix_text(value: str) -> str:
 class ConfiguracaoLojaSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConfiguracaoLoja
-        fields = '__all__'
+        fields = [
+            'id', 'pix_chave_telefone', 'pix_beneficiario', 'pix_cidade',
+            'mp_connected', 'mp_user_id', 'mp_percentual_taxa',
+            'mp_connected_em', 'atualizado_em',
+        ]
         read_only_fields = ['atualizado_em']
 
     def validate_pix_chave_telefone(self, value):

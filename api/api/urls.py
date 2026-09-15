@@ -5,7 +5,7 @@ from .views import (
     DTFVendorViewSet, UserViewSet, UserMeView, DashboardStatsView, ReportsView,
     ChangePasswordView, BackupExportView, BackupImportView, DTFConfigViewSet,
     ConfiguracaoLojaViewSet, ClientReportView, DTFOrdersReportView, FabricaOrdersReportView,
-    KDSPanelView, SyncDTFStatusView, PedidoPublicoView, mp_oauth_redirect_view, mp_oauth_callback_view,
+    KDSPanelView, SyncDTFStatusView, PedidoPublicoView, mp_oauth_callback_view,
 )
 from .evolution_views import WhatsAppInstanceViewSet
 from .webhook_views import WhatsAppWebhookView, WhatsAppWebhookConfigureView, MercadoPagoWebhookView
@@ -52,9 +52,10 @@ urlpatterns = [
     # Configuração da Loja (singleton)
     path('configuracao-loja/', ConfiguracaoLojaViewSet.as_view({'get': 'list'}), name='configuracao-loja-list'),
     path('configuracao-loja/<int:pk>/', ConfiguracaoLojaViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update'}), name='configuracao-loja-detail'),
+    path('configuracao-loja/mp-redirect/', ConfiguracaoLojaViewSet.as_view({'get': 'mp_redirect'}), name='mp-redirect'),
+    path('configuracao-loja/mp-desconectar/', ConfiguracaoLojaViewSet.as_view({'post': 'mp_desconectar'}), name='mp-desconectar'),
     # Mercado Pago
     path('webhook/mercadopago/', MercadoPagoWebhookView.as_view(), name='mp-webhook'),
-    path('integracoes/mercadopago/redirect/', mp_oauth_redirect_view, name='mp-redirect'),
     path('integracoes/mercadopago/callback/', mp_oauth_callback_view, name='mp-callback'),
     path('dtf/<int:pk>/mp-pagar/', DTFVendorViewSet.as_view({'post': 'mp_pagar'}), name='dtf-mp-pagar'),
     # Página pública (AllowAny - fora do router)

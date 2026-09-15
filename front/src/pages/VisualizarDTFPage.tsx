@@ -105,6 +105,12 @@ const VisualizarDTFPage = () => {
     </div>
   );
 
+  const metragemDestacada = dtf.tipo_produto === 'sublimacao'
+    ? `${(Number(dtf.tamanho_cm) / 10000).toFixed(2)} m²`
+    : dtf.tipo_produto === 'estampa'
+      ? `${dtf.quantidade ?? '-'} un`
+      : `${(Number(dtf.tamanho_cm) / 100).toFixed(2)} m`;
+
   return (
     <div className="min-h-screen bg-slate-800 p-4 md:p-8 flex flex-col items-center print:bg-white print:p-0 overflow-y-auto">
 
@@ -272,7 +278,7 @@ const VisualizarDTFPage = () => {
 
         {/* Área Destacada - Nome, ID, Tipo */}
         <div className="mt-auto pt-3 border-t-4 border-slate-900 bg-slate-50 rounded-xl p-4 flex-shrink-0">
-          <div className="grid grid-cols-3 gap-4 text-center">
+          <div className="grid grid-cols-4 gap-3 text-center">
             <div className="col-span-1 bg-white rounded-lg p-3 border border-slate-200">
               <span className="text-[9px] font-black text-slate-400 uppercase block leading-none mb-1">Nome</span>
               <span className="text-lg font-black text-slate-900 uppercase leading-none">{dtf.nome_cliente}</span>
@@ -280,6 +286,10 @@ const VisualizarDTFPage = () => {
             <div className="col-span-1 bg-white rounded-lg p-3 border border-slate-200">
               <span className="text-[9px] font-black text-slate-400 uppercase block leading-none mb-1">ID</span>
               <span className="text-lg font-black text-slate-900 leading-none">#{dtf.id}</span>
+            </div>
+            <div className="col-span-1 bg-white rounded-lg p-3 border border-slate-200">
+              <span className="text-[9px] font-black text-slate-400 uppercase block leading-none mb-1">Metragem</span>
+              <span className="text-lg font-black text-slate-900 leading-none">{metragemDestacada}</span>
             </div>
             <div className="col-span-1 bg-white rounded-lg p-3 border border-slate-200">
               <span className="text-[9px] font-black text-slate-400 uppercase block leading-none mb-1">Tipo</span>

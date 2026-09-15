@@ -6,7 +6,9 @@ import os, json
 from django.contrib.auth.hashers import check_password
 from num2words import num2words
 from django.utils import timezone
-from django.http import FileResponse, HttpResponseRedirect
+from django.http import FileResponse, HttpResponseRedirect, HttpResponse
+from django.core import signing
+import secrets
 from django.db.models import Count, Sum
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
@@ -60,6 +62,11 @@ class UserViewSet(viewsets.ModelViewSet):
     ordering_fields = ['id', 'username', 'nome', 'email']
     ordering = ['-id']
 
+    def get_permissions(self):
+        if self.action == 'create':
+            return [permissions.AllowAny()]
+        return [IsAdminUserCustom()]
+
 
 class EmpresaViewSet(viewsets.ModelViewSet):
     queryset = Empresa.objects.all()
@@ -71,7 +78,7 @@ class EmpresaViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
-            return [permissions.AllowAny()]
+            return [permissions.IsAuthenticated()]
         return [(IsAdminUserCustom | IsFinanceiro)()]
 
 
@@ -294,40 +301,38 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
 
 
 # View função para redirect real (não ViewSet action que retorna JSON)
-def mp_oauth_redirect_view(request):
-    """Redirect real para URL de OAuth do Mercado Pago."""
-    from .services.mercadopago_service import MercadoPagoService
-    try:
-        url = MercadoPagoService.get_oauth_redirect_url()
-    except RuntimeError as e:
-        from django.http import HttpResponse
-        return HttpResponse(f'Erro ao iniciar OAuth MP: {e}', status=500)
-    return HttpResponseRedirect(url)
-
-
 def mp_oauth_callback_view(request):
     """
     Callback do OAuth MP. Acesso via browser (redirect MP).
     Troca code por tokens e redireciona para página frontend.
     """
     code = request.GET.get('code')
+    state = request.GET.get('state', '')
     error = request.GET.get('error')
     error_description = request.GET.get('error_description', '')
 
     frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
 
     if error:
-        return HttpResponseRedirect(f"{frontend_url}/configuracoes?mp_status=error&mp_message={error_description or error}")
+        return HttpResponseRedirect(f"{frontend_url}/painel/configuracoes?mp_status=error&mp_message={error_description or error}")
 
-    if not code:
+    if not code or not state:
         return HttpResponse("code não fornecido", status=400)
+
+    try:
+        state_data = signing.loads(state, salt='mercadopago-oauth', max_age=600)
+        user = Usuario.objects.get(id=state_data['user_id'])
+        if not user.is_staff:
+            raise ValueError('usuÃ¡rio sem permissÃ£o')
+    except Exception:
+        return HttpResponse('state OAuth invÃ¡lido ou expirado', status=400)
 
     try:
         MercadoPagoService.trocar_code_por_tokens(code)
     except RuntimeError as e:
-        return HttpResponseRedirect(f"{frontend_url}/configuracoes?mp_status=error&mp_message={str(e)}")
+        return HttpResponseRedirect(f"{frontend_url}/painel/configuracoes?mp_status=error&mp_message={str(e)}")
 
-    return HttpResponseRedirect(f"{frontend_url}/configuracoes?mp_status=success")
+    return HttpResponseRedirect(f"{frontend_url}/painel/configuracoes?mp_status=success")
 
 
 class PedidoPublicoView(APIView):
@@ -368,7 +373,7 @@ class ConfiguracaoLojaViewSet(viewsets.ModelViewSet):
     """
     queryset = ConfiguracaoLoja.objects.all()
     serializer_class = ConfiguracaoLojaSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAdminUserCustom]
     http_method_names = ['get', 'patch', 'put', 'head', 'options']
 
     def list(self, request, *args, **kwargs):
@@ -399,7 +404,11 @@ class ConfiguracaoLojaViewSet(viewsets.ModelViewSet):
     def mp_redirect(self, request):
         """Inicia OAuth Connect com Mercado Pago. Retorna redirect URL."""
         try:
-            url = MercadoPagoService.get_oauth_redirect_url()
+            state = signing.dumps(
+                {'user_id': request.user.id, 'nonce': secrets.token_urlsafe(24)},
+                salt='mercadopago-oauth',
+            )
+            url = MercadoPagoService.get_oauth_redirect_url(state=state)
             return Response({'redirect_url': url})
         except RuntimeError as e:
             return Response({'error': str(e)}, status=500)
@@ -1062,4 +1071,4 @@ class BackupImportView(APIView):
 class DTFConfigViewSet(viewsets.ModelViewSet):
     queryset = DTFConfig.objects.all()
     serializer_class = DTFConfigSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAdminUserCustom]

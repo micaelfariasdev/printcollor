@@ -15,6 +15,7 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 import mercadopago
 import requests
+from urllib.parse import urlencode
 
 
 logger = logging.getLogger(__name__)
@@ -164,19 +165,19 @@ class MercadoPagoService:
     # ------------------------------------------------------------------ #
 
     @staticmethod
-    def get_oauth_redirect_url():
+    def get_oauth_redirect_url(state: str):
         """Retorna URL de autorização do MP OAuth Connect"""
         client_id = os.getenv('MERCADOPAGO_CLIENT_ID')
         redirect_uri = os.getenv('MERCADOPAGO_REDIRECT_URI')
         if not client_id or not redirect_uri:
             raise RuntimeError('MERCADOPAGO_CLIENT_ID ou MERCADOPAGO_REDIRECT_URI não configurados')
-        return (
-            f"https://auth.mercadopago.com/authorization"
-            f"?client_id={client_id}"
-            f"&response_type=code"
-            f"&platform_id=MP"
-            f"&redirect_uri={redirect_uri}"
-        )
+        return 'https://auth.mercadopago.com/authorization?' + urlencode({
+            'client_id': client_id,
+            'response_type': 'code',
+            'platform_id': 'MP',
+            'redirect_uri': redirect_uri,
+            'state': state,
+        })
 
     @staticmethod
     def trocar_code_por_tokens(code: str):

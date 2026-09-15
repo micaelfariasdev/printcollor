@@ -18,7 +18,6 @@ const ModalNovoUsuario: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
     email: '',
     password: '',
     nivel_acesso: 'vendedor',
-    codigo_convite: 'PRINTCOLLOR2026',
     is_staff: false
   });
 
@@ -31,7 +30,7 @@ const ModalNovoUsuario: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
       onSuccess();
       onClose();
       // Reset do form
-      setFormData({ username: '', email: '', password: '', nivel_acesso: 'vendedor', codigo_convite: 'PRINTCOLLOR2026', is_staff: false });
+      setFormData({ username: '', email: '', password: '', nivel_acesso: 'vendedor', is_staff: false });
     } catch (err) {
       console.error(err);
       addAlert("Erro ao criar usuária. Verifique se o nome de usuário ou e-mail já existem.", 'error');
