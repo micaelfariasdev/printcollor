@@ -205,17 +205,14 @@ class DTFVendor(models.Model):
 
     def atualizar_status(self):
         """Mantém os flags e o status no fluxo obrigatório do pedido."""
-        if not self.esta_pago:
-            self.foi_impresso = 'pendente'
-            self.foi_entregue = False
-        elif self.foi_impresso != 'impresso':
+        if self.foi_impresso != 'impresso':
             self.foi_entregue = False
 
         if self.foi_entregue:
             self.status = "finalizado"
         elif self.foi_impresso == "impresso":
             self.status = "impresso"
-        elif self.esta_pago:
+        elif self.esta_pago or self.status == 'pedido_feito':
             self.status = "pedido_feito"
         else:
             self.status = "orcamento"

@@ -72,17 +72,17 @@ export const DTFTable = () => {
 
   // Lógica automática de status: atualiza status baseado nos toggles
   const calcularStatusAuto = (foiEntregue: boolean, estaPago: boolean, foiImpresso: string) => {
-    if (estaPago && foiImpresso === 'impresso' && foiEntregue) return 'finalizado';
-    if (estaPago && foiImpresso === 'impresso') return 'impresso';
+    if (foiImpresso === 'impresso' && foiEntregue) return 'finalizado';
+    if (foiImpresso === 'impresso') return 'impresso';
     if (estaPago) return 'pedido_feito';
     return 'orcamento';
   };
 
   // Lógica inversa: atualiza toggles baseado no status
   const calcularTogglesDoStatus = (status: string) => {
-    if (status === 'finalizado') return { foiEntregue: true, estaPago: true, foiImpresso: 'impresso' };
-    if (status === 'impresso') return { foiEntregue: false, estaPago: true, foiImpresso: 'impresso' };
-    if (status === 'pedido_feito') return { foiEntregue: false, estaPago: true, foiImpresso: 'pendente' };
+    if (status === 'finalizado') return { foiEntregue: true, estaPago: false, foiImpresso: 'impresso' };
+    if (status === 'impresso') return { foiEntregue: false, estaPago: false, foiImpresso: 'impresso' };
+    if (status === 'pedido_feito') return { foiEntregue: false, estaPago: false, foiImpresso: 'pendente' };
     return { foiEntregue: false, estaPago: false, foiImpresso: 'pendente' };
   };
 
@@ -95,8 +95,8 @@ export const DTFTable = () => {
     try {
       const novoValor = !valorAtual;
 
-      if (campo === 'foi_entregue' && novoValor && (!item.esta_pago || item.foi_impresso !== 'impresso')) {
-        addAlert('Confirme o pagamento e a impressão antes de finalizar o pedido.', 'error');
+      if (campo === 'foi_entregue' && novoValor && item.foi_impresso !== 'impresso') {
+        addAlert('Marque o pedido como impresso antes de finalizar.', 'error');
         return;
       }
 
@@ -127,10 +127,6 @@ export const DTFTable = () => {
 
   const handleToggleImpressao = async (id: number, statusAtual: string, item: any) => {
     const novoStatusImpressao = statusAtual === 'impresso' ? 'pendente' : 'impresso';
-    if (novoStatusImpressao === 'impresso' && !item.esta_pago) {
-      addAlert('Confirme o pagamento antes de marcar o pedido como impresso.', 'error');
-      return;
-    }
     try {
       // Calcular novo status automático
       const novoStatus = calcularStatusAuto(item.foi_entregue, item.esta_pago, novoStatusImpressao);

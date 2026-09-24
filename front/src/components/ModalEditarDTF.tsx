@@ -161,9 +161,9 @@ const ModalEditarDTF: React.FC<Props> = ({
 
   // Lógica automática de status
   const atualizarStatusAuto = () => {
-    if (estaPago && foiImpresso === 'impresso' && foiEntregue) {
+    if (foiImpresso === 'impresso' && foiEntregue) {
       setStatus('finalizado');
-    } else if (estaPago && foiImpresso === 'impresso') {
+    } else if (foiImpresso === 'impresso') {
       setStatus('impresso');
     } else if (estaPago) {
       setStatus('pedido_feito');
@@ -446,10 +446,6 @@ const ModalEditarDTF: React.FC<Props> = ({
                 label="Impresso"
                 checked={foiImpresso === 'impresso'}
                 onChange={(e) => {
-                  if (e.target.checked && !estaPago) {
-                    addAlert('Confirme o pagamento antes de marcar como impresso.', 'error');
-                    return;
-                  }
                   setFoiImpresso(e.target.checked ? 'impresso' : 'pendente');
                   if (!e.target.checked) setFoiEntregue(false);
                   // Atualizar status automaticamente
@@ -462,10 +458,6 @@ const ModalEditarDTF: React.FC<Props> = ({
                 checked={estaPago}
                 onChange={(e) => {
                   setEstaPago(e.target.checked);
-                  if (!e.target.checked) {
-                    setFoiImpresso('pendente');
-                    setFoiEntregue(false);
-                  }
                   // Atualizar status automaticamente
                   setTimeout(() => atualizarStatusAuto(), 0);
                 }}
@@ -475,8 +467,8 @@ const ModalEditarDTF: React.FC<Props> = ({
                 label="Entregue"
                 checked={foiEntregue}
                 onChange={(e) => {
-                  if (e.target.checked && (!estaPago || foiImpresso !== 'impresso')) {
-                    addAlert('Confirme o pagamento e a impressão antes de finalizar.', 'error');
+                  if (e.target.checked && foiImpresso !== 'impresso') {
+                    addAlert('Marque como impresso antes de finalizar.', 'error');
                     return;
                   }
                   setFoiEntregue(e.target.checked);
@@ -500,14 +492,14 @@ const ModalEditarDTF: React.FC<Props> = ({
                   // Lógica inversa: ao mudar status manual, atualiza toggles
                   if (novoStatus === 'finalizado') {
                     setFoiEntregue(true);
-                    setEstaPago(true);
+                    setEstaPago(false);
                     setFoiImpresso('impresso');
                   } else if (novoStatus === 'pedido_feito') {
-                    setEstaPago(true);
+                    setEstaPago(false);
                     setFoiImpresso('pendente');
                     setFoiEntregue(false);
                   } else if (novoStatus === 'impresso') {
-                    setEstaPago(true);
+                    setEstaPago(false);
                     setFoiImpresso('impresso');
                     setFoiEntregue(false);
                   } else if (novoStatus === 'orcamento') {
