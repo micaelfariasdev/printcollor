@@ -241,7 +241,7 @@ export const DTFTable = () => {
     try {
       const texto = montarMensagem(item);
       await navigator.clipboard.writeText(texto);
-      addAlert('Mensagem de WhatsApp copiada!', 'success');
+      addAlert('Mensagem copiada!', 'success');
     } catch (err) {
       addAlert('Não foi possível acessar a área de transferência.', 'error');
     } finally {
@@ -589,10 +589,10 @@ export const DTFTable = () => {
                   onClick={() => handleCopiarMensagem(item)}
                   disabled={copiando === item.id}
                   className="flex-1 min-w-[80px] bg-green-50 hover:bg-green-100 text-green-600 p-2 rounded-xl transition-all flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-wait"
-                  title="Copiar mensagem WhatsApp"
+                  title="Copiar mensagem"
                 >
                   <MessageCircle size={16} />
-                  <span className="text-xs font-bold">{copiando === item.id ? 'Copiando…' : 'WhatsApp'}</span>
+                  <span className="text-xs font-bold">{copiando === item.id ? 'Copiando…' : 'Copiar'}</span>
                 </button>
                 {!item.esta_pago && pixConfig.pix_chave_telefone && (
                   <button

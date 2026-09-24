@@ -26,8 +26,6 @@ MODELOS_BACKUP = [
     'itemorcamento',  # api_itemorcamento (depende de Orcamento, Produto)
     'pedidofabrica',  # api_pedidofabrica (depende de Cliente, Produto)
     'dtfvendor',  # api_dtfvendor (DTF, sublimacao, estampa)
-    'whatsappinstance',  # api_whatsappinstance (depende de Usuario)
-    'whatsappmessage',  # api_whatsappmessage (depende de WhatsAppInstance, Cliente)
 ]
 
 # Mapeamento de nomes de modelos para objetos Django
@@ -44,8 +42,6 @@ MODELO_MAP = {
     'pedidofabrica': ('api', 'PedidoFabrica'),
     'dtfvendor': ('api', 'DTFVendor'),
     'dtfconfig': ('api', 'DTFConfig'),
-    'whatsappinstance': ('api', 'WhatsAppInstance'),
-    'whatsappmessage': ('api', 'WhatsAppMessage'),
     'configuracaoloja': ('api', 'ConfiguracaoLoja'),
 }
 

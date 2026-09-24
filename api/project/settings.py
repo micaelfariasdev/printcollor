@@ -26,8 +26,6 @@ CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
 CORS_EXPOSED_HEADERS = ['Content-Disposition']
 
 
-EVOLUTION_API_URL = os.getenv('EVOLUTION_API_URL')
-EVOLUTION_API_KEY = os.getenv('EVOLUTION_API_KEY')
 # Application definition
 
 INSTALLED_APPS = [
@@ -42,7 +40,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'django_filters',
-    'channels',  # Para WebSocket/WhatsApp
+    'channels',  # Notificações em tempo real do DTF
     'api',
     'rest_framework_simplejwt',
 ]

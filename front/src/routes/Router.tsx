@@ -17,8 +17,6 @@ import Usuarios from '../pages/Usuarios';
 import Configuracoes from '../pages/Configuracoes';
 import { AdminOrcamentosClientes } from '../pages/AdminOrcamentosClientes';
 import { ConfiguracoesBackup } from '../pages/ConfiguracoesBackup';
-import WhatsAppUnified from '../pages/WhatsAppUnified';
-import WhatsAppInstances from '../pages/WhatsAppInstances';
 import { LandingPage } from '../pages/LandingPage';
 import { PedidosCarrosselMobile } from '../pages/PedidosCarrosselMobile';
 import { DTFTable } from '../pages/DTF';
@@ -80,8 +78,6 @@ export const AppRouter = () => {
           <Route path="usuarios" element={<AdminFinanceiroRoute><Usuarios /></AdminFinanceiroRoute>} />
           <Route path="pedidos" element={<PedidosFabrica />} />
           <Route path="configuracoes" element={<Configuracoes />} />
-          <Route path="whatsapp" element={<WhatsAppUnified />} />
-          <Route path="whatsapp-instances" element={<WhatsAppInstances />} />
           <Route path="orcamentos-clientes" element={<AdminFinanceiroRoute><AdminOrcamentosClientes /></AdminFinanceiroRoute>} />
           <Route path="backup" element={<AdminFinanceiroRoute><ConfiguracoesBackup /></AdminFinanceiroRoute>} />
           <Route path="relatorios" element={<AdminFinanceiroRoute><Relatorios /></AdminFinanceiroRoute>} />

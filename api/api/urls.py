@@ -7,8 +7,7 @@ from .views import (
     ConfiguracaoLojaViewSet, ClientReportView, DTFOrdersReportView, FabricaOrdersReportView,
     KDSPanelView, SyncDTFStatusView, PedidoPublicoView, mp_oauth_callback_view,
 )
-from .evolution_views import WhatsAppInstanceViewSet
-from .webhook_views import WhatsAppWebhookView, WhatsAppWebhookConfigureView, MercadoPagoWebhookView
+from .webhook_views import MercadoPagoWebhookView
 
 router = DefaultRouter()
 router.register(r'empresas', EmpresaViewSet)
@@ -18,7 +17,6 @@ router.register(r'orcamentos', OrcamentoViewSet)
 router.register(r'dtf', DTFVendorViewSet)
 router.register(r'usuarios', UserViewSet)
 router.register(r'pedidos', PedidoFabricaViewSet)
-router.register(r'whatsapp-instances', WhatsAppInstanceViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -31,18 +29,6 @@ urlpatterns = [
     path('sync-status/', SyncDTFStatusView.as_view(), name='dtf-sync-status'),
     path('reports/fabrica-orders/', FabricaOrdersReportView.as_view(), name='reports-fabrica-orders'),
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
-    # WhatsApp - rotas manuais para actions do ViewSet
-    path('whatsapp-instances/<int:pk>/qrcode/', WhatsAppInstanceViewSet.as_view({'get': 'qrcode'}), name='whatsapp-qrcode'),
-    path('whatsapp-instances/<int:pk>/status/', WhatsAppInstanceViewSet.as_view({'get': 'status'}), name='whatsapp-status'),
-    path('whatsapp-instances/<int:pk>/enviar-mensagem/', WhatsAppInstanceViewSet.as_view({'post': 'enviar_mensagem'}), name='whatsapp-enviar'),
-    path('whatsapp-instances/<int:pk>/mensagens/', WhatsAppInstanceViewSet.as_view({'post': 'mensagens'}), name='whatsapp-mensagens'),
-    path('whatsapp-instances/<int:pk>/deletar/', WhatsAppInstanceViewSet.as_view({'delete': 'deletar'}), name='whatsapp-deletar'),
-    path('whatsapp-instances/<int:pk>/media/', WhatsAppInstanceViewSet.as_view({'get': 'media'}), name='whatsapp-media'),
-    path('whatsapp/unificado/', WhatsAppInstanceViewSet.as_view({'get': 'unificado'}), name='whatsapp-unificado'),
-    path('webhook/evolution/', WhatsAppWebhookView.as_view(), name='webhook-evolution'),
-    path('whatsapp/webhook/', WhatsAppWebhookView.as_view(), name='webhook-evolution-alt'),
-    path('webhook/configure/', WhatsAppWebhookConfigureView.as_view(), name='webhook-configure'),
-    path('whatsapp/webhook/configure/', WhatsAppWebhookConfigureView.as_view(), name='webhook-configure-alt'),
     # Backup
     path('backup/exportar/', BackupExportView.as_view(), name='backup-export'),
     path('backup/importar/', BackupImportView.as_view(), name='backup-import'),

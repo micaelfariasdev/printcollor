@@ -58,7 +58,6 @@ export const Layout: React.FC = () => {
     { id: 'dashboard', label: 'Início', icon: <LayoutDashboard size={22} />, roles: ['all'] },
     { id: 'pedidos', label: 'Produção', icon: <Package size={22} />, roles: ['all'] },
     { id: 'dtf', label: 'DTF / UV', icon: <Printer size={22} />, roles: ['all'] },
-    // { id: 'whatsapp', label: 'WhatsApp', icon: <MessageSquare size={22} />, roles: ['all'] },
     { id: 'orcamentos', label: 'Orçamentos', icon: <FileText size={22} />, roles: ['all'] },
     { id: 'clientes', label: 'Clientes', icon: <Users size={22} />, roles: ['all'] },
     { id: 'produtos', label: 'Produtos', icon: <Package size={22} />, roles: ['admin', 'financeiro'] },
@@ -67,7 +66,6 @@ export const Layout: React.FC = () => {
     { id: 'orcamentos-clientes', label: 'Pedidos Site', icon: <MessageCircle size={22} />, roles: ['admin', 'financeiro'] },
     { id: 'backup', label: 'Backup', icon: <DatabaseBackup size={22} />, roles: ['admin', 'financeiro'] },
     { id: 'relatorios', label: 'Relatórios', icon: <BarChart3 size={22} />, roles: ['admin', 'financeiro'] },
-    // { id: 'whatsapp-instances', label: 'Instâncias', icon: <MessageCircle size={22} />, roles: ['all'] },
     { id: 'monitor', label: 'Fila de Produção', icon: <Monitor size={22} className="text-blue-500" />, roles: ['all'], isExternal: true },
   ];
 
