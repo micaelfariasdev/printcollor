@@ -6,7 +6,6 @@ def migrar_status_antigo(apps, schema_editor):
     DTFVendor.objects.filter(status__in=['aprovado', 'em_producao']).update(
         status='pedido_feito'
     )
-    DTFVendor.objects.filter(tipo_produto='estampa').update(tamanho_cm=None)
 
 
 class Migration(migrations.Migration):
