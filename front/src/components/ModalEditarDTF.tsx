@@ -56,7 +56,7 @@ const ModalEditarDTF: React.FC<Props> = ({
   const [foiImpresso, setFoiImpresso] = useState('pendente');
   const [estaPago, setEstaPago] = useState(false);
   const [foiEntregue, setFoiEntregue] = useState(false);
-  const [status, setStatus] = useState<'orcamento' | 'aprovado' | 'em_producao' | 'finalizado'>('orcamento');
+  const [status, setStatus] = useState<'orcamento' | 'pedido_feito' | 'impresso' | 'finalizado'>('orcamento');
 
   // Arquivos
   const [novoLayout, setNovoLayout] = useState<File | null>(null);
@@ -161,12 +161,12 @@ const ModalEditarDTF: React.FC<Props> = ({
 
   // Lógica automática de status
   const atualizarStatusAuto = () => {
-    if (foiEntregue) {
+    if (estaPago && foiImpresso === 'impresso' && foiEntregue) {
       setStatus('finalizado');
-    } else if (foiImpresso === 'impresso') {
-      setStatus('finalizado'); // Impresso = Finalizado
+    } else if (estaPago && foiImpresso === 'impresso') {
+      setStatus('impresso');
     } else if (estaPago) {
-      setStatus('aprovado'); // Aprovado = apenas Pago
+      setStatus('pedido_feito');
     } else if (!estaPago) {
       setStatus('orcamento');
     }
@@ -446,7 +446,12 @@ const ModalEditarDTF: React.FC<Props> = ({
                 label="Impresso"
                 checked={foiImpresso === 'impresso'}
                 onChange={(e) => {
+                  if (e.target.checked && !estaPago) {
+                    addAlert('Confirme o pagamento antes de marcar como impresso.', 'error');
+                    return;
+                  }
                   setFoiImpresso(e.target.checked ? 'impresso' : 'pendente');
+                  if (!e.target.checked) setFoiEntregue(false);
                   // Atualizar status automaticamente
                   setTimeout(() => atualizarStatusAuto(), 0);
                 }}
@@ -457,6 +462,10 @@ const ModalEditarDTF: React.FC<Props> = ({
                 checked={estaPago}
                 onChange={(e) => {
                   setEstaPago(e.target.checked);
+                  if (!e.target.checked) {
+                    setFoiImpresso('pendente');
+                    setFoiEntregue(false);
+                  }
                   // Atualizar status automaticamente
                   setTimeout(() => atualizarStatusAuto(), 0);
                 }}
@@ -466,6 +475,10 @@ const ModalEditarDTF: React.FC<Props> = ({
                 label="Entregue"
                 checked={foiEntregue}
                 onChange={(e) => {
+                  if (e.target.checked && (!estaPago || foiImpresso !== 'impresso')) {
+                    addAlert('Confirme o pagamento e a impressão antes de finalizar.', 'error');
+                    return;
+                  }
                   setFoiEntregue(e.target.checked);
                   // Atualizar status automaticamente
                   setTimeout(() => atualizarStatusAuto(), 0);
@@ -482,28 +495,32 @@ const ModalEditarDTF: React.FC<Props> = ({
               <select
                 value={status}
                 onChange={(e) => {
-                  const novoStatus = e.target.value as 'orcamento' | 'aprovado' | 'em_producao' | 'finalizado';
+                  const novoStatus = e.target.value as 'orcamento' | 'pedido_feito' | 'impresso' | 'finalizado';
                   setStatus(novoStatus);
                   // Lógica inversa: ao mudar status manual, atualiza toggles
                   if (novoStatus === 'finalizado') {
                     setFoiEntregue(true);
                     setEstaPago(true);
                     setFoiImpresso('impresso');
-                  } else if (novoStatus === 'aprovado') {
-                    setEstaPago(true);
-                    setFoiImpresso('pendente'); // Aprovado = Pago, não impresso
-                  } else if (novoStatus === 'em_producao') {
+                  } else if (novoStatus === 'pedido_feito') {
                     setEstaPago(true);
                     setFoiImpresso('pendente');
+                    setFoiEntregue(false);
+                  } else if (novoStatus === 'impresso') {
+                    setEstaPago(true);
+                    setFoiImpresso('impresso');
+                    setFoiEntregue(false);
                   } else if (novoStatus === 'orcamento') {
                     setEstaPago(false);
+                    setFoiImpresso('pendente');
+                    setFoiEntregue(false);
                   }
                 }}
                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700"
               >
                 <option value="orcamento">💰 Orçamento</option>
-                <option value="aprovado">✅ Aprovado</option>
-                <option value="em_producao">⚙️ Em Produção</option>
+                <option value="pedido_feito">✅ Pedido feito</option>
+                <option value="impresso">🖨️ Impresso</option>
                 <option value="finalizado">🏁 Finalizado</option>
               </select>
             </div>

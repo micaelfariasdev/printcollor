@@ -43,7 +43,6 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
   const [quantidade, setQuantidade] = useState<number>(1);
   const [usarPrecoCustom, setUsarPrecoCustom] = useState(false);
   const [precoCustom, setPrecoCustom] = useState('');
-  const [status, setStatus] = useState<'orcamento' | 'aprovado' | 'em_producao' | 'finalizado'>('orcamento');
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [configs, setConfigs] = useState<any[]>([]);
   const [config, setConfig] = useState<any>(null);
@@ -189,8 +188,7 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
       const areaCm2 = Number(largura) * Number(comprimento);
       formData.append('tamanho_cm', areaCm2.toString());
     } else if (tipoProduto === 'estampa') {
-      // Estampa não usa tamanho_cm significativo — envia 0 para satisfazer o backend
-      formData.append('tamanho_cm', '0');
+      // Estampa é vendida por unidade e não possui metragem.
     } else {
       formData.append('tamanho_cm', tamanhoCm.toString());
     }
@@ -198,7 +196,7 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
     formData.append('tipo_produto', tipoProduto);
     formData.append('quantidade', String(quantidade));
     formData.append('layout_arquivo', arquivo);
-    formData.append('status', status);
+    formData.append('status', 'orcamento');
 
     // Override de preço: envia valor convertido ou vazio ('') pra não persistir override
     const precoOverrideNum = Number(precoCustom);
@@ -312,23 +310,6 @@ const ModalNovoDTF: React.FC<Props> = ({ isOpen, onClose, onSuccess, clienteId: 
               {TIPOS.map((t) => (
                 <option key={t.value} value={t.value}>{t.label}</option>
               ))}
-            </select>
-          </div>
-
-          {/* Status do Orçamento */}
-          <div className="space-y-2">
-            <label className="text-xs font-black text-slate-500 uppercase ml-1">
-              Status
-            </label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as 'orcamento' | 'aprovado' | 'em_producao' | 'finalizado')}
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700"
-            >
-              <option value="orcamento">💰 Orçamento</option>
-              <option value="aprovado">✅ Aprovado</option>
-              <option value="em_producao">⚙️ Em Produção</option>
-              <option value="finalizado">🏁 Finalizado</option>
             </select>
           </div>
 

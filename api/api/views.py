@@ -178,10 +178,9 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
         qs = DTFVendor.objects.annotate(
             status_order=models.Case(
                 models.When(status='orcamento', then=models.Value(0)),
-                models.When(status='aprovado', then=models.Value(1)),
-                models.When(status='em_producao', then=models.Value(2)),
-                models.When(status='impresso', then=models.Value(3)),
-                models.When(status='finalizado', then=models.Value(4)),
+                models.When(status='pedido_feito', then=models.Value(1)),
+                models.When(status='impresso', then=models.Value(2)),
+                models.When(status='finalizado', then=models.Value(3)),
                 default=models.Value(99),
                 output_field=models.IntegerField(),
             )
@@ -635,7 +634,7 @@ class DashboardStatsView(APIView):
         )
         total_vendas_dtf_valor = sum(i.valor_total() for i in query_financeira)
 
-        total_metragem = sum(i.tamanho_cm for i in query_financeira)
+        total_metragem = sum((i.tamanho_cm or Decimal('0')) for i in query_financeira)
         total_vendas_dtf = len(query_financeira)
 
         return Response({
@@ -696,7 +695,7 @@ class ReportsView(APIView):
                     })
                 elif tipo_val == 'sublimacao':
                     # Sublimação: tamanho_cm = cm² → converter para m²
-                    total_cm2 = sum(row.tamanho_cm for row in qs_t)
+                    total_cm2 = sum((row.tamanho_cm or Decimal('0')) for row in qs_t)
                     dtf_by_type_monthly.append({
                         'mes': m,
                         'tipo': tipo_val,
@@ -708,7 +707,7 @@ class ReportsView(APIView):
                     })
                 else:
                     # DTF Têxtil/UV: tamanho_cm = cm lineares → metros
-                    total_cm = sum(row.tamanho_cm for row in qs_t)
+                    total_cm = sum((row.tamanho_cm or Decimal('0')) for row in qs_t)
                     dtf_by_type_monthly.append({
                         'mes': m,
                         'tipo': tipo_val,
@@ -755,7 +754,7 @@ class ReportsView(APIView):
                     'unidade': 'un',
                 })
             elif tipo_val == 'sublimacao':
-                total_cm2 = sum(row.tamanho_cm for row in qs_t)
+                total_cm2 = sum((row.tamanho_cm or Decimal('0')) for row in qs_t)
                 dtf_by_type.append({
                     'tipo': tipo_val,
                     'tipo_display': tipo_label,
@@ -765,7 +764,7 @@ class ReportsView(APIView):
                     'unidade': 'm²',
                 })
             else:
-                total_cm = sum(row.tamanho_cm for row in qs_t)
+                total_cm = sum((row.tamanho_cm or Decimal('0')) for row in qs_t)
                 dtf_by_type.append({
                     'tipo': tipo_val,
                     'tipo_display': tipo_label,

@@ -72,9 +72,9 @@ export const DTFTable = () => {
 
   // Lógica automática de status: atualiza status baseado nos toggles
   const calcularStatusAuto = (foiEntregue: boolean, estaPago: boolean, foiImpresso: string) => {
-    if (foiEntregue) return 'finalizado';
-    if (foiImpresso === 'impresso') return 'impresso'; // Impresso mas não entregue
-    if (estaPago) return 'aprovado'; // Aprovado = apenas Pago
+    if (estaPago && foiImpresso === 'impresso' && foiEntregue) return 'finalizado';
+    if (estaPago && foiImpresso === 'impresso') return 'impresso';
+    if (estaPago) return 'pedido_feito';
     return 'orcamento';
   };
 
@@ -82,8 +82,7 @@ export const DTFTable = () => {
   const calcularTogglesDoStatus = (status: string) => {
     if (status === 'finalizado') return { foiEntregue: true, estaPago: true, foiImpresso: 'impresso' };
     if (status === 'impresso') return { foiEntregue: false, estaPago: true, foiImpresso: 'impresso' };
-    if (status === 'aprovado') return { foiEntregue: false, estaPago: true, foiImpresso: 'pendente' };
-    if (status === 'em_producao') return { foiEntregue: false, estaPago: true, foiImpresso: 'pendente' };
+    if (status === 'pedido_feito') return { foiEntregue: false, estaPago: true, foiImpresso: 'pendente' };
     return { foiEntregue: false, estaPago: false, foiImpresso: 'pendente' };
   };
 
@@ -95,6 +94,11 @@ export const DTFTable = () => {
   ) => {
     try {
       const novoValor = !valorAtual;
+
+      if (campo === 'foi_entregue' && novoValor && (!item.esta_pago || item.foi_impresso !== 'impresso')) {
+        addAlert('Confirme o pagamento e a impressão antes de finalizar o pedido.', 'error');
+        return;
+      }
 
       // Calcular novo status automático
       const novosToggles = {
@@ -123,6 +127,10 @@ export const DTFTable = () => {
 
   const handleToggleImpressao = async (id: number, statusAtual: string, item: any) => {
     const novoStatusImpressao = statusAtual === 'impresso' ? 'pendente' : 'impresso';
+    if (novoStatusImpressao === 'impresso' && !item.esta_pago) {
+      addAlert('Confirme o pagamento antes de marcar o pedido como impresso.', 'error');
+      return;
+    }
     try {
       // Calcular novo status automático
       const novoStatus = calcularStatusAuto(item.foi_entregue, item.esta_pago, novoStatusImpressao);
@@ -194,7 +202,7 @@ export const DTFTable = () => {
     // Status
     let statusTexto = '';
     if (item.esta_pago && item.foi_impresso !== 'impresso') {
-      statusTexto = `\n\n⚡ EM PRODUÇÃO\nEstamos cuidando do seu pedido!`;
+      statusTexto = `\n\n✅ PEDIDO FEITO\nSeu pagamento foi confirmado e o pedido entrou na fila de impressão.`;
     } else if (item.foi_impresso === 'impresso' && !item.foi_entregue) {
       statusTexto = `\n\n🚚 PRONTO PARA RETIRADA`;
     } else if (item.foi_entregue) {
@@ -527,18 +535,15 @@ export const DTFTable = () => {
                   className="flex-1 min-w-[100px] text-[10px] font-black px-3 py-2 rounded-xl border transition-all ${
                     item.status === 'orcamento'
                       ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                      : item.status === 'aprovado'
+                      : item.status === 'pedido_feito'
                       ? 'bg-blue-50 text-blue-700 border-blue-200'
-                      : item.status === 'em_producao'
-                      ? 'bg-purple-50 text-purple-700 border-purple-200'
                       : item.status === 'impresso'
                       ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
                       : 'bg-green-50 text-green-700 border-green-200'
                   }"
                 >
                   <option value="orcamento">💰 Orçamento</option>
-                  <option value="aprovado">✅ Aprovado</option>
-                  <option value="em_producao">⚙️ Em Produção</option>
+                  <option value="pedido_feito">✅ Pedido feito</option>
                   <option value="impresso">🖨️ Impresso</option>
                   <option value="finalizado">🏁 Finalizado</option>
                 </select>

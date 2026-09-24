@@ -139,6 +139,7 @@ class DTFVendorSerializer(serializers.ModelSerializer):
     tipo_produto_display = serializers.SerializerMethodField()
     status_display = serializers.SerializerMethodField()
     quantidade = serializers.IntegerField(required=False, default=1)
+    tamanho_cm = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
     preco_unit_override = serializers.DecimalField(
         max_digits=10, decimal_places=2, required=False, allow_null=True
     )
@@ -154,15 +155,17 @@ class DTFVendorSerializer(serializers.ModelSerializer):
         tamanho = attrs.get('tamanho_cm', getattr(self.instance, 'tamanho_cm', None))
         quantidade = attrs.get('quantidade', getattr(self.instance, 'quantidade', 1))
         tipo = attrs.get('tipo_produto', getattr(self.instance, 'tipo_produto', 'dtf_textil'))
-        if tamanho is not None and tamanho <= 0:
-            raise serializers.ValidationError({'tamanho_cm': 'Informe um tamanho maior que zero.'})
-        if tipo == 'estampa' and (quantidade is None or quantidade < 1):
-            raise serializers.ValidationError({'quantidade': 'Informe uma quantidade maior que zero.'})
+        if tipo == 'estampa':
+            if quantidade is None or quantidade < 1:
+                raise serializers.ValidationError({'quantidade': 'Informe uma quantidade maior que zero.'})
+            attrs['tamanho_cm'] = None
+        elif tamanho is None or tamanho <= 0:
+            raise serializers.ValidationError({'tamanho_cm': 'Informe uma metragem maior que zero.'})
         return attrs
 
     def get_fields(self):
         fields = super().get_fields()
-        for name in ('codigo_publico', 'esta_pago', 'comprovante_mp_data', 'valor_total', 'status_display', 'tipo_produto_display'):
+        for name in ('codigo_publico', 'comprovante_mp_data', 'valor_total', 'status_display', 'tipo_produto_display'):
             fields[name].read_only = True
         return fields
 

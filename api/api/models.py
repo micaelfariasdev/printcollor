@@ -158,8 +158,7 @@ class DTFVendor(models.Model):
 
     STATUS_ORCAMENTO = (
         ('orcamento', 'Orçamento'),
-        ('aprovado', 'Aprovado'),
-        ('em_producao', 'Em Produção'),
+        ('pedido_feito', 'Pedido feito'),
         ('impresso', 'Impresso'),
         ('finalizado', 'Finalizado'),
     )
@@ -167,7 +166,8 @@ class DTFVendor(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     layout_arquivo = models.FileField(upload_to=path_layout_dtf)
     tamanho_cm = models.DecimalField(
-        max_digits=10, decimal_places=2, help_text="Tamanho em centímetros lineares")
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Metragem em centímetros lineares. Não se aplica a estampas por unidade.")
     tipo_produto = models.CharField(
         max_length=20, choices=TIPOS_PRODUTO, default='dtf_textil')
     unidade = models.CharField(max_length=2, choices=UNIDADES, default='ml')
@@ -205,15 +205,21 @@ class DTFVendor(models.Model):
         help_text='Preco minimo congelado na criacao do pedido.')
 
     def atualizar_status(self):
-        """Atualiza o status automaticamente baseado nos flags."""
+        """Mantém os flags e o status no fluxo obrigatório do pedido."""
+        if not self.esta_pago:
+            self.foi_impresso = 'pendente'
+            self.foi_entregue = False
+        elif self.foi_impresso != 'impresso':
+            self.foi_entregue = False
+
         if self.foi_entregue:
             self.status = "finalizado"
-        elif not self.esta_pago:
-            self.status = "orcamento"
         elif self.foi_impresso == "impresso":
             self.status = "impresso"
-        elif self.status == 'orcamento':
-            self.status = "aprovado"
+        elif self.esta_pago:
+            self.status = "pedido_feito"
+        else:
+            self.status = "orcamento"
 
     def _precos_aplicaveis(self):
         try:
@@ -232,6 +238,7 @@ class DTFVendor(models.Model):
             self.unidade = 'm2'
         elif self.tipo_produto == 'estampa':
             self.unidade = 'un'
+            self.tamanho_cm = None
             if not self.quantidade:
                 self.quantidade = 1
         self.atualizar_status()
@@ -306,7 +313,8 @@ class DTFVendor(models.Model):
 
     def __str__(self):
         tipo = dict(self.TIPOS_PRODUTO).get(self.tipo_produto, '')
-        return f"{self.cliente.nome} - {self.tamanho_cm}cm ({self.get_foi_impresso_display()}) [{tipo}]"
+        medida = f"{self.quantidade or 1} un" if self.tipo_produto == 'estampa' else f"{self.tamanho_cm}cm"
+        return f"{self.cliente.nome} - {medida} ({self.get_foi_impresso_display()}) [{tipo}]"
 
 
 class DTFConfig(models.Model):
