@@ -37,12 +37,9 @@ app.post('/connection/reconnect', async (_, res) => { await connect(); res.json(
 app.post('/notifications/send', async (req, res) => {
   if (!socket || state.status !== 'conectado') return res.status(503).json({ error: 'not_connected' });
   const jid = `${String(req.body.telefone).replace(/\D/g, '')}@s.whatsapp.net`;
-  const message = req.body.url ? {
-    text: req.body.texto,
-    footer: 'Print Collor',
-    templateButtons: [{ index: 1, urlButton: { displayText: req.body.botao || 'Ver pedido', url: req.body.url } }],
-  } : { text: req.body.texto };
-  const result = await socket.sendMessage(jid, message);
+  const link = req.body.url && !String(req.body.texto || '').includes(req.body.url)
+    ? `\n\n🔗 ${req.body.botao || 'Ver pedido'}: ${req.body.url}` : '';
+  const result = await socket.sendMessage(jid, { text: `${req.body.texto || ''}${link}`.trim() });
   res.json({ id: result.key.id });
 });
 connect(); app.listen(port, () => console.log(`DTF notifier on ${port}`));
