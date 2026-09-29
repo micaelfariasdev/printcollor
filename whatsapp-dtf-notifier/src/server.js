@@ -1,6 +1,10 @@
 import express from 'express';
 import QRCode from 'qrcode';
-import makeWASocket, { DisconnectReason, useMultiFileAuthState } from 'whaileys';
+import * as Whaileys from 'whaileys';
+
+// O fork pode expor o socket como default ESM, default CommonJS ou named export.
+const makeWASocket = Whaileys.default?.default || Whaileys.default || Whaileys.makeWASocket;
+const { DisconnectReason, useMultiFileAuthState } = Whaileys;
 
 const app = express(); app.use(express.json());
 const port = process.env.PORT || 3100;
@@ -9,6 +13,7 @@ let socket; let state = { status: 'desconectado', qr: null, number: null };
 app.use((req, res, next) => req.headers.authorization === `Bearer ${token}` ? next() : res.sendStatus(401));
 
 async function connect() {
+  if (typeof makeWASocket !== 'function') throw new Error('Export makeWASocket não encontrado no whaileys');
   const { state: auth, saveCreds } = await useMultiFileAuthState(process.env.SESSION_DIR || './session');
   socket = makeWASocket({ auth, printQRInTerminal: false, syncFullHistory: false });
   socket.ev.on('creds.update', saveCreds);
