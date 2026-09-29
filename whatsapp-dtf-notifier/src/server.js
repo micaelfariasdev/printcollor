@@ -50,11 +50,23 @@ app.post('/notifications/send', async (req, res) => {
   if (!socket || state.status !== 'conectado') return res.status(503).json({ error: 'not_connected' });
   const jid = `${String(req.body.telefone).replace(/\D/g, '')}@s.whatsapp.net`;
   const link = req.body.url && !String(req.body.texto || '').includes(req.body.url) ? `\n\n🔗 ${req.body.botao || 'Ver pedido'}: ${req.body.url}` : '';
-  const buttons = [];
-  if (req.body.pix) buttons.push({ buttonId: 'pix_copia_cola', buttonText: { displayText: '📋 Enviar PIX copia e cola' }, type: 1 });
-  if (req.body.url) buttons.push({ buttonId: 'ver_pedido', buttonText: { displayText: '📄 Ver pedido' }, type: 1 });
-  const result = await socket.sendMessage(jid, buttons.length ? { text: `${req.body.texto || ''}${link}`.trim(), footer: 'Print Collor', buttons, headerType: 1 } : { text: `${req.body.texto || ''}${link}`.trim() });
-  if (buttons.length) {
+  const templateButtons = [];
+  if (req.body.url) templateButtons.push({
+    index: 1,
+    urlButton: { displayText: 'Ver pedido', url: req.body.url },
+  });
+  if (req.body.pix) templateButtons.push({
+    index: 2,
+    quickReplyButton: { displayText: 'Enviar PIX copia e cola', id: 'pix_copia_cola' },
+  });
+  const conteudo = `${req.body.texto || ''}${link}`.trim();
+  const result = await socket.sendMessage(
+    jid,
+    templateButtons.length
+      ? { text: conteudo, footer: 'Print Collor', templateButtons }
+      : { text: conteudo },
+  );
+  if (req.body.pix) {
     const action = { pix: req.body.pix, url: req.body.url };
     pendingActions.set(result.key.id, action);
     pendingActions.set(jid, action);
