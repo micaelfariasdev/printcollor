@@ -13,8 +13,8 @@ def enviar_evento(dtf, evento):
     telefone = (dtf.cliente.telefone or '').strip()
     if not telefone:
         return None
-    config = DTFNotificacaoConfig.objects.filter(ativo=True).first()
-    if not config:
+    config = DTFNotificacaoConfig.objects.first()
+    if not config or (not config.ativo and evento != 'manual'):
         return None
     base_url = getattr(settings, 'FRONTEND_URL', '').rstrip('/')
     link = f"\nAcompanhe: {base_url}/pedido-publico/{dtf.codigo_publico}" if base_url and dtf.codigo_publico else ''
