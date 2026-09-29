@@ -144,3 +144,7 @@ Não haverá PIN, senha adicional ou nova autenticação nessa confirmação.
 - Falhas ficam visíveis e podem ser reenviadas manualmente.
 - Alterações de status exigem confirmação modal.
 - A futura central de atendimento pode ser criada sem alterar o serviço, sessão ou banco desta integração.
+
+## Execução com PM2
+
+No servidor, dentro da pasta `whatsapp-dtf-notifier`, instale as dependências com `npm install`, edite `ecosystem.config.cjs` para definir um `NOTIFIER_TOKEN` forte e inicie com `pm2 start ecosystem.config.cjs`. Em seguida, use `pm2 save` e `pm2 startup` para manter o serviço após reinicializações.
