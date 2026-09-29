@@ -1130,6 +1130,10 @@ class DTFNotificacaoConfigViewSet(viewsets.ViewSet):
         config = self._config()
         try:
             response = requests.post(f'{config.service_url.rstrip("/")}/connection/reconnect', headers={'Authorization': f'Bearer {config.service_token}'}, timeout=10)
-            return Response(response.json(), status=response.status_code)
+            try:
+                data = response.json()
+            except ValueError:
+                data = {'error': response.text or 'Resposta inválida do serviço de notificações.'}
+            return Response(data, status=response.status_code)
         except requests.RequestException as exc:
             return Response({'error': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
