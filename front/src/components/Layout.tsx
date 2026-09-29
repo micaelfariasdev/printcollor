@@ -10,6 +10,7 @@ import {
   Volume2,
   VolumeX,
   BarChart3,
+  Send,
 } from 'lucide-react';
 import { theme } from './Theme';
 import { api, useAuth } from '../auth/useAuth';
@@ -58,6 +59,7 @@ export const Layout: React.FC = () => {
     { id: 'dashboard', label: 'Início', icon: <LayoutDashboard size={22} />, roles: ['all'] },
     { id: 'pedidos', label: 'Produção', icon: <Package size={22} />, roles: ['all'] },
     { id: 'dtf', label: 'DTF / UV', icon: <Printer size={22} />, roles: ['all'] },
+    { id: 'notificacoes-dtf', label: 'Notificações DTF', icon: <Send size={22} />, roles: ['admin', 'financeiro'] },
     { id: 'orcamentos', label: 'Orçamentos', icon: <FileText size={22} />, roles: ['all'] },
     { id: 'clientes', label: 'Clientes', icon: <Users size={22} />, roles: ['all'] },
     { id: 'produtos', label: 'Produtos', icon: <Package size={22} />, roles: ['admin', 'financeiro'] },

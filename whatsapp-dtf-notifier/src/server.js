@@ -1,0 +1,24 @@
+import express from 'express';
+import QRCode from 'qrcode';
+import makeWASocket, { DisconnectReason, useMultiFileAuthState } from 'whaileys';
+
+const app = express(); app.use(express.json());
+const port = process.env.PORT || 3100;
+const token = process.env.NOTIFIER_TOKEN;
+let socket; let state = { status: 'desconectado', qr: null, number: null };
+app.use((req, res, next) => req.headers.authorization === `Bearer ${token}` ? next() : res.sendStatus(401));
+
+async function connect() {
+  const { state: auth, saveCreds } = await useMultiFileAuthState(process.env.SESSION_DIR || './session');
+  socket = makeWASocket({ auth, printQRInTerminal: false, syncFullHistory: false });
+  socket.ev.on('creds.update', saveCreds);
+  socket.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
+    if (qr) { state.status = 'aguardando_qr'; state.qr = await QRCode.toDataURL(qr); }
+    if (connection === 'open') { state = { status: 'conectado', qr: null, number: socket.user?.id?.split(':')[0] || null }; }
+    if (connection === 'close') { state.status = 'desconectado'; if (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut) connect(); }
+  });
+}
+app.get('/health', (_, res) => res.json({ ok: true, ...state }));
+app.post('/connection/reconnect', async (_, res) => { await connect(); res.json(state); });
+app.post('/notifications/send', async (req, res) => { if (!socket || state.status !== 'conectado') return res.status(503).json({ error: 'not_connected' }); const jid = `${String(req.body.telefone).replace(/\D/g, '')}@s.whatsapp.net`; const result = await socket.sendMessage(jid, { text: req.body.texto }); res.json({ id: result.key.id }); });
+connect(); app.listen(port, () => console.log(`DTF notifier on ${port}`));

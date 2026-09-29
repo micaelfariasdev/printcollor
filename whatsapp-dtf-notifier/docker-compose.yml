@@ -1,0 +1,12 @@
+services:
+  whatsapp-dtf-notifier:
+    build: .
+    env_file: .env
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - notifier_session:/app/session
+
+volumes:
+  notifier_session:

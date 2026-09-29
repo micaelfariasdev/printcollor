@@ -5,7 +5,7 @@ from .views import (
     DTFVendorViewSet, UserViewSet, UserMeView, DashboardStatsView, ReportsView,
     ChangePasswordView, BackupExportView, BackupImportView, DTFConfigViewSet,
     ConfiguracaoLojaViewSet, ClientReportView, DTFOrdersReportView, FabricaOrdersReportView,
-    KDSPanelView, SyncDTFStatusView, PedidoPublicoView, mp_oauth_callback_view,
+    KDSPanelView, SyncDTFStatusView, PedidoPublicoView, mp_oauth_callback_view, DTFNotificacaoConfigViewSet,
 )
 from .webhook_views import MercadoPagoWebhookView
 
@@ -17,6 +17,7 @@ router.register(r'orcamentos', OrcamentoViewSet)
 router.register(r'dtf', DTFVendorViewSet)
 router.register(r'usuarios', UserViewSet)
 router.register(r'pedidos', PedidoFabricaViewSet)
+router.register(r'dtf-notificacoes-config', DTFNotificacaoConfigViewSet, basename='dtf-notificacoes-config')
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -44,6 +45,7 @@ urlpatterns = [
     path('webhook/mercadopago/', MercadoPagoWebhookView.as_view(), name='mp-webhook'),
     path('integracoes/mercadopago/callback/', mp_oauth_callback_view, name='mp-callback'),
     path('dtf/<int:pk>/mp-pagar/', DTFVendorViewSet.as_view({'post': 'mp_pagar'}), name='dtf-mp-pagar'),
+    path('dtf/<int:pk>/reenviar-notificacao/', DTFVendorViewSet.as_view({'post': 'reenviar_notificacao'}), name='dtf-reenviar-notificacao'),
     # Página pública (AllowAny - fora do router)
     path('pedido-publico/<str:codigo_publico>/', PedidoPublicoView.as_view(), name='pedido-publico'),
 ]

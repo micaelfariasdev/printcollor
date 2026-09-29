@@ -94,6 +94,8 @@ export const DTFTable = () => {
   ) => {
     try {
       const novoValor = !valorAtual;
+      const acao = campo === 'esta_pago' ? (novoValor ? 'confirmar o pagamento' : 'desmarcar o pagamento') : (novoValor ? 'finalizar o pedido' : 'reabrir o pedido');
+      if (!window.confirm(`Deseja ${acao} do pedido #${id}?`)) return;
 
       if (campo === 'foi_entregue' && novoValor && item.foi_impresso !== 'impresso') {
         addAlert('Marque o pedido como impresso antes de finalizar.', 'error');
@@ -127,6 +129,8 @@ export const DTFTable = () => {
 
   const handleToggleImpressao = async (id: number, statusAtual: string, item: any) => {
     const novoStatusImpressao = statusAtual === 'impresso' ? 'pendente' : 'impresso';
+    const acao = novoStatusImpressao === 'impresso' ? 'marcar como impresso' : 'retornar para a fila';
+    if (!window.confirm(`Deseja ${acao} o pedido #${id}?`)) return;
     try {
       // Calcular novo status automático
       const novoStatus = calcularStatusAuto(item.foi_entregue, item.esta_pago, novoStatusImpressao);
@@ -156,6 +160,16 @@ export const DTFTable = () => {
       carregarDados();
     } catch (error) {
       addAlert('Erro ao atualizar status.', 'error');
+    }
+  };
+
+  const handleReenviarNotificacao = async (id: number) => {
+    if (!window.confirm(`Reenviar a notificação do pedido #${id}?`)) return;
+    try {
+      await api.post(`dtf/${id}/reenviar-notificacao/`);
+      addAlert('Notificação enviada.', 'success');
+    } catch (error: any) {
+      addAlert(error?.response?.data?.error || 'Não foi possível enviar a notificação.', 'error');
     }
   };
 
@@ -547,6 +561,14 @@ export const DTFTable = () => {
 
               {/* Primeira linha: Botões de status e ação */}
               <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => handleReenviarNotificacao(item.id)}
+                  className="flex-1 min-w-[80px] bg-blue-50 hover:bg-blue-100 text-blue-600 p-2 rounded-xl transition-all flex items-center justify-center gap-1"
+                  title="Reenviar notificação DTF"
+                >
+                  <MessageCircle size={16} />
+                  <span className="text-xs font-bold">Notificar</span>
+                </button>
                 <button
                   onClick={() =>
                     handleToggleImpressao(item.id, item.foi_impresso, item)

@@ -400,3 +400,26 @@ class PedidoFabrica(models.Model):
     def __str__(self):
         return f"{self.cliente.nome} - {self.descricao} ({self.get_status_display()})"
 
+
+class DTFNotificacaoConfig(models.Model):
+    ativo = models.BooleanField(default=False)
+    service_url = models.URLField(default='http://whatsapp-dtf-notifier:3100')
+    service_token = models.CharField(max_length=128, blank=True, default='')
+    status_conexao = models.CharField(max_length=20, default='desconectado')
+    numero_conectado = models.CharField(max_length=30, blank=True, default='')
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+
+class DTFNotificacao(models.Model):
+    EVENTOS = [('criado', 'Pedido criado'), ('pedido_feito', 'Pedido feito'), ('pago', 'Pagamento confirmado'), ('impresso', 'Impresso'), ('finalizado', 'Finalizado'), ('manual', 'Reenvio manual')]
+    STATUS = [('pendente', 'Pendente'), ('enviado', 'Enviado'), ('falhou', 'Falhou'), ('cancelado', 'Cancelado')]
+    dtf = models.ForeignKey(DTFVendor, on_delete=models.CASCADE, related_name='notificacoes')
+    evento = models.CharField(max_length=20, choices=EVENTOS)
+    telefone = models.CharField(max_length=20)
+    conteudo = models.TextField(blank=True, default='')
+    status = models.CharField(max_length=12, choices=STATUS, default='pendente')
+    erro = models.TextField(blank=True, default='')
+    tentativas = models.PositiveSmallIntegerField(default=0)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    enviado_em = models.DateTimeField(null=True, blank=True)
+

@@ -5,7 +5,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from django.conf import settings
 from django.utils.crypto import constant_time_compare
-from .models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, Usuario, DTFVendor, PedidoFabrica, DTFConfig, ConfiguracaoLoja
+from .models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, Usuario, DTFVendor, PedidoFabrica, DTFConfig, ConfiguracaoLoja, DTFNotificacaoConfig, DTFNotificacao
 
 
 class EmpresaSerializer(serializers.ModelSerializer):
@@ -188,6 +188,21 @@ class DTFVendorSerializer(serializers.ModelSerializer):
         if not obj.esta_pago or not obj.comprovante_mp_data:
             return None
         return obj.comprovante_mp_data
+
+
+class DTFNotificacaoConfigSerializer(serializers.ModelSerializer):
+    service_token = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
+    class Meta:
+        model = DTFNotificacaoConfig
+        fields = '__all__'
+
+
+class DTFNotificacaoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DTFNotificacao
+        fields = '__all__'
+        read_only_fields = ['status', 'erro', 'tentativas', 'criado_em', 'enviado_em']
 
 
 class DTFConfigSerializer(serializers.ModelSerializer):

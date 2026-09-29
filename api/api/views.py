@@ -17,20 +17,22 @@ from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
 from django_filters.rest_framework import DjangoFilterBackend
 from decimal import Decimal
-from .models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, DTFVendor, Usuario, PedidoFabrica, DTFConfig, ConfiguracaoLoja
+from .models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, DTFVendor, Usuario, PedidoFabrica, DTFConfig, ConfiguracaoLoja, DTFNotificacaoConfig, DTFNotificacao
 from .permissions import IsAdminUserCustom, IsVendedor, IsFinanceiro, IsMaquina
 from .serializers import (
     EmpresaSerializer, ClienteSerializer,
     ProdutoSerializer, OrcamentoSerializer, DTFVendorSerializer, UsuarioSerializer,
-    UserMeSerializer, PedidoFabricaSerializer, DTFConfigSerializer, ConfiguracaoLojaSerializer
+    UserMeSerializer, PedidoFabricaSerializer, DTFConfigSerializer, ConfiguracaoLojaSerializer, DTFNotificacaoConfigSerializer, DTFNotificacaoSerializer
 )
 from .tools.utils import gerar_pdf_from_html
 from .services.backup_service import BackupService
 from .services.mercadopago_service import MercadoPagoService
+from .services.dtf_notificacao_service import enviar_evento, EVENTO_POR_STATUS
 from .serializers import PedidoPublicoSerializer
 
 import base64
 from io import BytesIO
+import requests
 
 
 def processar_imagem_base64(campo_arquivo):
@@ -203,6 +205,27 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
 
         # Outras ações (list, retrieve, gerar_pdf): Todos os cargos autorizados podem ver
         return [(IsAdminUserCustom | IsVendedor | IsMaquina)()]
+
+    def perform_update(self, serializer):
+        anterior = self.get_object()
+        status_anterior, pago_anterior = anterior.status, anterior.esta_pago
+        dtf = serializer.save()
+        evento = EVENTO_POR_STATUS.get(dtf.status) if dtf.status != status_anterior else None
+        if not evento and dtf.esta_pago and not pago_anterior:
+            evento = 'pago'
+        if evento:
+            enviar_evento(dtf, evento)
+
+    def perform_create(self, serializer):
+        dtf = serializer.save()
+        enviar_evento(dtf, 'criado')
+
+    @action(detail=True, methods=['post'])
+    def reenviar_notificacao(self, request, pk=None):
+        registro = enviar_evento(self.get_object(), 'manual')
+        if not registro:
+            return Response({'error': 'Integração inativa ou cliente sem telefone.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(DTFNotificacaoSerializer(registro).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['get'])
     def gerar_pdf(self, request, pk=None):
@@ -1071,3 +1094,42 @@ class DTFConfigViewSet(viewsets.ModelViewSet):
     queryset = DTFConfig.objects.all()
     serializer_class = DTFConfigSerializer
     permission_classes = [IsAdminUserCustom]
+
+
+class DTFNotificacaoConfigViewSet(viewsets.ViewSet):
+    permission_classes = [IsAdminUserCustom]
+
+    def _config(self):
+        return DTFNotificacaoConfig.objects.get_or_create(pk=1)[0]
+
+    def list(self, request):
+        return Response(DTFNotificacaoConfigSerializer(self._config()).data)
+
+    def partial_update(self, request, pk=None):
+        serializer = DTFNotificacaoConfigSerializer(self._config(), data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def connection(self, request):
+        config = self._config()
+        try:
+            response = requests.get(f'{config.service_url.rstrip("/")}/health', headers={'Authorization': f'Bearer {config.service_token}'}, timeout=5)
+            response.raise_for_status()
+            data = response.json()
+            config.status_conexao = data.get('status', 'desconectado')
+            config.numero_conectado = data.get('number') or ''
+            config.save(update_fields=['status_conexao', 'numero_conectado', 'atualizado_em'])
+            return Response(data)
+        except requests.RequestException as exc:
+            return Response({'status': 'indisponivel', 'error': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    @action(detail=False, methods=['post'])
+    def reconnect(self, request):
+        config = self._config()
+        try:
+            response = requests.post(f'{config.service_url.rstrip("/")}/connection/reconnect', headers={'Authorization': f'Bearer {config.service_token}'}, timeout=10)
+            return Response(response.json(), status=response.status_code)
+        except requests.RequestException as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
