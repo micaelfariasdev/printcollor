@@ -27,7 +27,7 @@ async function connect() {
       for (const message of messages) {
         const selected = message.message?.buttonsResponseMessage?.selectedButtonId;
         const originalId = message.message?.buttonsResponseMessage?.contextInfo?.stanzaId;
-        const action = pendingActions.get(originalId);
+        const action = pendingActions.get(originalId) || pendingActions.get(message.key.remoteJid);
         if (!selected || !action || message.key.fromMe) continue;
         if (selected === 'pix_copia_cola' && action.pix) await socket.sendMessage(message.key.remoteJid, { text: `PIX Copia e Cola:\n${action.pix}` });
         if (selected === 'ver_pedido' && action.url) await socket.sendMessage(message.key.remoteJid, { text: `Acesse seu pedido:\n${action.url}` });
@@ -54,7 +54,11 @@ app.post('/notifications/send', async (req, res) => {
   if (req.body.pix) buttons.push({ buttonId: 'pix_copia_cola', buttonText: { displayText: '📋 Enviar PIX copia e cola' }, type: 1 });
   if (req.body.url) buttons.push({ buttonId: 'ver_pedido', buttonText: { displayText: '📄 Ver pedido' }, type: 1 });
   const result = await socket.sendMessage(jid, buttons.length ? { text: `${req.body.texto || ''}${link}`.trim(), footer: 'Print Collor', buttons, headerType: 1 } : { text: `${req.body.texto || ''}${link}`.trim() });
-  if (buttons.length) pendingActions.set(result.key.id, { pix: req.body.pix, url: req.body.url });
+  if (buttons.length) {
+    const action = { pix: req.body.pix, url: req.body.url };
+    pendingActions.set(result.key.id, action);
+    pendingActions.set(jid, action);
+  }
   res.json({ id: result.key.id });
 });
 connect(); app.listen(port, () => console.log(`DTF notifier on ${port}`));
