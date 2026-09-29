@@ -31,7 +31,7 @@ def enviar_evento(dtf, evento):
     config = DTFNotificacaoConfig.objects.first()
     if not config:
         return None
-    base_url = getattr(settings, 'FRONTEND_URL', '').rstrip('/')
+    base_url = getattr(settings, 'FRONTEND_URL', 'https://printcollor.com.br').rstrip('/')
     link = f"{base_url}/pedido-publico/{dtf.codigo_publico}" if base_url and dtf.codigo_publico else ''
     tamanho = f"{dtf.quantidade or 1} unidades" if dtf.tipo_produto == 'estampa' else f"{dtf.tamanho_cm or ''} {dtf.unidade}"
     padrao = 'Olá, {nome}!\nPedido #{id}\nStatus: {status}\nValor: {valor}\n{link_publico}'
@@ -47,6 +47,8 @@ def enviar_evento(dtf, evento):
     texto = template
     for nome, valor in variaveis.items():
         texto = texto.replace(f'{{{nome}}}', str(valor))
+    if not texto.strip():
+        texto = f'Print Collor\nAcompanhe seu pedido: {link}'
     registro = DTFNotificacao.objects.create(dtf=dtf, evento=evento, telefone=telefone, conteudo=texto)
     try:
         resposta = requests.post(f'{config.service_url.rstrip("/")}/notifications/send', json={'telefone': telefone, 'texto': texto, 'url': link, 'botao': 'Ver pedido e pagamento'}, headers={'Authorization': f'Bearer {config.service_token}'}, timeout=12)
