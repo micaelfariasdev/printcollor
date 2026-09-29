@@ -206,23 +206,11 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
         # Outras ações (list, retrieve, gerar_pdf): Todos os cargos autorizados podem ver
         return [(IsAdminUserCustom | IsVendedor | IsMaquina)()]
 
-    def perform_update(self, serializer):
-        anterior = self.get_object()
-        status_anterior, pago_anterior = anterior.status, anterior.esta_pago
-        dtf = serializer.save()
-        evento = EVENTO_POR_STATUS.get(dtf.status) if dtf.status != status_anterior else None
-        if not evento and dtf.esta_pago and not pago_anterior:
-            evento = 'pago'
-        if evento:
-            enviar_evento(dtf, evento)
-
-    def perform_create(self, serializer):
-        dtf = serializer.save()
-        enviar_evento(dtf, 'criado')
-
     @action(detail=True, methods=['post'])
     def reenviar_notificacao(self, request, pk=None):
-        registro = enviar_evento(self.get_object(), 'manual')
+        dtf = self.get_object()
+        evento = 'pago' if dtf.esta_pago else EVENTO_POR_STATUS.get(dtf.status, 'criado')
+        registro = enviar_evento(dtf, evento)
         if not registro:
             return Response({'error': 'Integração inativa ou cliente sem telefone.'}, status=status.HTTP_400_BAD_REQUEST)
         return Response(DTFNotificacaoSerializer(registro).data, status=status.HTTP_201_CREATED)

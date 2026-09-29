@@ -407,6 +407,7 @@ class DTFNotificacaoConfig(models.Model):
     service_token = models.CharField(max_length=128, blank=True, default='')
     status_conexao = models.CharField(max_length=20, default='desconectado')
     numero_conectado = models.CharField(max_length=30, blank=True, default='')
+    templates = models.JSONField(default=dict, blank=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 
 

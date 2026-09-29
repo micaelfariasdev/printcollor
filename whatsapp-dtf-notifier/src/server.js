@@ -34,5 +34,15 @@ async function connect() {
 }
 app.get('/health', (_, res) => res.json({ ok: true, ...state }));
 app.post('/connection/reconnect', async (_, res) => { await connect(); res.json(state); });
-app.post('/notifications/send', async (req, res) => { if (!socket || state.status !== 'conectado') return res.status(503).json({ error: 'not_connected' }); const jid = `${String(req.body.telefone).replace(/\D/g, '')}@s.whatsapp.net`; const result = await socket.sendMessage(jid, { text: req.body.texto }); res.json({ id: result.key.id }); });
+app.post('/notifications/send', async (req, res) => {
+  if (!socket || state.status !== 'conectado') return res.status(503).json({ error: 'not_connected' });
+  const jid = `${String(req.body.telefone).replace(/\D/g, '')}@s.whatsapp.net`;
+  const message = req.body.url ? {
+    text: req.body.texto,
+    footer: 'Print Collor',
+    templateButtons: [{ index: 1, urlButton: { displayText: req.body.botao || 'Ver pedido', url: req.body.url } }],
+  } : { text: req.body.texto };
+  const result = await socket.sendMessage(jid, message);
+  res.json({ id: result.key.id });
+});
 connect(); app.listen(port, () => console.log(`DTF notifier on ${port}`));
