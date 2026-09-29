@@ -38,7 +38,15 @@ def enviar_evento(dtf, evento):
     template = (config.templates or {}).get(evento) or padrao
     loja = ConfiguracaoLoja.objects.first()
     pix = '' if dtf.esta_pago or not loja else gerar_pix_copia_cola(loja, dtf.valor_total(), dtf.codigo_publico or str(dtf.id))
-    texto = template.format(nome=dtf.cliente.nome, valor=f'R$ {dtf.valor_total():.2f}', id=dtf.id, codigo=dtf.codigo_publico or '', tamanho=tamanho, status=dtf.get_status_display(), link_publico=link, pix_copia_cola=pix)
+    variaveis = {
+        'nome': dtf.cliente.nome, 'valor': f'R$ {dtf.valor_total():.2f}',
+        'id': dtf.id, 'codigo': dtf.codigo_publico or '', 'tamanho': tamanho,
+        'status': dtf.get_status_display(), 'link_publico': link,
+        'pix_copia_cola': pix,
+    }
+    texto = template
+    for nome, valor in variaveis.items():
+        texto = texto.replace(f'{{{nome}}}', str(valor))
     registro = DTFNotificacao.objects.create(dtf=dtf, evento=evento, telefone=telefone, conteudo=texto)
     try:
         resposta = requests.post(f'{config.service_url.rstrip("/")}/notifications/send', json={'telefone': telefone, 'texto': texto, 'url': link, 'botao': 'Ver pedido e pagamento'}, headers={'Authorization': f'Bearer {config.service_token}'}, timeout=12)
