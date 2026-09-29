@@ -1119,7 +1119,7 @@ class DTFNotificacaoConfigViewSet(viewsets.ViewSet):
     def reconnect(self, request):
         config = self._config()
         try:
-            response = requests.post(f'{config.service_url.rstrip("/")}/connection/reconnect', headers={'Authorization': f'Bearer {config.service_token}'}, timeout=10)
+            response = requests.post(f'{config.service_url.rstrip("/")}/connection/reconnect', headers={'Authorization': f'Bearer {config.service_token}'}, timeout=15)
             try:
                 data = response.json()
             except ValueError:
