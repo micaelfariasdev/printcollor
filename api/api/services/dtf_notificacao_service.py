@@ -51,7 +51,7 @@ def enviar_evento(dtf, evento):
         texto = f'Print Collor\nAcompanhe seu pedido: {link}'
     registro = DTFNotificacao.objects.create(dtf=dtf, evento=evento, telefone=telefone, conteudo=texto)
     try:
-        resposta = requests.post(f'{config.service_url.rstrip("/")}/notifications/send', json={'telefone': telefone, 'texto': texto, 'url': link, 'botao': 'Ver pedido e pagamento'}, headers={'Authorization': f'Bearer {config.service_token}'}, timeout=12)
+        resposta = requests.post(f'{config.service_url.rstrip("/")}/notifications/send', json={'telefone': telefone, 'texto': texto, 'url': link, 'pix': pix, 'botao': 'Ver pedido e pagamento'}, headers={'Authorization': f'Bearer {config.service_token}'}, timeout=12)
         resposta.raise_for_status()
         registro.status, registro.enviado_em = 'enviado', timezone.now()
     except requests.RequestException as exc:

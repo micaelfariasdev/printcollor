@@ -11,6 +11,7 @@ const port = process.env.PORT || 3100;
 const token = process.env.NOTIFIER_TOKEN;
 let socket; let state = { status: 'desconectado', qr: null, number: null };
 let connecting = false;
+const pendingActions = new Map();
 app.use((req, res, next) => req.headers.authorization === `Bearer ${token}` ? next() : res.sendStatus(401));
 
 async function connect() {
@@ -21,6 +22,17 @@ async function connect() {
     const { state: auth, saveCreds } = await useMultiFileAuthState(process.env.SESSION_DIR || './session');
     socket = makeWASocket({ auth, printQRInTerminal: false, syncFullHistory: false });
     socket.ev.on('creds.update', saveCreds);
+    socket.ev.on('messages.upsert', async ({ messages, type }) => {
+      if (type !== 'notify') return;
+      for (const message of messages) {
+        const selected = message.message?.buttonsResponseMessage?.selectedButtonId;
+        const originalId = message.message?.buttonsResponseMessage?.contextInfo?.stanzaId;
+        const action = pendingActions.get(originalId);
+        if (!selected || !action || message.key.fromMe) continue;
+        if (selected === 'pix_copia_cola' && action.pix) await socket.sendMessage(message.key.remoteJid, { text: `PIX Copia e Cola:\n${action.pix}` });
+        if (selected === 'ver_pedido' && action.url) await socket.sendMessage(message.key.remoteJid, { text: `Acesse seu pedido:\n${action.url}` });
+      }
+    });
     socket.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
       if (qr) { state.status = 'aguardando_qr'; state.qr = await QRCode.toDataURL(qr); }
       if (connection === 'open') { connecting = false; state = { status: 'conectado', qr: null, number: socket.user?.id?.split(':')[0] || null }; }
@@ -37,9 +49,12 @@ app.post('/connection/reconnect', async (_, res) => { await connect(); res.json(
 app.post('/notifications/send', async (req, res) => {
   if (!socket || state.status !== 'conectado') return res.status(503).json({ error: 'not_connected' });
   const jid = `${String(req.body.telefone).replace(/\D/g, '')}@s.whatsapp.net`;
-  const link = req.body.url && !String(req.body.texto || '').includes(req.body.url)
-    ? `\n\n🔗 ${req.body.botao || 'Ver pedido'}: ${req.body.url}` : '';
-  const result = await socket.sendMessage(jid, { text: `${req.body.texto || ''}${link}`.trim() });
+  const link = req.body.url && !String(req.body.texto || '').includes(req.body.url) ? `\n\n🔗 ${req.body.botao || 'Ver pedido'}: ${req.body.url}` : '';
+  const buttons = [];
+  if (req.body.pix) buttons.push({ buttonId: 'pix_copia_cola', buttonText: { displayText: '📋 Enviar PIX copia e cola' }, type: 1 });
+  if (req.body.url) buttons.push({ buttonId: 'ver_pedido', buttonText: { displayText: '📄 Ver pedido' }, type: 1 });
+  const result = await socket.sendMessage(jid, buttons.length ? { text: `${req.body.texto || ''}${link}`.trim(), footer: 'Print Collor', buttons, headerType: 1 } : { text: `${req.body.texto || ''}${link}`.trim() });
+  if (buttons.length) pendingActions.set(result.key.id, { pix: req.body.pix, url: req.body.url });
   res.json({ id: result.key.id });
 });
 connect(); app.listen(port, () => console.log(`DTF notifier on ${port}`));

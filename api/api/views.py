@@ -209,7 +209,9 @@ class DTFVendorViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def reenviar_notificacao(self, request, pk=None):
         dtf = self.get_object()
-        evento = 'pago' if dtf.esta_pago else EVENTO_POR_STATUS.get(dtf.status, 'criado')
+        evento = EVENTO_POR_STATUS.get(dtf.status)
+        if not evento:
+            evento = 'pago' if dtf.esta_pago else 'criado'
         registro = enviar_evento(dtf, evento)
         if not registro:
             return Response({'error': 'Integração inativa ou cliente sem telefone.'}, status=status.HTTP_400_BAD_REQUEST)
