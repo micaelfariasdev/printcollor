@@ -60,12 +60,19 @@ app.post('/notifications/send', async (req, res) => {
     quickReplyButton: { displayText: 'Enviar PIX copia e cola', id: 'pix_copia_cola' },
   });
   const conteudo = `${req.body.texto || ''}${link}`.trim();
-  const result = await socket.sendMessage(
-    jid,
-    templateButtons.length
-      ? { text: conteudo, footer: 'Print Collor', templateButtons }
-      : { text: conteudo },
-  );
+  let result;
+  if (templateButtons.length) {
+    try {
+      result = await socket.sendMessage(jid, { text: conteudo, footer: 'Print Collor', templateButtons });
+    } catch (error) {
+      // Alguns clientes/versoes do WhatsApp recusam mensagens de template.
+      // A notificacao nao pode ser perdida por causa do botao opcional.
+      console.warn('Botao de URL indisponivel; enviando link em texto.', error.message);
+      result = await socket.sendMessage(jid, { text: conteudo });
+    }
+  } else {
+    result = await socket.sendMessage(jid, { text: conteudo });
+  }
   if (req.body.pix) {
     const action = { pix: req.body.pix, url: req.body.url };
     pendingActions.set(result.key.id, action);
