@@ -15,6 +15,14 @@ let connecting = false;
 let connectionGeneration = 0;
 app.use((req, res, next) => req.headers.authorization === `Bearer ${token}` ? next() : res.sendStatus(401));
 
+function normalizarTelefone(telefone) {
+  let numero = String(telefone || '').replace(/\D/g, '');
+  if (numero.startsWith('00')) numero = numero.slice(2);
+  if (numero.startsWith('55') && (numero.length === 12 || numero.length === 13)) return numero;
+  if (numero.length === 10 || numero.length === 11) return `55${numero}`;
+  throw new Error('Informe DDD e número, por exemplo: 86 8123-3343.');
+}
+
 async function connect() {
   if (connecting || state.status === 'conectado') return state;
   if (typeof makeWASocket !== 'function') throw new Error('Export makeWASocket não encontrado no whaileys');
@@ -60,10 +68,27 @@ app.post('/connection/reconnect', async (_, res) => {
 });
 app.post('/notifications/send', async (req, res) => {
   if (!socket || state.status !== 'conectado') return res.status(503).json({ error: 'not_connected' });
-  const jid = `${String(req.body.telefone).replace(/\D/g, '')}@s.whatsapp.net`;
+  let telefone;
+  try {
+    telefone = normalizarTelefone(req.body.telefone);
+  } catch (error) {
+    return res.status(422).json({ error: 'invalid_phone', detail: error.message });
+  }
+  let contato;
+  try {
+    const encontrados = await socket.onWhatsApp(telefone);
+    contato = Array.isArray(encontrados) ? encontrados.find(item => item.exists) : encontrados;
+  } catch (error) {
+    console.error('Falha ao validar número no WhatsApp.', error);
+    return res.status(502).json({ error: 'phone_validation_failed' });
+  }
+  if (!contato?.exists || !contato?.jid) {
+    return res.status(422).json({ error: 'not_on_whatsapp', telefone });
+  }
+  const jid = contato.jid;
   const link = req.body.url && !String(req.body.texto || '').includes(req.body.url) ? `\n\n🔗 ${req.body.botao || 'Ver pedido'}: ${req.body.url}` : '';
   const conteudo = `${req.body.texto || ''}${link}`.trim();
   const result = await socket.sendMessage(jid, { text: conteudo });
-  res.json({ id: result.key.id });
+  res.json({ id: result.key.id, telefone, jid });
 });
 connect(); app.listen(port, () => console.log(`DTF notifier on ${port}`));
