@@ -8,7 +8,7 @@ import { formatarReal } from '../tools/formatReal';
 
 type Recibo = {
   id: number; nome_empresa: string; nome_cliente: string; valor: string; referente_a: string;
-  forma_pagamento: string; forma_pagamento_display: string; data_recebimento: string; observacoes: string;
+  forma_pagamento: string; forma_pagamento_display: string; data_recebimento: string; observacoes: string; empresa_template_id?: number;
 };
 
 const hoje = () => new Date().toISOString().slice(0, 10);
@@ -66,6 +66,12 @@ const valorPorExtenso = (valor: string | number) => {
 };
 const dataBrasil = (data: string) => new Intl.DateTimeFormat('pt-BR').format(new Date(`${data}T12:00:00`));
 
+const CabecalhoRecibo = ({ recibo }: { recibo: Recibo }) => {
+  if (Number(recibo.empresa_template_id) === 2) return <header className="cabecalho-template cabecalho-template-2"><h1>FC INDÚSTRIA DE MALHAS</h1><h1>VITÓRIA F CARVALHO</h1><p>CNPJ Nº 28.185.884/0001-15 · INSCRIÇÃO ESTADUAL Nº 19.604.393-0 · CMC Nº 489982-2</p><p>AV. ODILON ARAÚJO Nº 940 / SALA C · MONTE CASTELO · CEP 64017-470 · TERESINA-PI</p><p>FONE: (86) 99983-0220</p></header>;
+  if (Number(recibo.empresa_template_id) === 3) return <header className="cabecalho-template cabecalho-template-3"><strong>A P F DE CARVALHO</strong><p>CNPJ: 09.101.218/0001-07 · Insc. Estadual 19.459.367-3</p><p>Av. Rua Coelho de Rezende, 576 A · Centro · CEP: 64001-370 · Teresina-PI</p><p>Fone: (86) 99955-7523</p></header>;
+  return <header className="cabecalho-template cabecalho-template-1"><img src="/static/logo-yasprint.png" alt="Yasprint"/><div><h1>YASPRINT Comunicação Visual</h1><p>Rua Magalhães Filho, 701 · Centro · Teresina-PI</p><p>CNPJ: 56.606.188/0001-70 · IE: 197681166</p><p>YASprintComunicacaoVisual@gmail.com</p></div></header>;
+};
+
 export default function Recibos() {
   const { items, loading, hasMore, loadMore, refresh, setSearch } = usePaginatedList<Recibo>({ endpoint: 'recibos/' });
   const { addAlert } = useAlert();
@@ -117,8 +123,9 @@ export default function Recibos() {
 
   return <div className="space-y-6">
     <style>{`@media print { @page { size: A4 portrait; margin: 18mm; } html, body { background: #fff !important; -webkit-print-color-adjust: economy !important; print-color-adjust: economy !important; } body * { visibility: hidden !important; } #recibo-para-impressao, #recibo-para-impressao * { visibility: visible !important; color: #000 !important; background-color: transparent !important; } #recibo-para-impressao { position: fixed; inset: 0; width: 100%; box-sizing: border-box; padding: 18mm 16mm; background: #fff !important; } }`}</style>
+    <style>{`.cabecalho-template { margin-bottom: 24px; padding-bottom: 14px; text-align: center; border-bottom: 2px solid #000; } .cabecalho-template h1, .cabecalho-template p { margin: 2px 0; } .cabecalho-template-1 { display: flex; align-items: center; justify-content: center; gap: 16px; text-align: center; } .cabecalho-template-1 img { width: 145px; max-height: 70px; object-fit: contain; } .cabecalho-template-1 h1 { font-size: 22px; } .cabecalho-template-1 p, .cabecalho-template-2 p, .cabecalho-template-3 p { font-size: 12px; } .cabecalho-template-2 h1 { color: #0070c0; font-size: 20px; text-decoration: underline; } .cabecalho-template-3 strong { display: inline-block; margin-bottom: 6px; padding: 5px 20px; background: #c00000; color: #fff; font-size: 16px; letter-spacing: 2px; } @media print { .cabecalho-template-2 h1 { color: #0070c0 !important; } .cabecalho-template-3 strong { color: #fff !important; background: #c00000 !important; } }`}</style>
     {printing && <article id="recibo-para-impressao" className="hidden print:block font-serif text-slate-900">
-      <header className="flex items-start justify-between border-b-2 border-slate-900 pb-5"><div><p className="text-2xl font-bold">{printing.nome_empresa}</p><p className="mt-1 text-sm">RECIBO Nº {String(printing.id).padStart(6, '0')}</p></div><h1 className="text-3xl font-bold uppercase">Recibo</h1></header>
+      <CabecalhoRecibo recibo={printing}/><div className="mb-8 flex items-center justify-between border-y-2 border-slate-900 py-3"><h1 className="text-3xl font-bold uppercase">Recibo</h1><p className="text-sm font-bold">Nº {String(printing.id).padStart(6, '0')}</p></div>
       <p className="mt-12 text-lg leading-9">Recebi de <strong>{printing.nome_cliente}</strong> a quantia de <strong>{formatarReal(printing.valor)}</strong> (<strong>{valorPorExtenso(printing.valor)}</strong>), referente a <strong>{printing.referente_a}</strong>.</p>
       <div className="mt-8 rounded border border-slate-400 p-4 text-sm"><p><strong>Forma de pagamento:</strong> {printing.forma_pagamento_display}</p>{printing.observacoes && <p className="mt-2"><strong>Observações:</strong> {printing.observacoes}</p>}</div>
       <p className="mt-14 text-right">Teresina - PI, {dataBrasil(printing.data_recebimento)}.</p><div className="mt-24 ml-auto w-80 border-t border-slate-900 pt-2 text-center text-sm">{printing.nome_empresa}<br />Assinatura / responsável</div>

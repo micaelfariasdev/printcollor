@@ -74,6 +74,7 @@ class OrcamentoSerializer(serializers.ModelSerializer):
 
 class ReciboSerializer(serializers.ModelSerializer):
     empresa_nome_atual = serializers.ReadOnlyField(source='empresa.nome')
+    empresa_template_id = serializers.ReadOnlyField(source='empresa.template_id')
     cliente_nome_atual = serializers.ReadOnlyField(source='cliente.nome')
     forma_pagamento_display = serializers.CharField(source='get_forma_pagamento_display', read_only=True)
 
