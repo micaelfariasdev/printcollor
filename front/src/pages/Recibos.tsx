@@ -64,7 +64,7 @@ export default function Recibos() {
   };
 
   return <div className="space-y-6">
-    <style>{`@media print { body * { visibility: hidden !important; } #recibo-para-impressao, #recibo-para-impressao * { visibility: visible !important; } #recibo-para-impressao { position: fixed; inset: 0; width: 100%; padding: 35mm 24mm; } }`}</style>
+    <style>{`@media print { @page { size: A4 portrait; margin: 18mm; } html, body { background: #fff !important; -webkit-print-color-adjust: economy !important; print-color-adjust: economy !important; } body * { visibility: hidden !important; } #recibo-para-impressao, #recibo-para-impressao * { visibility: visible !important; color: #000 !important; background-color: transparent !important; } #recibo-para-impressao { position: fixed; inset: 0; width: 100%; box-sizing: border-box; padding: 18mm 16mm; background: #fff !important; } }`}</style>
     {printing && <article id="recibo-para-impressao" className="hidden print:block font-serif text-slate-900">
       <header className="flex items-start justify-between border-b-2 border-slate-900 pb-5"><div><p className="text-2xl font-bold">{printing.nome_empresa}</p><p className="mt-1 text-sm">RECIBO Nº {String(printing.id).padStart(6, '0')}</p></div><h1 className="text-3xl font-bold uppercase">Recibo</h1></header>
       <p className="mt-12 text-lg leading-9">Recebi de <strong>{printing.nome_cliente}</strong> a quantia de <strong>{formatarReal(printing.valor)}</strong> referente a <strong>{printing.referente_a}</strong>.</p>
