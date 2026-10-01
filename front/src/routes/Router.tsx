@@ -74,7 +74,7 @@ export const AppRouter = () => {
           <Route path="dtf" element={<DTFTable />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="orcamentos" element={<Orcamentos />} />
-          <Route path="recibos" element={<AdminFinanceiroRoute><Recibos /></AdminFinanceiroRoute>} />
+          <Route path="recibos" element={<Recibos />} />
           <Route path="clientes" element={<Clients />} />
           <Route path="produtos" element={<AdminFinanceiroRoute><Produtos /></AdminFinanceiroRoute>} />
           <Route path="empresas" element={<AdminFinanceiroRoute><Empresas /></AdminFinanceiroRoute>} />

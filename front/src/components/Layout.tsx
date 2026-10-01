@@ -61,7 +61,7 @@ export const Layout: React.FC = () => {
     { id: 'dtf', label: 'DTF / UV', icon: <Printer size={22} />, roles: ['all'] },
     { id: 'notificacoes-dtf', label: 'Notificações DTF', icon: <Send size={22} />, roles: ['admin', 'financeiro'] },
     { id: 'orcamentos', label: 'Orçamentos', icon: <FileText size={22} />, roles: ['all'] },
-    { id: 'recibos', label: 'Recibos', icon: <FileText size={22} />, roles: ['admin', 'financeiro'] },
+    { id: 'recibos', label: 'Recibos', icon: <FileText size={22} />, roles: ['all'] },
     { id: 'clientes', label: 'Clientes', icon: <Users size={22} />, roles: ['all'] },
     { id: 'produtos', label: 'Produtos', icon: <Package size={22} />, roles: ['admin', 'financeiro'] },
     { id: 'empresas', label: 'Unidades', icon: <Building2 size={22} />, roles: ['admin', 'financeiro'] },

@@ -177,7 +177,7 @@ class ReciboViewSet(viewsets.ModelViewSet):
     ordering = ['-data_recebimento', '-id']
 
     def get_permissions(self):
-        return [(IsAdminUserCustom | IsFinanceiro)()]
+        return [permissions.IsAuthenticated()]
 
 
 class DTFVendorViewSet(viewsets.ModelViewSet):
