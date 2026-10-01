@@ -12,6 +12,58 @@ type Recibo = {
 };
 
 const hoje = () => new Date().toISOString().slice(0, 10);
+const unidades = ['zero', 'um', 'dois', 'tres', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove', 'dez'];
+const dezenas = ['onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
+const dezenasCheias = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
+const centenas = ['', 'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos', 'seiscentos', 'setecentos', 'oitocentos', 'novecentos'];
+
+const grupoPorExtenso = (numero: number) => {
+  if (numero === 0) return '';
+  if (numero === 100) return 'cem';
+  const partes: string[] = [];
+  if (numero >= 100) partes.push(centenas[Math.floor(numero / 100)]);
+  const resto = numero % 100;
+  if (resto <= 10) { if (resto) partes.push(unidades[resto]); }
+  else if (resto < 20) partes.push(dezenas[resto - 11]);
+  else {
+    partes.push(dezenasCheias[Math.floor(resto / 10)]);
+    if (resto % 10) partes.push(unidades[resto % 10]);
+  }
+  return partes.join(' e ');
+};
+
+const numeroPorExtenso = (numero: number) => {
+  if (numero === 0) return 'zero';
+  const escalas = [
+    { singular: '', plural: '' },
+    { singular: 'mil', plural: 'mil' },
+    { singular: 'milhão', plural: 'milhões' },
+    { singular: 'bilhão', plural: 'bilhões' },
+  ];
+  const partes: string[] = [];
+  let restante = numero;
+  let indice = 0;
+  while (restante && indice < escalas.length) {
+    const grupo = restante % 1000;
+    if (grupo) {
+      const escala = escalas[indice];
+      if (indice === 1 && grupo === 1) partes.unshift('mil');
+      else if (indice === 0) partes.unshift(grupoPorExtenso(grupo));
+      else partes.unshift(`${grupoPorExtenso(grupo)} ${grupo === 1 ? escala.singular : escala.plural}`);
+    }
+    restante = Math.floor(restante / 1000);
+    indice += 1;
+  }
+  return partes.length > 1 ? `${partes.slice(0, -1).join(', ')} e ${partes.at(-1)}` : partes[0];
+};
+
+const valorPorExtenso = (valor: string | number) => {
+  const centavosTotais = Math.round(Number(valor) * 100);
+  const reais = Math.floor(centavosTotais / 100);
+  const centavos = centavosTotais % 100;
+  const valorReais = `${numeroPorExtenso(reais)} ${reais === 1 ? 'real' : 'reais'}`;
+  return centavos ? `${valorReais} e ${numeroPorExtenso(centavos)} ${centavos === 1 ? 'centavo' : 'centavos'}` : valorReais;
+};
 const dataBrasil = (data: string) => new Intl.DateTimeFormat('pt-BR').format(new Date(`${data}T12:00:00`));
 
 export default function Recibos() {
@@ -67,7 +119,7 @@ export default function Recibos() {
     <style>{`@media print { @page { size: A4 portrait; margin: 18mm; } html, body { background: #fff !important; -webkit-print-color-adjust: economy !important; print-color-adjust: economy !important; } body * { visibility: hidden !important; } #recibo-para-impressao, #recibo-para-impressao * { visibility: visible !important; color: #000 !important; background-color: transparent !important; } #recibo-para-impressao { position: fixed; inset: 0; width: 100%; box-sizing: border-box; padding: 18mm 16mm; background: #fff !important; } }`}</style>
     {printing && <article id="recibo-para-impressao" className="hidden print:block font-serif text-slate-900">
       <header className="flex items-start justify-between border-b-2 border-slate-900 pb-5"><div><p className="text-2xl font-bold">{printing.nome_empresa}</p><p className="mt-1 text-sm">RECIBO Nº {String(printing.id).padStart(6, '0')}</p></div><h1 className="text-3xl font-bold uppercase">Recibo</h1></header>
-      <p className="mt-12 text-lg leading-9">Recebi de <strong>{printing.nome_cliente}</strong> a quantia de <strong>{formatarReal(printing.valor)}</strong> referente a <strong>{printing.referente_a}</strong>.</p>
+      <p className="mt-12 text-lg leading-9">Recebi de <strong>{printing.nome_cliente}</strong> a quantia de <strong>{formatarReal(printing.valor)}</strong> (<strong>{valorPorExtenso(printing.valor)}</strong>), referente a <strong>{printing.referente_a}</strong>.</p>
       <div className="mt-8 rounded border border-slate-400 p-4 text-sm"><p><strong>Forma de pagamento:</strong> {printing.forma_pagamento_display}</p>{printing.observacoes && <p className="mt-2"><strong>Observações:</strong> {printing.observacoes}</p>}</div>
       <p className="mt-14 text-right">Teresina - PI, {dataBrasil(printing.data_recebimento)}.</p><div className="mt-24 ml-auto w-80 border-t border-slate-900 pt-2 text-center text-sm">{printing.nome_empresa}<br />Assinatura / responsável</div>
     </article>}
