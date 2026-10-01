@@ -24,6 +24,7 @@ MODELOS_BACKUP = [
     'configuracaoloja',  # api_configuracaoloja (singleton PIX)
     'orcamento',  # api_orcamento (depende de Cliente, Usuario, Empresa)
     'itemorcamento',  # api_itemorcamento (depende de Orcamento, Produto)
+    'recibo',  # api_recibo (depende de Cliente, Usuario, Empresa)
     'pedidofabrica',  # api_pedidofabrica (depende de Cliente, Produto)
     'dtfvendor',  # api_dtfvendor (DTF, sublimacao, estampa)
 ]
@@ -39,6 +40,7 @@ MODELO_MAP = {
     'usuario': ('api', 'Usuario'),
     'orcamento': ('api', 'Orcamento'),
     'itemorcamento': ('api', 'ItemOrcamento'),
+    'recibo': ('api', 'Recibo'),
     'pedidofabrica': ('api', 'PedidoFabrica'),
     'dtfvendor': ('api', 'DTFVendor'),
     'dtfconfig': ('api', 'DTFConfig'),

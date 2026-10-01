@@ -23,6 +23,7 @@ import { DTFTable } from '../pages/DTF';
 import { PedidosFabrica } from '../pages/PedidosFabrica';
 import Relatorios from '../pages/Relatorios';
 import NotificacoesDTF from '../pages/NotificacoesDTF';
+import Recibos from '../pages/Recibos';
 // useState e useEffect removidos - não utilizados
 import { useState, useEffect } from 'react';
 
@@ -73,6 +74,7 @@ export const AppRouter = () => {
           <Route path="dtf" element={<DTFTable />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="orcamentos" element={<Orcamentos />} />
+          <Route path="recibos" element={<AdminFinanceiroRoute><Recibos /></AdminFinanceiroRoute>} />
           <Route path="clientes" element={<Clients />} />
           <Route path="produtos" element={<AdminFinanceiroRoute><Produtos /></AdminFinanceiroRoute>} />
           <Route path="empresas" element={<AdminFinanceiroRoute><Empresas /></AdminFinanceiroRoute>} />

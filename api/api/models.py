@@ -137,6 +137,34 @@ class ItemOrcamento(models.Model):
         return self.produto_nome_no_ato or (self.produto.nome if self.produto else "Produto Excluído")
 
 
+class Recibo(models.Model):
+    FORMAS_PAGAMENTO = (
+        ('dinheiro', 'Dinheiro'),
+        ('pix', 'PIX'),
+        ('cartao', 'Cartão'),
+        ('transferencia', 'Transferência'),
+        ('outro', 'Outro'),
+    )
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.SET_NULL, null=True, related_name='recibos')
+    cliente = models.ForeignKey(Cliente, on_delete=models.SET_NULL, null=True, related_name='recibos')
+    nome_empresa = models.CharField(max_length=100)
+    nome_cliente = models.CharField(max_length=100)
+    valor = models.DecimalField(max_digits=12, decimal_places=2)
+    referente_a = models.CharField(max_length=255)
+    forma_pagamento = models.CharField(max_length=20, choices=FORMAS_PAGAMENTO, default='pix')
+    data_recebimento = models.DateField(default=timezone.localdate)
+    observacoes = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    criado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='recibos_emitidos')
+
+    class Meta:
+        ordering = ['-data_recebimento', '-id']
+
+    def __str__(self):
+        return f'Recibo #{self.id} - {self.nome_cliente}'
+
+
 class DTFVendor(models.Model):
     TIPOS_PRODUTO = (
         ('dtf_textil', 'DTF Têxtil'),

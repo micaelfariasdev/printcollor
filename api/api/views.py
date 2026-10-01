@@ -17,11 +17,11 @@ from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
 from django_filters.rest_framework import DjangoFilterBackend
 from decimal import Decimal
-from .models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, DTFVendor, Usuario, PedidoFabrica, DTFConfig, ConfiguracaoLoja, DTFNotificacaoConfig, DTFNotificacao
+from .models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, Recibo, DTFVendor, Usuario, PedidoFabrica, DTFConfig, ConfiguracaoLoja, DTFNotificacaoConfig, DTFNotificacao
 from .permissions import IsAdminUserCustom, IsVendedor, IsFinanceiro, IsMaquina
 from .serializers import (
     EmpresaSerializer, ClienteSerializer,
-    ProdutoSerializer, OrcamentoSerializer, DTFVendorSerializer, UsuarioSerializer,
+    ProdutoSerializer, OrcamentoSerializer, ReciboSerializer, DTFVendorSerializer, UsuarioSerializer,
     UserMeSerializer, PedidoFabricaSerializer, DTFConfigSerializer, ConfiguracaoLojaSerializer, DTFNotificacaoConfigSerializer, DTFNotificacaoSerializer
 )
 from .tools.utils import gerar_pdf_from_html
@@ -165,6 +165,19 @@ class OrcamentoViewSet(viewsets.ModelViewSet):
                 )
         serializer = OrcamentoSerializer(novo)
         return Response(serializer.data, status=201)
+
+
+class ReciboViewSet(viewsets.ModelViewSet):
+    queryset = Recibo.objects.select_related('empresa', 'cliente', 'criado_por')
+    serializer_class = ReciboSerializer
+    http_method_names = ['get', 'post', 'head', 'options']
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['nome_cliente', 'nome_empresa', 'referente_a']
+    ordering_fields = ['id', 'data_recebimento', 'criado_em', 'valor']
+    ordering = ['-data_recebimento', '-id']
+
+    def get_permissions(self):
+        return [(IsAdminUserCustom | IsFinanceiro)()]
 
 
 class DTFVendorViewSet(viewsets.ModelViewSet):

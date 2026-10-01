@@ -5,7 +5,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from django.conf import settings
 from django.utils.crypto import constant_time_compare
-from .models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, Usuario, DTFVendor, PedidoFabrica, DTFConfig, ConfiguracaoLoja, DTFNotificacaoConfig, DTFNotificacao
+from .models import Empresa, Cliente, Produto, Orcamento, ItemOrcamento, Usuario, Recibo, DTFVendor, PedidoFabrica, DTFConfig, ConfiguracaoLoja, DTFNotificacaoConfig, DTFNotificacao
 
 
 class EmpresaSerializer(serializers.ModelSerializer):
@@ -70,6 +70,33 @@ class OrcamentoSerializer(serializers.ModelSerializer):
                 ItemOrcamento.objects.create(orcamento=instance, **item)
 
         return instance
+
+
+class ReciboSerializer(serializers.ModelSerializer):
+    empresa_nome_atual = serializers.ReadOnlyField(source='empresa.nome')
+    cliente_nome_atual = serializers.ReadOnlyField(source='cliente.nome')
+    forma_pagamento_display = serializers.CharField(source='get_forma_pagamento_display', read_only=True)
+
+    class Meta:
+        model = Recibo
+        fields = '__all__'
+        read_only_fields = ['nome_empresa', 'nome_cliente', 'criado_em', 'criado_por']
+
+    def validate_valor(self, valor):
+        if valor <= 0:
+            raise ValidationError('O valor do recibo deve ser maior que zero.')
+        return valor
+
+    def create(self, validated_data):
+        empresa = validated_data['empresa']
+        cliente = validated_data['cliente']
+        request = self.context.get('request')
+        return Recibo.objects.create(
+            **validated_data,
+            nome_empresa=empresa.nome,
+            nome_cliente=cliente.nome,
+            criado_por=request.user if request and request.user.is_authenticated else None,
+        )
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
